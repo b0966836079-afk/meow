@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>喵喵小窩</title>
+<meta name="theme-color" content="#f6eee3">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="喵喵小窩">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="decos"></div>
+<div id="app">
+  <header id="top">
+    <div class="duo">
+      <div class="who"><div id="catMe" class="bob"></div><div class="nm" id="nmMe">我</div><div class="st on">● 你</div></div>
+      <div class="mid" id="midHeart"></div>
+      <div class="who"><div id="catThem" class="bob2"></div><div class="nm" id="nmThem">另一半</div><div class="st" id="stThem">等待中</div></div>
+    </div>
+  </header>
+  <main id="view"></main>
+</div>
+<nav id="nav" class="hidden">
+  <button data-go="home"><span class="ni" id="niHome"></span>遊戲</button>
+  <button data-go="chat"><span class="ni" id="niChat"></span>聊天<b id="badge" class="hidden">0</b></button>
+  <button data-go="settings"><span class="ni" id="niSet"></span>設定</button>
+</nav>
+<div id="toast" class="hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="pixel.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+<!-- 遊戲：之後新增遊戲就在這裡多加一行 -->
+<script src="games/moqi.js"></script>
+<script src="games/gomoku.js"></script>
+<script>App.start();</script>
+</body>
+</html>
