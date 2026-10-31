@@ -411,6 +411,31 @@ const App = (function(){
     ["peach","蜜桃","#ffeee4","#ff9f7a"],["sky","天空藍","#e8f3fd","#7fb5ee"],["cream","奶油","#fbf6ec","#5a3b2e"],["tuxedo","黑白賓士貓","#ececec","#222222"],["matcha","抹茶","#eef2df","#93ad55"]];
   const KB_ANIMS = [["jelly","果凍彈跳"],["paw","貓掌蓋章"],["hearts","愛心爆炸"],["jump","跳跳落地"],["spin","旋轉星星"],["peek","貓咪探頭"],["ripple","波紋擴散"]];
   function applyKbTheme(){ document.body.dataset.kb = store.get("mw_kb") || "strawberry"; }
+  const WALLS = [["paws","貓掌"],["night","星空"],["aqua","魚缸"],["sky","雲朵"],["sakura","櫻花"],["picnic","野餐布"],["meadow","小花園"],["dots","點點"],["photo","我的照片"]];
+  function applyWall(){
+    const w = store.get("mw_wall") || "paws", img = store.get("mw_wall_img");
+    document.body.dataset.wall = (w==="photo" && !img) ? "paws" : w;
+    if(img) document.body.style.setProperty("--wall-img", `url("${img}")`);
+  }
+  function wallCss(id){
+    const prev = document.body.dataset.wall;
+    const probe = document.createElement("div"); probe.className="chat"; probe.style.cssText="position:absolute;left:-9999px;width:60px;height:80px"; probe.innerHTML='<div class="list" style="height:80px"></div>';
+    document.body.appendChild(probe); document.body.dataset.wall = (id==="photo" && !store.get("mw_wall_img")) ? "paws" : id;
+    const cs = getComputedStyle(probe.firstChild); const css = `background:${cs.backgroundImage==="none"?"":cs.backgroundImage} ${cs.backgroundColor};background-size:${cs.backgroundSize};background-position:${cs.backgroundPosition};background-repeat:${cs.backgroundRepeat}`;
+    document.body.dataset.wall = prev; probe.remove(); return css;
+  }
+  async function pickWallPhoto(){
+    return new Promise(res=>{
+      const inp=document.createElement("input"); inp.type="file"; inp.accept="image/*";
+      inp.onchange = async ()=>{ const f=inp.files&&inp.files[0]; if(!f) return res(false);
+        const url=URL.createObjectURL(f); const im=new Image();
+        im.onload=()=>{ const max=900, sc=Math.min(1,max/Math.max(im.naturalWidth,im.naturalHeight)); const c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*sc); c.height=Math.round(im.naturalHeight*sc); c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+          let q=.75, data=c.toDataURL("image/jpeg",q); while(data.length>1200000 && q>.3){ q-=.15; data=c.toDataURL("image/jpeg",q); }
+          URL.revokeObjectURL(url); store.set("mw_wall_img", data); store.set("mw_wall","photo"); applyWall(); res(true); };
+        im.onerror=()=>res(false); im.src=url; };
+      inp.click();
+    });
+  }
   function kbArt(){ const p=palOf(me.cat||"orange"); return { paw: icon("bigpaw",{F:p.Y,O:p.O,P:'#f7a7b8'}), heart: icon("heart"), star: icon("star"), cat: sprite(me.cat||"orange","happy") }; }
 
   // ---------- settings ----------
@@ -420,6 +445,8 @@ const App = (function(){
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>
         <div class="k">點一下可以預覽，只會改變你自己的手機。</div></div>
+      <div class="box set"><h2>聊天背景</h2><div class="walls" id="wls">${WALLS.map(([id,n])=>`<button data-w="${id}" class="${(store.get("mw_wall")||"paws")===id?"on":""}"><span class="wv" data-wall="${id}"><span class="chat"><span class="list"></span></span></span>${n}</button>`).join("")}</div>
+        <div class="k">「我的照片」可以選一張你們的合照當背景（只存在這支手機）。</div></div>
       <div class="box set"><h2>通知</h2><div class="k">${ps==="on"?"✅ 已開啟：ta 傳訊息時你的手機會跳通知":ps==="denied"?"❌ 通知被封鎖了，請到手機的瀏覽器設定裡允許通知":ps==="ios-home"?"📱 iPhone 要先把這個網頁「加入主畫面」，從主畫面圖示打開後才能開通知":ps==="unsupported"?"這個瀏覽器不支援通知，請用 Chrome（Android）或 Safari 加入主畫面（iPhone）":"還沒開啟"}</div>
         ${ps!=="on"&&ps!=="unsupported"&&ps!=="ios-home"?`<button class="btn mint" id="bPush2">開啟通知</button>`:""}${ps==="on"?`<button class="btn sub" id="bTest">傳一則測試訊息給 ta</button>`:""}</div>
       <div class="box set"><h2>邀請碼</h2><div class="code" style="text-align:center">${esc(B.code||"")}</div><div class="k">另一半打開網址後輸入這組碼就能加入。換手機時，用同一個名字再輸入一次即可。</div><button class="btn sub" id="bInv2">傳邀請連結</button></div>
@@ -432,6 +459,15 @@ const App = (function(){
     const b2=$("bPush2"); if(b2) b2.addEventListener("click", ()=>enablePush().then(()=>render()));
     const bt=$("bTest"); if(bt) bt.addEventListener("click", ()=>{ sendMsg("（測試通知）喵～收到了嗎？","text"); toast("已送出，看看 ta 的手機有沒有跳通知"); });
     $("bInv2").addEventListener("click", shareInvite);
+    // wallpaper previews reuse the real CSS by scoping data-wall on each swatch
+    $("wls").querySelectorAll(".wv").forEach(v=>{ const id=v.dataset.wall; v.querySelector(".list").style.cssText = wallCss(id); });
+    $("wls").querySelectorAll("button").forEach(b=>b.addEventListener("click", async ()=>{
+      const id=b.dataset.w;
+      if(id==="photo"){ const ok = await pickWallPhoto(); if(!ok) return; } else { store.set("mw_wall", id); applyWall(); }
+      $("wls").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); SFX.select();
+      $("wls").querySelectorAll(".wv").forEach(v=>{ v.querySelector(".list").style.cssText = wallCss(v.dataset.wall); });
+      toast(`${sprite(me.cat||"orange","love")} 聊天背景換好了！`);
+    }));
     $("thm").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ store.set("mw_kb",b.dataset.t); applyKbTheme(); $("thm").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.select(); }));
     $("anm").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ store.set("mw_anim",b.dataset.a); $("anm").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.key(); previewAnim(b); }));
     $("bSnd").addEventListener("click", e=>{ SFX.toggle(); e.target.textContent = SFX.on?"♪ 音效 開":"♪ 音效 關"; });
@@ -556,7 +592,7 @@ const App = (function(){
 
   // ---------- start ----------
   async function start(){
-    setupHaptic(); applyKbTheme();
+    setupHaptic(); applyKbTheme(); applyWall();
     document.addEventListener("pointerdown", e=>{ if(e.button>0) return; tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear");
