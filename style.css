@@ -265,3 +265,9 @@ body[data-kb="matcha"]{--kb-bg:#eef2df;--kb-dot:rgba(120,150,60,.12);--kb-top:#f
 .sheetBody{min-width:0;width:100%}
 .sheetBody .chat{min-width:0;width:100%}
 .sheetBody .ime,.sheetBody #kbd{min-width:0;max-width:100%}
+
+/* inside a game: no bottom tabs (back button + chat bubble instead) */
+body.ingame #nav{display:none}
+body.ingame{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+body.ingame .fab{bottom:calc(18px + env(safe-area-inset-bottom))}
+body.ingame .gtop{position:sticky;top:0;z-index:6}
