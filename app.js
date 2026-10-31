@@ -45,6 +45,16 @@ const App = (function(){
       del(){ tone(520,.05,{to:300,vol:.12,type:"square",lp:2000}); },
       send(){ [N.G5,N.C6,N.E6].forEach((f,i)=>tone(f,.07,{vol:.2,delay:i*.05,type:"square",lp:3500})); tone(600,.25,{to:1800,vol:.08,type:"triangle",delay:.05}); },
       combo(){ [N.C6,N.E6,N.G6].forEach((f,i)=>tone(f,.08,{vol:.18,delay:i*.06,type:"triangle"})); },
+      boom(big){ const c=ensure(); if(!c) return; const t=c.currentTime, d=big?.7:.45; const buf=c.createBuffer(1, c.sampleRate*d, c.sampleRate), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/ch.length, 2.2); const src=c.createBufferSource(); src.buffer=buf; const lp=c.createBiquadFilter(); lp.type="lowpass"; lp.frequency.setValueAtTime(big?1800:1200,t); lp.frequency.exponentialRampToValueAtTime(120,t+d); const g=c.createGain(); g.gain.value=big?.9:.6; src.connect(lp); lp.connect(g); g.connect(master); src.start(t); tone(big?90:120,d*.8,{to:40,vol:.5,type:"sine"}); },
+      shoot(){ tone(300,.18,{to:900,vol:.18,type:"sawtooth",lp:2000}); tone(180,.12,{to:80,vol:.3,type:"square",lp:600}); },
+      hit(){ tone(160,.12,{to:70,vol:.4,type:"square",lp:900}); tone(900,.05,{vol:.15,type:"square",delay:.01}); },
+      block(){ tone(1400,.06,{vol:.18,type:"square"}); tone(700,.1,{vol:.15,type:"triangle",delay:.03}); },
+      charge(){ tone(300,.35,{to:1200,vol:.14,type:"triangle"}); },
+      beep(hi){ tone(hi?1320:660,.09,{vol:.22,type:"square"}); },
+      bang(){ this.boom(false); tone(1800,.04,{vol:.2,type:"square"}); },
+      splash(){ const c=ensure(); if(!c) return; const t=c.currentTime; const buf=c.createBuffer(1,c.sampleRate*.4,c.sampleRate), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*Math.pow(1-i/ch.length,1.5); const src=c.createBufferSource(); src.buffer=buf; const bp=c.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value=1800; bp.Q.value=.8; const g=c.createGain(); g.gain.value=.35; src.connect(bp); bp.connect(g); g.connect(master); src.start(t); },
+      jump(){ tone(420,.12,{to:900,vol:.16,type:"square",lp:2500}); },
+      coin(){ tone(1568,.06,{vol:.16,type:"square"}); tone(2093,.12,{vol:.14,type:"square",delay:.06}); },
       meow(p){ meow(p||1); }, join(){ meow(1.05); tone(N.E6,.18,{vol:.15,type:"triangle",delay:.45}); } };
   })();
 
