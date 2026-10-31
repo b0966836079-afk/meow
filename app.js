@@ -141,15 +141,15 @@ const App = (function(){
   }
   function viewHome(v){
     const p = partner();
-    let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${statusCard()}${careCard()}<div class="box meter" id="meter"></div>`;
+    let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">另一半還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
     if(pushState()!=="on") html += `<div class="box banner"><span class="bi">${icon("bell")}</span><div style="flex:1">開啟通知，ta 傳訊息時手機會跳出來</div><button class="btn mint" id="bPush">開啟</button></div>`;
-    html += `<div class="games">` + games.map(g=>`<button class="gcard" data-g="${g.id}"><span class="gi">${g.icon()}</span><span class="gn">${esc(g.name)}</span><span class="gd">${esc(g.desc)}</span>${g.badge&&g.badge()?`<span class="gb">${esc(g.badge())}</span>`:""}</button>`).join("")
+    html += `<div class="games">` + games.filter(g=>!g.hidden).map(g=>`<button class="gcard" data-g="${g.id}"><span class="gi">${g.icon()}</span><span class="gn">${esc(g.name)}</span><span class="gd">${esc(g.desc)}</span>${g.badge&&g.badge()?`<span class="gb">${esc(g.badge())}</span>`:""}</button>`).join("")
       + `<div class="gcard soon"><span class="gi">${sprite("gray","sleep",{soft:true})}</span><span class="gn">新遊戲</span><span class="gd">敬請期待…</span></div></div>`;
     v.innerHTML = html;
     renderMeter();
     v.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>go("game-"+b.dataset.g)));
-    bindCare(v); bindStatus(v);
+    bindCare(v); bindStatus(v); bindDaily(v); const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet"));
     const bi=$("bInv"); if(bi) bi.addEventListener("click", shareInvite);
     const bp=$("bPush"); if(bp) bp.addEventListener("click", ()=>enablePush().then(()=>render()));
   }
@@ -224,6 +224,7 @@ const App = (function(){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
     if(m.kind==="ping") return "";
+    if(m.kind==="greet") return `<div class="msg sys greet"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="status") return `<div class="msg sys status"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="truce") return `<div class="msg sys truce"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="letter"){ const opened = mine || openedLetters.has(m.id);
@@ -715,6 +716,69 @@ const App = (function(){
       if(p && !quiet){ try{ const row = await B.send(`${def[2]} ${me.name} ${def[1]}，${until?`大概 ${fmtUntil(until)} 有空`:"晚點回你"}`, "status", me.name, me.cat); addMessage(row); }catch(e){} }
     }
   }
+  // ---- home box helper ----
+  function refreshHomeBox(id, html, bind){
+    if(route!=="home") return; const c=$(id); if(!c) return;
+    const tmp=document.createElement("div"); tmp.innerHTML=html(); if(tmp.firstElementChild){ c.replaceWith(tmp.firstElementChild); if(bind) bind($("view")); }
+  }
+  // ---- our cat (strip on home; the room itself lives in games/pet.js) ----
+  function petStrip(){
+    const P = window.PetLogic; if(!P || !partner()) return "";
+    const ps = stateCache.pet && stateCache.pet.state;
+    if(!ps) return `<button class="box petStrip" id="petGo"><span class="psCat">${sprite("white","curl",{soft:true})}</span><span class="psTx"><b>領養一隻我們的貓 🐾</b><i>兩個人一起餵牠、陪牠長大</i></span><span class="psGo">▶</span></button>`;
+    const f = P.fullness(ps), md = P.mood(ps), stg = P.stage(ps);
+    return `<button class="box petStrip ${md.hungry?"hungry":""}" id="petGo"><span class="psCat">${sprite(ps.color, md.face)}</span><span class="psTx"><b>${esc(ps.name)}・${stg.name}</b><i>${md.text}</i><span class="pbBar"><i class="${f<15?"low":f<40?"mid":""}" style="width:${f}%"></i></span></span><span class="psGo">▶</span></button>`;
+  }
+  // ---- 早安 / 晚安 check-in ----
+  const dayKeyOf = t => { const d = new Date((t||Date.now()) - 4*3600e3); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); };
+  const prevDay = k => { const [y,m,d] = k.split("-").map(Number); const x = new Date(y, m-1, d-1, 12); return x.getFullYear()+"-"+(x.getMonth()+1)+"-"+x.getDate(); };
+  function greetSlot(){ const h = new Date().getHours(); return h>=4 && h<14 ? "m" : (h>=19 || h<4) ? "n" : null; }
+  const SLOT = { m:["☀️","早安"], n:["🌙","晚安"] };
+  function dayDone(st, k, slot){ const p = partner(); const x = st && st.days && st.days[k] && st.days[k][slot]; return !!(x && p && x[me.uid] && x[p.user_id]); }
+  function streak(st, slot){
+    let k = dayKeyOf(), n = 0;
+    if(!dayDone(st, k, slot)) k = prevDay(k);
+    while(dayDone(st, k, slot) && n < 400){ n++; k = prevDay(k); }
+    return n;
+  }
+  function dailyCard(){
+    const p = partner(); if(!p) return "";
+    const st = stateCache.daily && stateCache.daily.state, k = dayKeyOf(), slot = greetSlot();
+    const row = sl => {
+      const n = streak(st, sl), best = st && st.best && st.best[sl] || 0, x = (st && st.days && st.days[k] && st.days[k][sl]) || {};
+      const broke = n===0 && best>0;
+      return `<div class="dyRow ${broke?"broke":""}"><span class="dyIc">${broke?sprite(me.cat||"orange","cry"):SLOT[sl][0]}</span><span class="dyTx"><b>${SLOT[sl][1]}${n?` 連續 🔥${n} 天`:broke?"・斷掉了…今天重新開始吧":"・還沒開始"}</b><i>你 ${x[me.uid]?"✔":"—"}・${esc(p.name)} ${x[p.user_id]?"✔":"—"}${best?`・最高 ${best} 天`:""}</i></span></div>`;
+    };
+    let btn;
+    if(!slot) btn = `<button class="btn sub" disabled>晚上 7 點後可以說晚安 🌙</button>`;
+    else { const x = (st && st.days && st.days[k] && st.days[k][slot]) || {};
+      btn = x[me.uid] ? `<button class="btn sub" disabled>${SLOT[slot][0]} 你今天說過${SLOT[slot][1]}了${x[p.user_id]?" 💗":"，等 ta"}</button>`
+                      : `<button class="btn" id="dyBtn">${SLOT[slot][0]} 跟 ${esc(p.name)} 說${SLOT[slot][1]}</button>`; }
+    return `<div class="box daily" id="dailyBox"><div class="careHd">📅 早安晚安打卡<span>兩個人都說了才算一天 · 每次 +2 🐟</span></div>${row("m")}${row("n")}${btn}</div>`;
+  }
+  function bindDaily(root){ const b = root.querySelector("#dyBtn"); if(b) b.addEventListener("click", sayGreet); }
+  async function sayGreet(){
+    const slot = greetSlot(), p = partner(); if(!slot || !p) return;
+    const k = dayKeyOf(); let completed = false;
+    const ns = await update("daily", st=>{
+      st = st || { days:{}, done:0, best:{} }; st.days = st.days||{}; st.best = st.best||{};
+      const d = st.days[k] = st.days[k] || {}, x = d[slot] = d[slot] || {};
+      if(x[me.uid]) return undefined;
+      x[me.uid] = Date.now(); completed = !!x[p.user_id];
+      if(completed){ st.done = (st.done||0)+1; }
+      const kn = q => q.split("-").reduce((t,v)=>t*100+ +v, 0); const keys = Object.keys(st.days).sort((a,b)=>kn(b)-kn(a)); for(const old of keys.slice(60)) delete st.days[old];
+      return st;
+    });
+    if(!ns) return;
+    const n = streak(ns, slot);
+    if(completed && n > ((ns.best||{})[slot]||0)){ await update("daily", st=>{ if(!st) return undefined; st.best = st.best||{}; if(n <= (st.best[slot]||0)) return undefined; st.best[slot] = n; return st; }); }
+    SFX.select();
+    const [ic, word] = SLOT[slot];
+    const body = completed ? `${ic} ${me.name} 也說${word}了！${word}連續 🔥${n} 天・小魚乾 +2 🐟` : `${ic} ${me.name} 說${word}！${slot==="m"?"今天也要加油喔":"好好睡喔"} 💗`;
+    try{ const row = await B.send(body, "greet", me.name, me.cat); addMessage(row); }catch(e){}
+    if(completed){ SFX.level(); burst(); toast(`${sprite(me.cat||"orange","love")} ${word}連續 ${n} 天！我們的貓多了 2 條小魚乾`, 3500); }
+    else toast(`${sprite(me.cat||"orange", slot==="m"?"wave":"sleep")} 已經跟 ${esc(p.name)} 說${word}，等 ta 也說就算一天`);
+  }
   function onMood(st){
     const prev = moodSt; moodSt = st;
     const mk = st && st.makeup && st.makeup.last;
@@ -865,6 +929,9 @@ const App = (function(){
     await getState("moqi").catch(()=>{});
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);
+    for(const g of ["daily","pet","fishing"]) await getState(g).catch(()=>{});
+    onState("daily", ()=>refreshHomeBox("dailyBox", dailyCard, bindDaily));
+    onState("pet", ()=>refreshHomeBox("petGo", petStrip, v=>{ const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet")); }));
     clearInterval(truceTimer); truceTimer = setInterval(tickTruce, 1000);
     B.track({ name: me.name, cat: me.cat });
     B.connect();

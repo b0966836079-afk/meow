@@ -27,3 +27,8 @@
 ## 更新流程
 
 改好程式 → 推到 `main` → GitHub Pages 約 1～2 分鐘後上線 → 手機把 App 關掉再打開。
+
+## Our cat & daily check-in
+- `games/pet.js` (hidden game `pet`, opened from the home strip): state `pet` = {name,color,full,at,exp,spent,gift,log,petDay,playDay}. Food = moqi hearts + fishing total/5 + daily.done*2 + gift − spent. Fullness decays 2.2/h.
+- Daily 早安(04–14)/晚安(19–04) check-in lives in app.js (`dailyCard`, `sayGreet`), state `daily` = {days:{"Y-M-D":{m:{uid:ts},n:{uid:ts}}}, done, best}. Day boundary is 04:00. Messages kind `greet`.
+- Status board: `moodSt.status[uid]` = {s, until, at}; messages kind `status`.
