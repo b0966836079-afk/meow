@@ -17,6 +17,7 @@ webpush.setVapidDetails(
 const STICKER: Record<string, string> = {
   happy: "傳了一張開心貼圖 😸", love: "傳了一張愛心貼圖 😻", surprised: "傳了一張驚訝貼圖 🙀",
   sleep: "傳了一張睡覺貼圖 😴", wave: "跟你揮揮手 👋", heart: "傳了一顆愛心 💗", loaf: "變成了一條吐司 🍞",
+  loveyou: "說：愛你 💗", miss: "說：想你 🥺", hug: "要抱抱 🫂", kiss: "啾～ 💋", morning: "說：早安 ☀️", night: "說：晚安 🌙", sorry: "說：對不起 🥺", hungry: "說：好餓 🍙", home: "說：到家了 🏠", angry: "哼！💢", jealous: "吃醋了 💢", cute: "說你好可愛 ✨",
 };
 
 Deno.serve(async (req) => {

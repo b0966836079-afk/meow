@@ -18,6 +18,8 @@ function setEyes(rows, kind){
     if(kind==='happy'){ put(ex,Y,'E'); put(ex+1,Y,'E'); put(ex-1,Y+1,'E'); put(ex+2,Y+1,'E'); }
     if(kind==='sleep'){ put(ex-1,Y+1,'E'); put(ex,Y+1,'E'); put(ex+1,Y+1,'E'); put(ex+2,Y+1,'E'); }
     if(kind==='love'){ put(ex-1,Y,'K'); put(ex+1,Y,'K'); put(ex-1,Y+1,'K'); put(ex,Y+1,'K'); put(ex+1,Y+1,'K'); put(ex,Y,'Y'); put(ex,Y+2,'K'); }
+    if(kind==='angry'){ if(ex===L){ put(ex-1,Y,'E'); put(ex,Y,'E'); put(ex+1,Y+1,'E'); put(ex+2,Y+1,'E'); } else { put(ex-1,Y+1,'E'); put(ex,Y+1,'E'); put(ex+1,Y,'E'); put(ex+2,Y,'E'); } }
+    if(kind==='cry'){ put(ex-1,Y,'E'); put(ex,Y+1,'E'); put(ex+1,Y+1,'E'); put(ex+2,Y,'E'); put(ex,Y+2,'T'); put(ex+1,Y+2,'T'); }
     if(kind==='surprised'){ put(ex,Y,'E'); put(ex+1,Y,'E'); put(ex,Y+1,'E'); put(ex+1,Y+1,'E'); put(ex-1,Y,'Y'); }
   }
   return rows.map(r=>r.join(''));
@@ -50,14 +52,14 @@ const SIT = [
 const sit = SIT.map(r=>r.padEnd(21,'.'));
 
 const PAL = {
-  orange: {O:'#5a3b2e',Y:'#f2b06a',S:'#d98546',D:'#d99858',P:'#f2a1ae',E:'#2b1d18',H:'#ffffff',B:'#f59aa6',N:'#e8798a',M:'#5a3b2e',W:'#fff1df',K:'#ec5f7e'},
-  white:  {O:'#5b5566',Y:'#fbf8f4',S:'#a9a4b6',D:'#e3ddd6',P:'#f2a1ae',E:'#2b2630',H:'#ffffff',B:'#f7b0bb',N:'#e8798a',M:'#5b5566',W:'#ffffff',K:'#ec5f7e'},
-  black:  {O:'#1d1a22',Y:'#3a3542',S:'#2c2833',D:'#2f2a36',P:'#e89aa8',E:'#f5d36b',H:'#fff6c8',B:'#c9707f',N:'#e8798a',M:'#9a92a8',W:'#5a5363',K:'#ec5f7e'},
-  calico: {O:'#5a3b2e',Y:'#fffaf2',S:'#e59a4f',D:'#3e3434',P:'#f2a1ae',E:'#2b1d18',H:'#ffffff',B:'#f59aa6',N:'#e8798a',M:'#5a3b2e',W:'#ffffff',K:'#ec5f7e'},
-  gray:   {O:'#4a4f60',Y:'#a7aec2',S:'#868da3',D:'#9097ab',P:'#f2b1bc',E:'#232631',H:'#ffffff',B:'#f0a5b2',N:'#e8798a',M:'#4a4f60',W:'#e9ecf3',K:'#ec5f7e'},
+  orange: {O:'#5a3b2e',Y:'#f2b06a',S:'#d98546',D:'#d99858',P:'#f2a1ae',E:'#2b1d18',H:'#ffffff',B:'#f59aa6',N:'#e8798a',M:'#5a3b2e',W:'#fff1df',K:'#ec5f7e',T:'#7fc4ff'},
+  white:  {O:'#5b5566',Y:'#fbf8f4',S:'#a9a4b6',D:'#e3ddd6',P:'#f2a1ae',E:'#2b2630',H:'#ffffff',B:'#f7b0bb',N:'#e8798a',M:'#5b5566',W:'#ffffff',K:'#ec5f7e',T:'#7fc4ff'},
+  black:  {O:'#1d1a22',Y:'#3a3542',S:'#2c2833',D:'#2f2a36',P:'#e89aa8',E:'#f5d36b',H:'#fff6c8',B:'#c9707f',N:'#e8798a',M:'#9a92a8',W:'#5a5363',K:'#ec5f7e',T:'#7fc4ff'},
+  calico: {O:'#5a3b2e',Y:'#fffaf2',S:'#e59a4f',D:'#3e3434',P:'#f2a1ae',E:'#2b1d18',H:'#ffffff',B:'#f59aa6',N:'#e8798a',M:'#5a3b2e',W:'#ffffff',K:'#ec5f7e',T:'#7fc4ff'},
+  gray:   {O:'#4a4f60',Y:'#a7aec2',S:'#868da3',D:'#9097ab',P:'#f2b1bc',E:'#232631',H:'#ffffff',B:'#f0a5b2',N:'#e8798a',M:'#4a4f60',W:'#e9ecf3',K:'#ec5f7e',T:'#7fc4ff'},
 };
 const soft = p => Object.assign({}, p, {O: p.D});      // no-outline soft version
-const gb = {O:'#0f380f',Y:'#8bac0f',S:'#306230',D:'#306230',P:'#9bbc0f',E:'#0f380f',H:'#9bbc0f',B:'#306230',N:'#0f380f',M:'#0f380f',W:'#9bbc0f',K:'#0f380f'};
+const gb = {O:'#0f380f',Y:'#8bac0f',S:'#306230',D:'#306230',P:'#9bbc0f',E:'#0f380f',H:'#9bbc0f',B:'#306230',N:'#0f380f',M:'#0f380f',W:'#9bbc0f',K:'#0f380f',T:'#7fc4ff'};
 
 // calico patches: recolor some Y as S/D in head & body
 function calicoize(rows){

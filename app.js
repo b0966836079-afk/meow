@@ -152,6 +152,29 @@ const App = (function(){
 
   // ---------- chat ----------
   const STK=["normal","happy","love","surprised","sleep","wave","loaf"];
+  // [id, face/pose, caption, decoration]
+  const STICKERS = [
+    ["loveyou","love","愛你","hearts"],["miss","cry","想你","hearts"],["hug","wave","抱抱","hearts"],["kiss","love","啾～","kiss"],
+    ["morning","happy","早安","sun"],["night","sleep","晚安","moon"],["sleepy","sleep","好睏","zzz"],["bye","wave","掰掰",""],
+    ["haha","happy","哈哈哈","sparkle"],["yay","happy","耶～","sparkle"],["good","happy","讚啦","star"],["ok","normal","OK","" ],
+    ["thanks","love","謝謝","flower"],["sorry","cry","對不起","sweat"],["cry","cry","哭哭","tears"],["angry","angry","哼！","anger"],
+    ["what","surprised","蛤？","q"],["shock","surprised","嚇死","excl"],["hungry","normal","好餓","food"],["eat","happy","吃飯了","food"],
+    ["shy","love","害羞","blush"],["busy","angry","忙碌中","sweat"],["home","wave","到家了","home"],["wait","normal","等我","sweat"],
+    ["cute","love","你好可愛","sparkle"],["best","happy","你最棒","star"],["jealous","angry","吃醋","anger"],["please","cry","拜託嘛","sparkle"],
+    ["loaf","loaf","耍廢中","zzz"],["curl","curl","不想動","zzz"],
+  ];
+  const STK_BY = Object.fromEntries(STICKERS.map(x=>[x[0],x]));
+  const DECO = {
+    hearts: '<span class="d d1">💗</span><span class="d d2">💕</span>', kiss:'<span class="d d1">💋</span>', sun:'<span class="d d1">☀️</span>', moon:'<span class="d d1">🌙</span><span class="d d2">⭐</span>',
+    zzz:'<span class="d d1 z">z</span><span class="d d2 z">Z</span>', sparkle:'<span class="d d1">✨</span><span class="d d2">✨</span>', star:'<span class="d d1">👍</span>', flower:'<span class="d d1">🌸</span>',
+    sweat:'<span class="d d1">💦</span>', tears:'<span class="d d1">💧</span><span class="d d2">💧</span>', anger:'<span class="d d1">💢</span>', q:'<span class="d d1 q">？</span>', excl:'<span class="d d1 q">！</span>',
+    food:'<span class="d d1">🍙</span>', blush:'<span class="d d1">///</span>', home:'<span class="d d1">🏠</span>',
+  };
+  function stickerHtml(id, cat){
+    const st = STK_BY[id];
+    if(!st){ return id==="heart" ? icon("heart") : sprite(cat||"orange", STK.includes(id)?id:"normal"); }
+    return `<span class="stkArt">${sprite(cat||"orange", st[1])}${DECO[st[3]]||""}<b>${esc(st[2])}</b></span>`;
+  }
   const QK = {
     "常用語": ["我愛你 ❤️","想你了","抱抱 🫂","親親 😘","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","等等打給你","好喔 👌","哈哈哈哈"],
     "表情": ["❤️","💕","🥰","😘","😍","🥺","😭","😂","🤣","😳","😴","🤗","👍","👌","🙏","🎉","🌙","☀️","🍰","🐱","🐾","🌸","✨","💤"],
@@ -198,7 +221,7 @@ const App = (function(){
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">🎮 ${esc(m.body)}</div></div>`;
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
-    if(m.kind==="sticker") bub = `<span class="stk">${m.body==="heart"?icon("heart"):sprite(m.cat||"orange", STK.includes(m.body)?m.body:"normal")}</span>`;
+    if(m.kind==="sticker") bub = `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
     else if(m.kind==="image") bub = `<span class="pic"><img data-media="${esc(m.media||"")}" ${imgCache[m.media]?`src="${esc(imgCache[m.media])}"`:""} alt="照片"></span>`;
     else if(m.kind==="poke") bub = `<div class="bub">戳了${mine?"對方":"你"}一下 🐾</div>`;
     else bub = `<div class="bub">${esc(m.body)}</div>`;
@@ -208,7 +231,7 @@ const App = (function(){
   let kb = null;
   function viewChat(v){
     v.innerHTML = `<div class="box chat"><div class="list" id="list"></div>
-      <div class="stickers hidden" id="stk">${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}<button data-s="poke" title="戳一下">${icon("paw")}</button></div>
+      <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
       <textarea id="txt" placeholder="點這裡打字…" maxlength="1000" readonly inputmode="none"></textarea><button class="send" id="bSend">傳送</button></div>
@@ -241,6 +264,8 @@ const App = (function(){
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
     $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; } showKb(false); });
     ctx._toSys = toSys;
+    const unreadLove = messages.filter(m=>m.id>lastSeen && m.sender!==me.uid && isLove(m));
+    if(unreadLove.length) setTimeout(()=>playLove(unreadLove.length, unreadLove[0].sender), 350);
     markSeen();
   }
   function insertText(t){ const x=$("txt"); x.value = (x.value + t).slice(0,1000); typeFx("key", [...t].length); }
@@ -284,6 +309,39 @@ const App = (function(){
     for(let i=0;i<6;i++){ const d=document.createElement("div"); d.style.cssText=`position:fixed;left:${b.left+b.width/2-9}px;top:${b.top}px;width:18px;height:18px;pointer-events:none;z-index:45`; d.innerHTML=icon(i%2?"heart":"star"); document.body.appendChild(d);
       const dx=-30-Math.random()*120, dy=-80-Math.random()*120;
       d.animate([{transform:"translate(0,0) scale(.5)"},{transform:`translate(${dx}px,${dy}px) scale(1.2)`,opacity:1,offset:.6},{transform:`translate(${dx*1.2}px,${dy*1.3}px) scale(.5)`,opacity:0}],{duration:650,easing:"steps(8,end)",fill:"forwards"}); setTimeout(()=>d.remove(),700); }
+  }
+  // ---------- "我愛你" kiss animation ----------
+  const LOVE_RE = /我愛你|我愛妳|愛你|愛妳|love\s*you|ily/i;
+  const isLove = m => m && (m.kind==="text" ? LOVE_RE.test(m.body) : (m.kind==="sticker" && (m.body==="loveyou"||m.body==="kiss")));
+  let loveBusy = false, loveQueue = 0, loveFrom = null, loveT = null;
+  function queueLove(fromUid){ loveQueue++; loveFrom = fromUid; clearTimeout(loveT); loveT = setTimeout(()=>{ const n=loveQueue; loveQueue=0; playLove(n, loveFrom); }, 500); }
+  function playLove(n, fromUid){
+    if(loveBusy || !n) return; loveBusy = true;
+    const p = partner(); if(!p){ loveBusy=false; return; }
+    const fromCat = catOf(fromUid), toUid = fromUid===me.uid ? p.user_id : me.uid, toCat = catOf(toUid);
+    const o = document.createElement("div"); o.className = "loveFx";
+    o.innerHTML = `<div class="lfBg"></div><div class="lfStage"><div class="lfCat l" id="lfL">${sprite(fromCat,"happy")}</div><div class="lfCat r" id="lfR">${sprite(toCat,"happy")}</div>
+      <div class="lfKiss hidden" id="lfKiss">啾～</div><div class="lfBig hidden" id="lfBig">${icon("heart")}${n>1?`<b>×${n}</b>`:""}</div></div>
+      <div class="lfTxt">${esc(nameOf(fromUid))} 說：我愛你${n>1?` ×${n}`:""} 💗</div>`;
+    document.body.appendChild(o);
+    const L = o.querySelector("#lfL"), R = o.querySelector("#lfR");
+    const walk = [{transform:"translateX(0) translateY(0)"},{transform:"translateX(25%) translateY(-6px)"},{transform:"translateX(50%) translateY(0)"},{transform:"translateX(75%) translateY(-6px)"},{transform:"translateX(100%) translateY(0)"}];
+    L.animate(walk,{duration:1300,easing:"steps(8,end)",fill:"forwards"});
+    R.animate(walk.map(k=>({transform:k.transform.replace("translateX(","translateX(-")})),{duration:1300,easing:"steps(8,end)",fill:"forwards"});
+    SFX.meow(1); setTimeout(()=>SFX.meow(1.15), 350);
+    const done = () => { o.animate([{opacity:1},{opacity:0}],{duration:350,fill:"forwards"}).onfinish=()=>{ o.remove(); loveBusy=false; }; };
+    let finished = false; const finish = ()=>{ if(finished) return; finished=true; done(); };
+    o.addEventListener("click", finish);
+    setTimeout(()=>{
+      L.innerHTML = sprite(fromCat,"love"); R.innerHTML = sprite(toCat,"love");
+      L.animate([{transform:"translateX(100%) rotate(0)"},{transform:"translateX(108%) rotate(10deg)"},{transform:"translateX(100%) rotate(0)"}],{duration:600,fill:"forwards"});
+      R.animate([{transform:"translateX(-100%) rotate(0)"},{transform:"translateX(-108%) rotate(-10deg)"},{transform:"translateX(-100%) rotate(0)"}],{duration:600,fill:"forwards"});
+      const k = o.querySelector("#lfKiss"); k.classList.remove("hidden"); k.animate([{transform:"translate(-50%,0) scale(.3)",opacity:0},{transform:"translate(-50%,-20px) scale(1.2)",opacity:1,offset:.5},{transform:"translate(-50%,-30px) scale(1)",opacity:1}],{duration:500,fill:"forwards"});
+      SFX.heart(); haptic();
+      for(let i=0;i<14;i++) setTimeout(()=>{ const h=document.createElement("div"); h.className="float"; h.innerHTML=icon(i%3?"heart":"star"); h.style.left=(35+Math.random()*30)+"vw"; h.style.top=(45+Math.random()*10)+"vh"; document.body.appendChild(h); setTimeout(()=>h.remove(),2300); }, i*70);
+    }, 1350);
+    setTimeout(()=>{ const b = o.querySelector("#lfBig"); b.classList.remove("hidden"); b.animate([{transform:"translate(-50%,-50%) scale(0)"},{transform:"translate(-50%,-50%) scale(1.3)",offset:.6},{transform:"translate(-50%,-50%) scale(1)"}],{duration:500,easing:"ease-out",fill:"forwards"}); if(n>1) SFX.combo(); }, 1900);
+    setTimeout(finish, 3600);
   }
   function fillImages(){
     document.querySelectorAll(".pic img[data-media]").forEach(async im=>{
@@ -335,7 +393,7 @@ const App = (function(){
   function addMessage(m){
     if(!m || messages.some(x=>x.id===m.id)) return;
     messages.push(m); messages.sort((a,b)=>a.id-b.id); if(messages.length>300) messages=messages.slice(-300);
-    if(chatVisible()){ drawList(false); markSeen(); }
+    if(chatVisible()){ drawList(false); markSeen(); if(isLove(m)) queueLove(m.sender); }
     else renderBadge();
     if(m.sender!==me.uid){
       if(m.kind==="poke"){ SFX.meow(1.12); haptic(); floatSvg(sprite(m.cat||"white","wave")); }
