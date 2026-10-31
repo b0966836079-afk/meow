@@ -113,7 +113,7 @@ const App = (function(){
   let lastHdr="", wasOnline=null;
   function renderHeader(){
     const p = partner(); const here = p && isOnline(p.user_id);
-    const k = (me.cat||"orange")+(p?p.cat:"-")+here+JSON.stringify(moodSt&&moodSt.moods||{});
+    const k = (me.cat||"orange")+(p?p.cat:"-")+here+JSON.stringify(moodSt&&moodSt.moods||{})+JSON.stringify(moodSt&&moodSt.status||{});
     if(k!==lastHdr){ lastHdr=k;
       $("catMe").innerHTML = sprite(me.cat||"orange", moodFace(me.uid,"normal"));
       $("catThem").innerHTML = p ? sprite(p.cat, moodFace(p.user_id, here?"normal":"curl")) : sprite("white","normal",{soft:true});
@@ -121,7 +121,8 @@ const App = (function(){
     $("nmMe").textContent = me.name||"我";
     $("nmThem").textContent = p ? p.name : "???";
     const pm = p && moodOf(p.user_id), mm = moodOf(me.uid);
-    const st=$("stThem"); st.textContent = (!p ? "還沒加入" : here ? "● 在線" : "○ 睡著了") + (pm ? " "+pm[2] : ""); st.className = "st"+(here?" on":"");
+    const st=$("stThem"); const ps = p && statusOf(p.user_id);
+    st.textContent = (!p ? "還沒加入" : ps && ps.def[0]!=="free" ? (here?"● ":"○ ")+ps.def[2]+ps.def[1] : here ? "● 在線" : "○ 睡著了") + (pm ? " "+pm[2] : ""); st.className = "st"+(here?" on":"");
     const sm = document.querySelector("#top .who .st:not(#stThem)"); if(sm) sm.textContent = "● 你" + (mm ? " "+mm[2] : "");
     if(p){ if(wasOnline===false && here){ SFX.join(); toast(`${sprite(p.cat,"wave")} ${esc(p.name)} 上線了！`); } wasOnline = !!here; }
   }
@@ -140,7 +141,7 @@ const App = (function(){
   }
   function viewHome(v){
     const p = partner();
-    let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${careCard()}<div class="box meter" id="meter"></div>`;
+    let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${statusCard()}${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">另一半還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
     if(pushState()!=="on") html += `<div class="box banner"><span class="bi">${icon("bell")}</span><div style="flex:1">開啟通知，ta 傳訊息時手機會跳出來</div><button class="btn mint" id="bPush">開啟</button></div>`;
     html += `<div class="games">` + games.map(g=>`<button class="gcard" data-g="${g.id}"><span class="gi">${g.icon()}</span><span class="gn">${esc(g.name)}</span><span class="gd">${esc(g.desc)}</span>${g.badge&&g.badge()?`<span class="gb">${esc(g.badge())}</span>`:""}</button>`).join("")
@@ -148,7 +149,7 @@ const App = (function(){
     v.innerHTML = html;
     renderMeter();
     v.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>go("game-"+b.dataset.g)));
-    bindCare(v);
+    bindCare(v); bindStatus(v);
     const bi=$("bInv"); if(bi) bi.addEventListener("click", shareInvite);
     const bp=$("bPush"); if(bp) bp.addEventListener("click", ()=>enablePush().then(()=>render()));
   }
@@ -223,6 +224,7 @@ const App = (function(){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
     if(m.kind==="ping") return "";
+    if(m.kind==="status") return `<div class="msg sys status"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="truce") return `<div class="msg sys truce"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="letter"){ const opened = mine || openedLetters.has(m.id);
       return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<button class="letterBub ${opened?"":"new"}" data-letter="${m.id}"><span class="lb1">💌</span><span><b>${mine?"你寫的信":"一封信"}</b><i>${opened?"點開再看一次":"點我拆信"}</i></span></button><span class="tm">${hhmm(m.created_at)}</span></div>`; }
@@ -239,7 +241,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}</div><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
@@ -539,6 +541,7 @@ const App = (function(){
     return `<div class="truceBar" data-truce>🏳️ <span>${mine?"你正在冷靜":esc(nameOf(t.by))+" 想先冷靜一下"}</span><b class="tLeft">${fmtLeft(t.until-Date.now())}</b></div>`;
   }
   function tickTruce(){
+    if(Date.now()%20000 < 1000) refreshStatus(false);
     const t = truce();
     document.querySelectorAll("[data-truce] .tLeft").forEach(e=>e.textContent = t ? fmtLeft(t.until-Date.now()) : "");
     if(t && Date.now() >= t.until) endTruce(false);
@@ -622,6 +625,96 @@ const App = (function(){
     const close=()=>{ o.animate([{opacity:1},{opacity:0}],{duration:300}).onfinish=()=>o.remove(); };
     o.addEventListener("click", close); setTimeout(close, 4200);
   }
+  // ---- status board (上班中 / 開會中 …) ----
+  const STATUSES = [["free","有空","🟢"],["work","上班中","💼"],["meeting","開會中","🗣️"],["drive","開車中","🚗"],["busy","忙碌中","⏳"],["eat","吃飯中","🍙"],["bath","洗澡中","🛁"],["sleep","睡覺中","🌙"],["out","出門中","🚶"],["game","打遊戲","🎮"]];
+  const STATUS_BY = Object.fromEntries(STATUSES.map(x=>[x[0],x]));
+  const GRACE = 3*3600e3;
+  // returns {def, until, over} or null when nothing worth showing
+  function statusOf(uid){
+    const s = moodSt && moodSt.status && moodSt.status[uid]; if(!s || !STATUS_BY[s.s]) return null;
+    const now = Date.now(), def = STATUS_BY[s.s];
+    if(s.s==="free") return now - s.at < GRACE ? { def, until:null, over:false } : null;
+    const end = s.until || (s.at + 12*3600e3);
+    if(now > end + (s.until ? GRACE : 0)) return null;
+    return { def, until: s.until||null, over: !!s.until && now > s.until };
+  }
+  const isBusy = uid => { const x = statusOf(uid); return !!x && x.def[0]!=="free"; };
+  function fmtUntil(t){
+    const d = new Date(t), now = new Date(), tm = hhmm(t);
+    if(d.toDateString()===now.toDateString()) return tm;
+    const tmr = new Date(now); tmr.setDate(now.getDate()+1);
+    return (d.toDateString()===tmr.toDateString() ? "明天 " : `${d.getMonth()+1}/${d.getDate()} `) + tm;
+  }
+  const statusLine = x => !x ? "" : x.def[0]==="free" ? "現在有空" : x.until ? (x.over ? `說 ${fmtUntil(x.until)} 有空・快好了？` : `大概 ${fmtUntil(x.until)} 有空`) : "還不確定幾點有空";
+  function statusCard(){
+    const p = partner(); if(!p) return "";
+    const mine = statusOf(me.uid), theirs = statusOf(p.user_id), busy = mine && mine.def[0]!=="free";
+    const tile = (x, name, who) => `<span class="stEm">${x?x.def[2]:"🐾"}</span><span class="stTx"><b>${esc(name)}${x?`・${x.def[1]}`:""}</b><i>${x?statusLine(x):who==="me"?"點我設定狀態":"還沒設定狀態"}</i></span>`;
+    return `<div class="box statBox" id="statBox">
+      <div class="careHd">📋 狀態牌</div>
+      <div class="stTiles"><button class="stT" id="stMe">${tile(mine, me.name||"我", "me")}</button><div class="stT them ${theirs&&theirs.def[0]!=="free"?"busy":""}">${tile(theirs, p.name, "them")}</div></div>
+      ${busy ? `<div class="stAct">${mine.over?`<span>已經過了你說的時間，忙完了嗎？</span>`:""}<button class="btn mint" id="stDone">🟢 我忙完了</button>${mine.over?`<button class="btn sub" id="stMore">還在忙 +1 小時</button>`:""}</div>` : ""}
+    </div>`;
+  }
+  function bindStatus(root){
+    const q = id => root.querySelector("#"+id);
+    if(q("stMe")) q("stMe").addEventListener("click", statusPicker);
+    if(q("stDone")) q("stDone").addEventListener("click", ()=>setStatus("free", null));
+    if(q("stMore")) q("stMore").addEventListener("click", ()=>{ const cur = moodSt.status[me.uid]; setStatus(cur.s, Date.now()+3600e3, true); });
+  }
+  function busyBar(){
+    const p = partner(); if(!p) return ""; const x = statusOf(p.user_id);
+    if(!x || x.def[0]==="free") return "";
+    return `<div class="busyBar">${x.def[2]} <span>${esc(p.name)} ${x.def[1]}，${statusLine(x)}<br><small>訊息可能會晚點回喔</small></span></div>`;
+  }
+  let statusKey = "";
+  function refreshStatus(force){
+    const p = partner();
+    const k = JSON.stringify([statusOf(me.uid), p && statusOf(p.user_id)]);
+    if(!force && k===statusKey) return; statusKey = k;
+    if(route==="home"){ const c=$("statBox"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=statusCard(); if(tmp.firstChild){ c.replaceWith(tmp.firstChild); bindStatus($("view")); } } }
+    document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar()+busyBar());
+    lastHdr = ""; renderHeader();
+  }
+  function statusPicker(){
+    const cur = statusOf(me.uid);
+    const o = modal(`<h3>你現在在做什麼？</h3><div class="stGrid">${STATUSES.map(x=>`<button data-s="${x[0]}" class="${cur&&cur.def[0]===x[0]?"on":""} ${x[0]==="free"?"free":""}"><span>${x[2]}</span>${x[1]}</button>`).join("")}</div><div class="k">對方會在大廳、聊天室上面看到你的狀態</div>`);
+    o.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click", ()=>{
+      const sid = b.dataset.s; SFX.select();
+      if(sid==="free"){ o.remove(); setStatus("free", null); return; }
+      untilPicker(o, sid);
+    }));
+  }
+  function untilPicker(o, sid){
+    const def = STATUS_BY[sid], now = new Date();
+    const at = (h,m) => { const d = new Date(now); d.setHours(h,m,0,0); if(d <= now) d.setDate(d.getDate()+1); return d.getTime(); };
+    const opts = [["不確定", null],["30 分鐘", Date.now()+30*60e3],["1 小時", Date.now()+3600e3],["2 小時", Date.now()+2*3600e3],["3 小時", Date.now()+3*3600e3]];
+    if(sid==="work") opts.push(["到 18:00", at(18,0)]);
+    if(sid==="sleep") opts.push(["到早上 8:00", at(8,0)]);
+    const def0 = new Date(Date.now()+3600e3);
+    o.querySelector(".cmBox").innerHTML = `<h3>${def[2]} ${def[1]}・大概什麼時候有空？</h3>
+      <div class="tcGrid">${opts.map((x,i)=>`<button data-u="${i}">${x[0]}</button>`).join("")}</div>
+      <div class="stTime"><span>或指定時間</span><input type="time" id="stT" value="${hhmm(def0)}"><button class="btn" id="stTOk">好</button></div>
+      <div class="k">時間到之後，你這邊會問你忙完了沒</div>`;
+    o.querySelectorAll("[data-u]").forEach(b=>b.addEventListener("click", ()=>{ o.remove(); setStatus(sid, opts[+b.dataset.u][1]); }));
+    o.querySelector("#stTOk").addEventListener("click", ()=>{
+      const v = o.querySelector("#stT").value; if(!/^\d\d:\d\d$/.test(v)) return;
+      o.remove(); setStatus(sid, at(+v.slice(0,2), +v.slice(3)));
+    });
+  }
+  async function setStatus(sid, until, quiet){
+    const was = isBusy(me.uid);
+    const ok = await update("mood", st=>{ st = st || {}; st.status = st.status || {}; st.status[me.uid] = { s: sid, until: until||null, at: Date.now() }; return st; });
+    if(!ok) return;
+    const def = STATUS_BY[sid], p = partner();
+    if(sid==="free"){
+      toast(`${sprite(me.cat||"orange","happy")} 狀態改成「有空」`);
+      if(was && p){ try{ const row = await B.send(`🟢 ${me.name} 忙完了，現在有空！`, "status", me.name, me.cat); addMessage(row); }catch(e){} }
+    } else {
+      toast(`${sprite(me.cat||"orange","normal")} 狀態改成「${def[1]}」`);
+      if(p && !quiet){ try{ const row = await B.send(`${def[2]} ${me.name} ${def[1]}，${until?`大概 ${fmtUntil(until)} 有空`:"晚點回你"}`, "status", me.name, me.cat); addMessage(row); }catch(e){} }
+    }
+  }
   function onMood(st){
     const prev = moodSt; moodSt = st;
     const mk = st && st.makeup && st.makeup.last;
@@ -629,7 +722,8 @@ const App = (function(){
     if(mk) shownMakeup = mk.n; else if(shownMakeup===null) shownMakeup = 0;
     lastHdr = ""; renderHeader();
     if(route==="home"){ const c=$("care"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=careCard(); c.replaceWith(tmp.firstChild); bindCare($("view")); } const tb=$("truceHome"); if(tb) tb.innerHTML = truceBar(); }
-    document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar());
+    document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar()+busyBar());
+    refreshStatus(true);
     if(chatVisible()) drawList(false);
   }
   // ---------- settings ----------
