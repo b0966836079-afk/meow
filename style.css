@@ -510,3 +510,18 @@ body[data-wall="night"] .msg .rd{color:#ffd3dd}
 .walls button.on{border-color:var(--line);background:var(--pinkL);box-shadow:2px 2px 0 var(--shadow)}
 .walls .wv{width:100%;aspect-ratio:3/4;border-radius:5px;border:1px solid rgba(0,0,0,.15);overflow:hidden;position:relative}
 .walls .wv .chat,.walls .wv .list{position:absolute;inset:0;height:100%;padding:0;border:0;animation:none!important}
+/* runner: landscape fullscreen */
+.rnPreview{position:relative;height:110px;border:3px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(#bfe3ff,#ffe9f0)}
+.rnPreview svg{position:absolute;left:30px;bottom:24px;width:70px;height:70px;animation:bob .5s steps(2) infinite}
+.rnGround{position:absolute;left:0;right:0;bottom:0;height:26px;background:linear-gradient(#86cf88 0 5px,#c9925c 5px)}
+.rnStart{margin-top:10px;height:60px;font-size:20px;border-radius:14px}
+.rnFull{position:fixed;inset:0;z-index:95;background:#000;overflow:hidden;touch-action:none}
+.rnFull.hidden{display:none}
+.rnStage{position:absolute;left:0;top:0;transform-origin:top left;user-select:none;-webkit-user-select:none}
+.rnStage.rot{transform:rotate(90deg) translateY(-100%)}
+.rnStage canvas{display:block;image-rendering:pixelated;touch-action:none}
+.rnStage .rnOver{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.rnStage .rnOver.hidden{display:none}
+.rnStage .rnMenu{min-width:min(60%,340px)}
+.rnX{position:absolute;right:calc(10px + env(safe-area-inset-right));top:10px;width:40px;height:40px;border-radius:50%;border:3px solid var(--line);background:rgba(255,255,255,.9);font-size:18px;z-index:3}
+body.rnLock{overflow:hidden}

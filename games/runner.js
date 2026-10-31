@@ -1,6 +1,6 @@
 // 遊戲：跳跳貓每日挑戰（橫向跑酷；每天兩個人的關卡一模一樣，比誰跑得遠）
 (function(){
-const W = 360, H = 200, GROUND = 34, GRAV = 1700, JUMP = 560, JUMP2 = 470;
+let W = 360; const H = 200, GROUND = 34, GRAV = 1700, JUMP = 560, JUMP2 = 470;
 function rng(seed){ let s = seed>>>0 || 1; return ()=> (s = (s*1664525 + 1013904223)>>>0) / 4294967296; }
 function hash(str){ let h=2166136261; for(const c of str){ h^=c.charCodeAt(0); h=Math.imul(h,16777619); } return h>>>0; }
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
@@ -33,15 +33,47 @@ App.registerGame({
     const { sprite, icon, esc, SFX } = ctx;
     let s = null, run = null, raf = 0;
     el.innerHTML = `<div class="box rn"><div class="rnBoard" id="rnBoard"></div>
-      <div class="rnField"><canvas id="rnC"></canvas><div class="rnOver" id="rnOver"></div></div>
-      <div class="rnHint">點畫面跳躍，在空中可以再跳一次（二段跳）</div></div>`;
-    const $ = q => el.querySelector(q);
-    const cv = $("#rnC"), g = cv.getContext("2d");
+      <div class="rnPreview" id="rnPrev">${sprite(ctx.me.cat,"happy")}<div class="rnGround"></div></div>
+      <button class="btn rnStart" id="rnStart">🏃 橫向全螢幕開始！</button>
+      <div class="rnHint">把手機橫過來玩・點畫面跳躍，在空中可以再跳一次（二段跳）</div></div>`;
+    const $ = q => el.querySelector(q) || document.querySelector(q);
+    const full = document.createElement("div"); full.className = "rnFull hidden";
+    full.innerHTML = `<div class="rnStage" id="rnStage"><canvas id="rnC"></canvas><div class="rnOver" id="rnOver"></div><button class="rnX" id="rnX">✕</button></div>`;
+    document.body.appendChild(full);
+    const cv = full.querySelector("#rnC"), g = cv.getContext("2d"), stage = full.querySelector("#rnStage");
     const me = () => ctx.me.uid;
     let scale = 1;
     const img = (svg, w, h) => { const i = new Image(); i.src = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg.replace("<svg ", `<svg width="${w}" height="${h}" `)); return i; };
     const IM = { run1: img(sprite(ctx.me.cat,"happy"),80,80), run2: img(sprite(ctx.me.cat,"normal"),80,80), hurt: img(sprite(ctx.me.cat,"surprised"),80,80), fish: img(icon("fish"),48,32), heart: img(icon("heart"),40,40) };
-    function resize(){ const r = cv.getBoundingClientRect(); if(!r.width) return; const d = window.devicePixelRatio||1; cv.width=r.width*d; cv.height=r.width*H/W*d; scale=r.width/W; g.setTransform(d*scale,0,0,d*scale,0,0); g.imageSmoothingEnabled=false; drawIdle(); }
+    function layout(){
+      if(full.classList.contains("hidden")) return;
+      const vw = window.innerWidth, vh = window.innerHeight, portrait = vh > vw;
+      const long = portrait ? vh : vw, short = portrait ? vw : vh;
+      stage.classList.toggle("rot", portrait);
+      stage.style.width = long+"px"; stage.style.height = short+"px";
+      const d = window.devicePixelRatio||1;
+      W = Math.round(H * long / short);
+      cv.style.width = long+"px"; cv.style.height = short+"px";
+      cv.width = long*d; cv.height = short*d; scale = short/H;
+      g.setTransform(d*scale,0,0,d*scale,0,0); g.imageSmoothingEnabled=false;
+      if(!run) drawIdle(); else draw();
+    }
+    function resize(){ layout(); }
+    async function openFull(){
+      full.classList.remove("hidden"); document.body.classList.add("rnLock");
+      try{ if(document.documentElement.requestFullscreen && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI:"hide" }); }catch(e){}
+      try{ if(screen.orientation && screen.orientation.lock) await screen.orientation.lock("landscape"); }catch(e){}
+      setTimeout(layout, 60); setTimeout(layout, 400);
+    }
+    async function closeFull(){
+      if(run){ cancelAnimationFrame(raf); run = null; }
+      full.classList.add("hidden"); document.body.classList.remove("rnLock");
+      try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+      try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){}
+    }
+    window.addEventListener("resize", layout);
+    full.querySelector("#rnX").addEventListener("click", e=>{ e.stopPropagation(); closeFull(); });
+    $("#rnStart").addEventListener("click", async ()=>{ await openFull(); menu(); });
     const sy = y => H - GROUND - y;
 
     function board(){
@@ -56,7 +88,7 @@ App.registerGame({
     function overlay(html){ const o=$("#rnOver"); o.innerHTML = html; o.classList.toggle("hidden", !html); }
     function menu(){
       const t = ((s && s.daily) || {})[today()]||{}, mine = t[me()];
-      overlay(`<div class="rnMenu"><div class="rnCatBig">${sprite(ctx.me.cat,"wave")}</div><button class="btn" id="rnGo">${mine!=null?"再挑戰一次":"開始跑！"}</button>${mine!=null?`<div class="rnSmall">今天最佳：${mine} 公尺</div>`:""}</div>`);
+      overlay(`<div class="rnMenu"><div class="rnCatBig">${sprite(ctx.me.cat,"wave")}</div><button class="btn" id="rnGo">${mine!=null?"再挑戰一次":"開始跑！"}</button>${mine!=null?`<div class="rnSmall">今天最佳：${mine} 公尺</div>`:""}<div class="rnSmall">點畫面跳躍・空中可以再跳一次</div></div>`);
       $("#rnGo").addEventListener("click", e=>{ e.stopPropagation(); start(); });
     }
     function drawBg(dist){
@@ -106,7 +138,7 @@ App.registerGame({
       const cx0 = 52, cx1 = 70, cy0 = r.y+2, cy1 = r.y+20;
       for(const it of r.items){
         const sx = it.x - r.dist + 60;
-        if(sx > 120) break;
+        if(sx > 140) break;
         if(sx + it.w < 40) continue;
         const y0 = it.y||0, y1 = y0 + it.h;
         if(sx < cx1 && sx+it.w > cx0 && y0 < cy1 && y1 > cy0){
@@ -132,8 +164,7 @@ App.registerGame({
       if(run.jumps===0 && run.y<=0){ run.vy = JUMP; run.jumps = 1; SFX.jump(); }
       else if(run.jumps<2){ run.vy = JUMP2; run.jumps = 2; SFX.jump(); }
     }
-    cv.addEventListener("pointerdown", e=>{ e.preventDefault(); jump(); });
-    $("#rnOver").addEventListener("pointerdown", e=>{ if(run && !run.over) jump(); });
+    stage.addEventListener("pointerdown", e=>{ if(e.target.closest("button")) return; if(run && !run.over){ e.preventDefault(); jump(); } });
     async function end(){
       SFX.hit(); setTimeout(()=>SFX.miss(), 150);
       const meters = Math.floor(run.dist/10) + run.fish*10, day = today();
@@ -153,16 +184,18 @@ App.registerGame({
       if(rec && p && theirs!=null && beat) ctx.notifyPartner(`${ctx.me.name} 在「跳跳貓」跑了 ${meters} 公尺，超過你了！`);
       overlay(`<div class="rnMenu"><div class="rnScore">${meters} 公尺</div><div class="rnSmall">距離 ${Math.floor(run.dist/10)} ＋ 小魚乾 ${run.fish}×10</div>
         ${rec?`<div class="rnRec">今日新紀錄！</div>`:""}${theirs!=null?`<div class="rnSmall">${esc(p.name)} 今天：${theirs} 公尺${beat?"・<b>你領先！</b>":""}</div>`:""}
-        <button class="btn" id="rnGo">再跑一次</button></div>`);
+        <div style="display:flex;gap:8px"><button class="btn sub" id="rnQuit" style="flex:1">離開</button><button class="btn" id="rnGo" style="flex:2">再跑一次</button></div></div>`);
+      $("#rnQuit").addEventListener("click", e=>{ e.stopPropagation(); closeFull(); });
       $("#rnGo").addEventListener("click", e=>{ e.stopPropagation(); start(); });
       if(rec) { ctx.burst(); SFX.level(); }
       run = null;
     }
     this._u = ctx.onState("runner", st=>{ s = st; board(); });
-    this._ro = new ResizeObserver(resize); this._ro.observe(cv);
+
     this._stop = () => { cancelAnimationFrame(raf); run = null; };
-    (async()=>{ const cur = await ctx.getState("runner"); s = cur ? JSON.parse(JSON.stringify(cur.state)) : null; board(); menu(); resize(); })();
+    this._full = () => { closeFull(); window.removeEventListener("resize", layout); full.remove(); };
+    (async()=>{ const cur = await ctx.getState("runner"); s = cur ? JSON.parse(JSON.stringify(cur.state)) : null; board(); })();
   },
-  unmount(){ if(this._u) this._u(); if(this._ro) this._ro.disconnect(); if(this._stop) this._stop(); },
+  unmount(){ if(this._u) this._u(); if(this._ro) this._ro.disconnect(); if(this._stop) this._stop(); if(this._full) this._full(); },
 });
 })();
