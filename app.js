@@ -147,7 +147,6 @@ const App = (function(){
     "表情": ["❤️","💕","🥰","😘","😍","🥺","😭","😂","🤣","😳","😴","🤗","👍","👌","🙏","🎉","🌙","☀️","🍰","🐱","🐾","🌸","✨","💤"],
     "顏文字": ["ฅ^•ﻌ•^ฅ","(=^･ω･^=)","(つ≧▽≦)つ","(*´∀`)~♥","(´；ω；`)","╰(*°▽°*)╯","(｡･ω･｡)ﾉ♡","(*´з`)","(￣▽￣)ノ","( ˘ω˘ )zzZ","(๑•̀ㅂ•́)و✧","(⁄ ⁄•⁄ω⁄•⁄ ⁄)"],
   };
-  let qkTab = "常用語";
   let lastSeen = +(store.get("mw_seen")||0);
   const imgCache = {};
   function unread(){ return messages.filter(m=>m.id>lastSeen && m.sender!==me.uid).length; }
@@ -174,40 +173,43 @@ const App = (function(){
     const p = partner(); const read = mine && p && (p.last_read||0) >= m.id;
     return `<div class="msg ${mine?"me":""} ${m.kind==="poke"?"poke":""}">${mine?"":av}${bub}<span class="tm">${read?`<span class="rd">已讀</span>`:""}${hhmm(m.created_at)}</span></div>`;
   }
+  let kb = null;
   function viewChat(v){
     v.innerHTML = `<div class="box chat"><div class="list" id="list"></div>
-      <div class="stickers hidden" id="stk">${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
-      <div class="qk hidden" id="qk"></div>
+      <div class="stickers hidden" id="stk">${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}<button data-s="poke" title="戳一下">${icon("paw")}</button></div>
       <div class="combo hidden" id="combo"></div>
-      <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button><button id="bQk" title="快捷鍵盤">${icon("keys")}</button>
-      <textarea id="txt" placeholder="說點什麼…" maxlength="1000" enterkeyhint="send"></textarea><button class="send" id="bSend">傳送</button></div>
+      <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
+      <textarea id="txt" placeholder="點這裡打字…" maxlength="1000" readonly inputmode="none"></textarea><button class="send" id="bSend">傳送</button></div>
+      <div id="kbd" class="hidden"></div>
       <input type="file" id="fPic" accept="image/*" class="hidden"></div>`;
     drawList(true);
-    const txt=$("txt");
-    $("bSend").addEventListener("click", sendText);
-    txt.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
-    txt.addEventListener("input", e=>{ txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
-    txt.addEventListener("focus", ()=>{ $("qk").classList.add("hidden"); $("stk").classList.add("hidden"); });
-    $("bStk").addEventListener("click", ()=>{ $("qk").classList.add("hidden"); $("stk").classList.toggle("hidden"); });
-    $("bQk").addEventListener("click", ()=>{ $("stk").classList.add("hidden"); const q=$("qk"); q.classList.toggle("hidden"); if(!q.classList.contains("hidden")){ txt.blur(); drawQk(); } });
+    const txt=$("txt"); let sysKb = false;
+    const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; };
+    const showKb = (on) => {
+      $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
+      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", phrases: QK["常用語"].concat(QK["顏文字"]), emojis: QK["表情"],
+        commit: t => { txt.value = (txt.value + t).slice(0,1000); autoSize(); },
+        backspace: () => { const arr=[...txt.value]; arr.pop(); txt.value = arr.join(""); autoSize(); },
+        send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
+        fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); } });
+        const L=$("list"); setTimeout(()=>{ L.scrollTop=L.scrollHeight; }, 50); }
+    };
+    function toSys(){ return toSys_(); }
+    const toSys_ = () => { sysKb=true; showKb(false); txt.readOnly=false; txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
+    const toMeow = () => { sysKb=false; txt.readOnly=true; txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
+    txt.insertAdjacentHTML("beforebegin", `<button id="bKb" class="hidden" title="喵喵鍵盤">${icon("keys")}</button>`);
+    $("bKb").addEventListener("click", toMeow);
+    txt.addEventListener("click", ()=>{ if(!sysKb) showKb(true); });
+    $("bSend").addEventListener("click", ()=>{ if(kb && kb.composing()) kb.flush(); sendText(); });
+    txt.addEventListener("input", e=>{ if(!sysKb) return; autoSize(); if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
+    txt.addEventListener("keydown", e=>{ if(sysKb && e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
+    $("bStk").addEventListener("click", ()=>{ showKb(false); $("stk").classList.toggle("hidden"); });
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
-    $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
-    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src) viewPhoto(im.src); });
+    $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
+    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; } showKb(false); });
+    ctx._toSys = toSys;
     markSeen();
-  }
-  function drawQk(){
-    const q=$("qk"); if(!q) return;
-    const keys = QK[qkTab];
-    q.innerHTML = `<div class="tabs">${Object.keys(QK).map(t=>`<button class="${t===qkTab?"on":""}" data-t="${t}">${t}</button>`).join("")}</div>
-      <div class="keys ${qkTab==="表情"?"emo":qkTab==="顏文字"?"kao":""}">${keys.map((k,i)=>`<button class="k" data-i="${i}">${esc(k)}</button>`).join("")}</div>
-      <div class="fn"><button class="k" id="qkBk">⌫</button><button class="k" id="qkSp">空白</button><button class="k" id="qkPoke">${icon("paw")} 戳</button><button class="k send" id="qkSend">傳送 ▶</button></div>`;
-    q.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>{ qkTab=b.dataset.t; SFX.key(1.4); drawQk(); }));
-    q.querySelectorAll(".keys .k").forEach(b=>b.addEventListener("click",()=>{ insertText(keys[+b.dataset.i]); keyPop(b); }));
-    $("qkBk").addEventListener("click", e=>{ const t=$("txt"); const arr=[...t.value]; arr.pop(); t.value=arr.join(""); typeFx("del"); keyPop(e.currentTarget); });
-    $("qkSp").addEventListener("click", e=>{ insertText(" "); keyPop(e.currentTarget); });
-    $("qkPoke").addEventListener("click", ()=>{ sendMsg("poke","poke"); SFX.meow(); });
-    $("qkSend").addEventListener("click", sendText);
   }
   function insertText(t){ const x=$("txt"); x.value = (x.value + t).slice(0,1000); typeFx("key", [...t].length); }
   function keyPop(btn){ btn.animate([{transform:"translate(2px,2px) scale(.92)"},{transform:"translate(0,0) scale(1.06)"},{transform:"none"}],{duration:180,easing:"steps(3,end)"}); }
@@ -373,7 +375,7 @@ const App = (function(){
   function go(r){ if(location.hash!=="#"+r) location.hash=r; else render(); }
   function render(){
     const r = (location.hash||"#home").slice(1) || "home";
-    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null;
+    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; kb=null; document.body.classList.remove("kbd");
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");
     document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on", b.dataset.go===route || (route==="game"&&b.dataset.go==="home")));

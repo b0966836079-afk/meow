@@ -88,7 +88,7 @@ body.compact #top .mid{padding-bottom:26px}
 .chat .bar button{border:3px solid var(--line);background:#fff;width:40px;height:44px;padding:4px;flex:none;box-shadow:2px 2px 0 var(--shadow)}
 .chat .bar button.send{background:var(--pink);color:#fff;width:56px;font-size:15px}
 .chat .bar button svg{width:100%;height:100%;display:block}
-.stickers{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:6px 8px;border-top:2px dashed var(--shadow);background:#fffaf2}
+.stickers{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;padding:6px 8px;border-top:2px dashed var(--shadow);background:#fffaf2}
 .stickers button{border:2px solid var(--shadow);background:#fff;padding:0;aspect-ratio:1/1}
 .stickers svg{width:100%;height:100%;display:block}
 
@@ -140,3 +140,38 @@ body.compact #top .mid{padding-bottom:26px}
 
 .msg .tm{display:flex;flex-direction:column;align-items:flex-end;line-height:1.3}
 .msg .rd{color:var(--pink);font-size:10px}
+
+/* built-in keyboard */
+body.kbd #nav{display:none}
+body.kbd{padding-bottom:calc(6px + env(safe-area-inset-bottom))}
+body.kbd .chat{height:calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+#kbd{border-top:3px solid var(--line);background:#f3e4d4}
+.ime{user-select:none;-webkit-user-select:none}
+.ime-top{background:#fffaf2;border-bottom:2px solid var(--shadow)}
+.ime .pre{min-height:20px;padding:2px 8px;font-size:15px;color:var(--ink)}
+.ime .pre u{text-decoration:underline dashed var(--pink);text-underline-offset:4px}
+.ime .pre b{font-weight:400;color:var(--pink);margin-left:2px}
+.ime .cands{display:flex;gap:4px;overflow-x:auto;padding:3px 6px 5px;min-height:38px;align-items:center;scrollbar-width:none}
+.ime .cands::-webkit-scrollbar{display:none}
+.ime .cands button{flex:none;border:2px solid var(--line);background:#fff;font-size:18px;padding:2px 9px;box-shadow:0 2px 0 var(--shadow)}
+.ime .cands button:first-child{background:var(--pinkL)}
+.ime .cands .hint{font-size:12px;color:var(--muted);flex:1}
+.ime .cands button.sysk{font-size:12px;background:#fff;padding:2px 6px}
+.ime .cands .hint+button.sysk{margin-left:auto}
+.ime-body{padding:5px 3px 4px}
+.ime .row{display:flex;gap:3px;margin-bottom:4px;justify-content:center}
+.ime .k{flex:1;min-width:0;height:40px;border:2px solid var(--line);background:#fff;box-shadow:0 3px 0 var(--shadow);font-size:17px;padding:0;display:flex;align-items:center;justify-content:center}
+.ime .k:active{background:var(--pinkL)}
+.ime .k.tone{background:#fff6dc;color:#b06b2a}
+.ime .k.fn{background:#f8efe6;font-size:13px;flex:1.2}
+.ime .k.fn.on{background:var(--pink);color:#fff}
+.ime .row.bottom .k{height:42px}
+.ime .row.bottom .sw{flex:.9;font-size:13px}
+.ime .k.space{flex:3;font-size:13px;color:var(--muted)}
+.ime .k.send{flex:1.6;background:var(--pink);color:#fff;font-size:14px}
+.ime .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;max-height:176px;overflow-y:auto;margin-bottom:4px}
+.ime .grid.emo{grid-template-columns:repeat(8,1fr)}
+.ime .grid .k{height:38px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
+.ime .grid.emo .k{font-size:21px}
+.chat textarea[readonly]{caret-color:transparent}
+.chat .bar button#bKb{padding:7px}
