@@ -388,3 +388,70 @@ body.ingame .gtop{position:sticky;top:0;z-index:6}
 .qdScore{font-size:16px;color:var(--ink)}
 .qdScore b{font-weight:400;color:var(--pink);font-size:22px}
 .qdStats ul{list-style:none;padding:0;margin:6px 0 0;font-size:12px;line-height:1.7}
+/* fishing */
+.fs{padding:10px 8px 14px}
+.fsHero{position:relative;height:150px;border:3px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(#bfe3ff,#e6f4ff 60%,#6fb6e8 60%,#4f98d0)}
+.fsHero svg{position:absolute;left:18px;bottom:44px;width:90px;height:90px}
+.fsRod{position:absolute;left:92px;bottom:96px;width:110px;height:4px;background:#8a5a3a;transform:rotate(-24deg);transform-origin:left}
+.fsBoard{display:flex;gap:8px;margin:10px 0}
+.fsBoard>div{flex:1;border:2px solid var(--shadow);border-radius:10px;background:#fff;padding:6px;display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--muted)}
+.fsBoard b{font-weight:400;font-size:14px;color:var(--ink)}
+.fsNews{font-size:13px;background:#fff8e0;border:2px dashed #f0c84a;border-radius:8px;padding:6px 8px;margin-bottom:10px}
+.fsNews b{font-weight:400}
+.fsGo{height:56px;font-size:19px;border-radius:14px}
+.fsRules{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center}
+.fsTop{display:flex;justify-content:space-between;font-size:18px;margin-bottom:6px}
+.fsTop #fsS{color:var(--pink)}
+.fsPond{position:relative;height:240px;border:3px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(#bfe3ff,#e6f4ff 38%,#6fb6e8 38%,#3f86c0)}
+.fsCat{position:absolute;left:6px;top:20px;width:76px;height:76px}.fsCat svg{width:100%;height:100%}
+.fsLine{position:absolute;left:78px;top:40px;width:2px;height:0}
+.fsBob{position:absolute;left:62%;top:-40px;width:18px;height:22px;border-radius:9px 9px 6px 6px;background:linear-gradient(#f05a6a 50%,#fff 50%);border:2px solid var(--line);transition:top .5s ease-out}
+.fsBob.in{top:96px;animation:bob 1.2s steps(2) infinite}
+.fsBob.bite{animation:none;top:112px;transform:scale(1.1)}
+.fsBang{position:absolute;left:62%;top:52px;margin-left:-4px;font-size:34px;color:#e5486a;animation:beat .25s steps(2) infinite}
+.fsCatch{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.35)}
+.fsCard{background:#fff;border:4px solid;border-radius:14px;padding:8px 14px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 4px 0 rgba(0,0,0,.15)}
+.fsCard svg{width:90px;height:90px}
+.fsCard i{font-style:normal;color:#fff;font-size:12px;padding:0 8px;border-radius:6px}
+.fsCard b{font-weight:400;font-size:18px}.fsCard span{font-size:12px;color:var(--muted)}
+.fsMiss{background:#fff;border:3px solid var(--line);border-radius:10px;padding:8px 14px;font-size:16px}
+.fsReel{margin-top:10px}
+.fsReel .bar{position:relative;height:34px;border:3px solid var(--line);border-radius:10px;background:#f3e4d6;overflow:hidden}
+.fsReel .zone{position:absolute;top:0;bottom:0;background:#7cc7a5}
+.fsReel .needle{position:absolute;top:-2px;bottom:-2px;width:6px;margin-left:-3px;background:#e5486a;border:1px solid #fff}
+.fsReel .lives{text-align:center;font-size:14px;margin-top:4px}
+.fsAct{margin-top:10px;height:78px;font-size:24px;border-radius:16px;touch-action:manipulation}
+.fsAct.wait{background:#9cc0d8}
+.fsAct.go{background:#e5486a;animation:beat .35s steps(2) infinite}
+.fsEnd{text-align:center;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.fsBig svg{width:110px;height:110px}
+.fsScore{font-size:34px;color:var(--pink)}
+.fsScore em{font-style:normal;font-size:14px;background:#ffcf66;color:var(--ink);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.fsGot{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;min-height:30px;font-size:13px;color:var(--muted)}
+.fsGot span svg{width:34px;height:34px}
+.fsDexHd{display:flex;align-items:center;gap:8px;margin-bottom:8px}.fsDexHd b{font-weight:400}
+.fsDex{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.fsCell{position:relative;border:2px solid;border-radius:10px;background:#fff;padding:4px 2px;display:flex;flex-direction:column;align-items:center;font-size:10px}
+.fsCell svg{width:52px;height:52px}
+.fsCell b{font-weight:400;font-size:11px}.fsCell i{font-style:normal;font-size:9px}
+.fsCell span{position:absolute;top:2px;right:4px;font-size:10px;color:var(--muted)}
+.fsCell em{position:absolute;top:1px;left:3px;font-style:normal;font-size:10px}
+.fsCell.un{background:#f3ede6}
+/* runner */
+.rn{padding:10px 8px 14px}
+.rnBoard{margin-bottom:8px}
+.rnDay{font-size:14px;margin-bottom:6px}
+.rnRows{display:flex;gap:8px}
+.rnRows>div{flex:1;border:2px solid var(--shadow);background:#fff;border-radius:10px;padding:5px;display:flex;flex-direction:column;align-items:center;font-size:12px}
+.rnRows b{font-weight:400;font-size:13px}.rnRows span{color:var(--pink);font-size:15px}.rnRows i{font-style:normal;font-size:11px;color:var(--muted)}
+.rnY{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+.rnField{position:relative}
+.rnField canvas{width:100%;aspect-ratio:9/5;display:block;border:3px solid var(--line);border-radius:12px;touch-action:none;image-rendering:pixelated}
+.rnOver{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.rnOver.hidden{display:none}
+.rnMenu{background:rgba(255,250,242,.94);border:3px solid var(--line);border-radius:14px;padding:12px 18px;text-align:center;display:flex;flex-direction:column;gap:6px;min-width:60%}
+.rnCatBig svg{width:70px;height:70px}
+.rnScore{font-size:30px;color:var(--pink)}
+.rnSmall{font-size:12px;color:var(--muted)}.rnSmall b{font-weight:400;color:var(--pink)}
+.rnRec{font-size:14px;background:#ffcf66;border-radius:6px;padding:1px 8px;align-self:center}
+.rnHint{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
