@@ -336,3 +336,55 @@ body.ingame .gtop{position:sticky;top:0;z-index:6}
 .cnW button:disabled{opacity:.35}
 .cnFire{height:56px;font-size:22px;border-radius:14px}
 .cnHint{font-size:11px;color:var(--muted);text-align:center}
+/* battleship */
+.bs{padding:10px 8px 12px}
+.bsMsg{text-align:center;font-size:16px;margin-bottom:8px;line-height:1.5}
+.bsMsg b{font-weight:400;color:var(--pink)}
+.bsMsg small{font-size:12px;color:var(--muted)}
+.bsGrid{display:grid;grid-template-columns:18px repeat(8,1fr);gap:3px;background:linear-gradient(#9fd4f5,#7fbbe8);border:3px solid #3f6f99;border-radius:10px;padding:4px}
+.bsGrid .lb{font-size:10px;color:#fff;display:flex;align-items:center;justify-content:center}
+.bsGrid button{aspect-ratio:1/1;border:none;border-radius:6px;background:rgba(255,255,255,.28);font-size:17px;padding:0;display:flex;align-items:center;justify-content:center}
+.bsGrid.enemy button:not(.hit):not(.miss):not(.sunk):active{background:rgba(255,255,255,.6)}
+.bsGrid button.ship{background:#f6c483;box-shadow:inset 0 -3px 0 #c98a3f}
+.bsGrid button.ship.sel{background:#ffb3c2;box-shadow:inset 0 -3px 0 #e06a87,0 0 0 2px #fff}
+.bsGrid button.ship.headh{border-radius:12px 4px 4px 12px}
+.bsGrid button.ship.headv{border-radius:12px 12px 4px 4px}
+.bsGrid button.miss{background:rgba(255,255,255,.12);color:#fff}
+.bsGrid button.hit{background:#ffcf66}
+.bsGrid button.sunk{background:#8a8090}
+.bsGrid button.aim{background:#fff;box-shadow:0 0 0 3px #f08aa0;animation:bob .8s steps(2) infinite}
+.bsMine .bsGrid{transform:scale(.62);transform-origin:top center;margin-bottom:-38%}
+.bsLabel{font-size:13px;margin:10px 0 4px}
+.bsFire{margin-top:10px;height:52px;font-size:19px;border-radius:12px}
+.bsTools{display:flex;gap:8px;justify-content:center;margin-top:10px}
+.bsList{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px 0;font-size:12px;color:var(--muted)}
+.bsList span.on{color:var(--pink)}
+.bsOpp{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+/* quickdraw */
+.qd{padding:10px 8px 14px}
+.qdScene{position:relative;height:230px;border:3px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(#ffcf8a 0,#ffb48a 55%,#e8b878 55%,#d9a462 100%)}
+.qdSun{position:absolute;left:50%;top:24px;width:70px;height:70px;margin-left:-35px;border-radius:50%;background:#fff1b8;box-shadow:0 0 30px #fff1b8}
+.qdWeed{position:absolute;bottom:14px;left:46%;font-size:26px;animation:bob 2s steps(2) infinite}
+.qdCats{position:absolute;inset:auto 0 18px 0;display:flex;justify-content:space-between;padding:0 10px}
+.qdC{position:relative;width:110px;text-align:center}
+.qdC svg{width:100px;height:100px}
+.qdC.r svg{transform:scaleX(-1)}
+.qdC .hat{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-size:30px;font-style:normal;z-index:2}
+.qdC b{display:block;font-weight:400;font-size:12px;margin-top:-6px}
+.qdSign{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:30px;white-space:nowrap;color:var(--line);text-shadow:2px 2px 0 #fff}
+.qdSign.ready{font-size:24px;animation:bob .6s steps(2) infinite}
+.qdSign.go{font-size:46px;color:#e5486a;animation:none}
+.qdSign.foul{color:#8a72d8}
+.qdSign.win{color:#e5486a}
+.qdBtn{display:block;width:100%;margin-top:12px;height:86px;border:3px solid var(--line);border-radius:16px;background:var(--pink);color:#fff;font-size:26px;box-shadow:0 5px 0 var(--shadow);letter-spacing:4px;touch-action:manipulation}
+.qdBtn.wait{background:#c9b8a8}
+.qdBtn.go{background:#e5486a;animation:beat .3s steps(2) infinite}
+.qdBtn:disabled{opacity:.5}
+.qdBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 var(--shadow)}
+.qdMsg{text-align:center;font-size:15px;margin-top:10px;line-height:1.7;min-height:26px}
+.qdMsg b{font-weight:400;color:var(--pink)}
+.qdMsg .foul{color:#8a72d8}
+.qdStats{margin-top:10px;font-size:13px;text-align:center;color:var(--muted)}
+.qdScore{font-size:16px;color:var(--ink)}
+.qdScore b{font-weight:400;color:var(--pink);font-size:22px}
+.qdStats ul{list-style:none;padding:0;margin:6px 0 0;font-size:12px;line-height:1.7}
