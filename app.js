@@ -151,7 +151,16 @@ const App = (function(){
   let lastSeen = +(store.get("mw_seen")||0);
   const imgCache = {};
   function unread(){ return messages.filter(m=>m.id>lastSeen && m.sender!==me.uid).length; }
-  function markSeen(){ const mx=messages.reduce((a,m)=>Math.max(a,m.id),0); if(mx>lastSeen){ lastSeen=mx; store.set("mw_seen",String(mx)); } renderBadge(); }
+  let lastReported = 0;
+  function markSeen(){
+    const mx=messages.reduce((a,m)=>Math.max(a,m.id),0);
+    if(mx>lastSeen){ lastSeen=mx; store.set("mw_seen",String(mx)); }
+    renderBadge();
+    if(route==="chat" && document.visibilityState==="visible" && mx>lastReported){
+      const myRow = members.find(x=>x.user_id===me.uid);
+      if(!myRow || (myRow.last_read||0) < mx){ lastReported = mx; B.updateMe({ last_read: mx }).catch(()=>{ lastReported = 0; }); }
+    }
+  }
   function renderBadge(){ const n=unread(), b=$("badge"); b.textContent=n>99?"99+":n; b.classList.toggle("hidden", n===0); }
   function msgHtml(m){
     const mine = m.sender===me.uid;
@@ -162,7 +171,8 @@ const App = (function(){
     else if(m.kind==="image") bub = `<span class="pic"><img data-media="${esc(m.media||"")}" ${imgCache[m.media]?`src="${esc(imgCache[m.media])}"`:""} alt="照片"></span>`;
     else if(m.kind==="poke") bub = `<div class="bub">戳了${mine?"對方":"你"}一下 🐾</div>`;
     else bub = `<div class="bub">${esc(m.body)}</div>`;
-    return `<div class="msg ${mine?"me":""} ${m.kind==="poke"?"poke":""}">${mine?"":av}${bub}<span class="tm">${hhmm(m.created_at)}</span></div>`;
+    const p = partner(); const read = mine && p && (p.last_read||0) >= m.id;
+    return `<div class="msg ${mine?"me":""} ${m.kind==="poke"?"poke":""}">${mine?"":av}${bub}<span class="tm">${read?`<span class="rd">已讀</span>`:""}${hhmm(m.created_at)}</span></div>`;
   }
   function viewChat(v){
     v.innerHTML = `<div class="box chat"><div class="list" id="list"></div>
@@ -408,7 +418,7 @@ const App = (function(){
   async function enterNest(justCreated){
     $("top").classList.remove("hidden"); $("nav").classList.remove("hidden");
     B.on("msg", addMessage);
-    B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); });
+    B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); else if(route==="chat") drawList(false); });
     B.on("state", (game, version, state)=>{ if(!stateCache[game] || version > stateCache[game].version){ stateCache[game]={version,state}; emitState(game); } });
     B.on("presence", list=>{ online = new Set(list.map(x=>x.uid)); renderHeader(); (ctx._presence||[]).forEach(h=>h()); });
     B.on("status", s=>{ connected = s==="SUBSCRIBED"; if(s==="SUBSCRIBED") resync(); });
@@ -422,6 +432,7 @@ const App = (function(){
     render();
     if(justCreated) setTimeout(()=>toast(`${sprite(me.cat,"wave")} 小窩建好了！把邀請碼傳給另一半吧`, 5000), 300);
     if(pushState()==="on") subscribePush().catch(()=>{});
+    clearNotifs();
   }
   async function resync(){
     try{ const ms = await B.messages(); ms.forEach(addMessage); }catch(e){}
@@ -439,8 +450,8 @@ const App = (function(){
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");
     document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.go)));
     window.addEventListener("hashchange", ()=>{ if(B && B.coupleId) render(); });
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && B && B.coupleId){ B.reconnect(); } });
-    if("serviceWorker" in navigator && !window.__mock){ navigator.serviceWorker.register("sw.js").catch(()=>{}); navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) go(e.data.go); }); }
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && B && B.coupleId){ B.reconnect(); clearNotifs(); if(route==="chat") markSeen(); } });
+    if("serviceWorker" in navigator && !window.__mock){ navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r=>r.update()).catch(()=>{}); navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) go(e.data.go); }); }
     if(!cfg.SUPABASE_URL && !window.__mock){ $("view").innerHTML = `<div class="box form"><h2>還沒設定好</h2><div class="help">config.js 裡還沒有填 Supabase 的網址和金鑰。</div></div>`; $("top").classList.add("hidden"); return; }
     $("view").innerHTML = `<div class="box form"><div class="preview">${sprite("orange","loaf")}</div>喵～載入中…</div>`;
     try{
@@ -456,6 +467,7 @@ const App = (function(){
     }
   }
 
+  function clearNotifs(){ try{ if(navigator.serviceWorker) navigator.serviceWorker.ready.then(r=>r.getNotifications()).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}); }catch(e){} }
   function registerGame(g){ games.push(g); }
   return { start, registerGame, ctx };
 })();

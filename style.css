@@ -137,3 +137,6 @@ body.compact #top .mid{padding-bottom:26px}
 .combo{position:absolute;right:10px;top:10px;z-index:5;background:#fff;border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:2px 8px;font-size:13px;display:flex;align-items:center;gap:4px;color:var(--pink)}
 .combo svg{width:16px;height:16px}.combo b{font-weight:400;font-size:18px}
 .chat .bar button#bPic,.chat .bar button#bQk{padding:7px}
+
+.msg .tm{display:flex;flex-direction:column;align-items:flex-end;line-height:1.3}
+.msg .rd{color:var(--pink);font-size:10px}
