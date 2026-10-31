@@ -155,12 +155,34 @@ const App = (function(){
     const mx=messages.reduce((a,m)=>Math.max(a,m.id),0);
     if(mx>lastSeen){ lastSeen=mx; store.set("mw_seen",String(mx)); }
     renderBadge();
-    if(route==="chat" && document.visibilityState==="visible" && mx>lastReported){
+    if(chatVisible() && document.visibilityState==="visible" && mx>lastReported){
       const myRow = members.find(x=>x.user_id===me.uid);
       if(!myRow || (myRow.last_read||0) < mx){ lastReported = mx; B.updateMe({ last_read: mx }).catch(()=>{ lastReported = 0; }); }
     }
   }
-  function renderBadge(){ const n=unread(), b=$("badge"); b.textContent=n>99?"99+":n; b.classList.toggle("hidden", n===0); }
+  function renderBadge(){ const n=unread(); for(const id of ["badge","fabBadge"]){ const b=$(id); if(!b) continue; b.textContent=n>99?"99+":n; b.classList.toggle("hidden", n===0); } }
+  // ---------- chat sheet (chat without leaving a game) ----------
+  let sheetOpen = false, lastGame = null;
+  function chatVisible(){ return route==="chat" || sheetOpen; }
+  function openSheet(){
+    if(sheetOpen) return;
+    sheetOpen = true; kb = null;
+    const sh = document.createElement("div"); sh.id="sheet"; sh.className="sheet";
+    sh.innerHTML = `<div class="sheetIn"><div class="sheetHd"><span>${sprite(partner()?partner().cat:"white","happy")}</span><b>${esc(partner()?partner().name:"聊天")}</b><button id="sheetX">收起 ▾</button></div><div class="sheetBody" id="sheetBody"></div></div>`;
+    document.body.appendChild(sh);
+    sh.addEventListener("click", e=>{ if(e.target===sh) closeSheet(); });
+    $("sheetX").addEventListener("click", closeSheet);
+    viewChat($("sheetBody"));
+    sh.querySelector(".sheetIn").animate([{transform:"translateY(100%)"},{transform:"translateY(-8px)",offset:.75},{transform:"translateY(0)"}],{duration:320,easing:"ease-out"});
+    const f=$("fab"); if(f) f.classList.add("hidden");
+  }
+  function closeSheet(){
+    if(!sheetOpen) return;
+    sheetOpen = false; kb = null; document.body.classList.remove("kbd");
+    const sh=$("sheet"); if(sh){ const a=sh.querySelector(".sheetIn").animate([{transform:"translateY(0)"},{transform:"translateY(100%)"}],{duration:200,easing:"ease-in"}); a.onfinish=()=>sh.remove(); }
+    const f=$("fab"); if(f) f.classList.remove("hidden");
+    renderBadge();
+  }
   function msgHtml(m){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">🎮 ${esc(m.body)}</div></div>`;
@@ -303,13 +325,13 @@ const App = (function(){
   function addMessage(m){
     if(!m || messages.some(x=>x.id===m.id)) return;
     messages.push(m); messages.sort((a,b)=>a.id-b.id); if(messages.length>300) messages=messages.slice(-300);
-    if(route==="chat"){ drawList(false); markSeen(); }
+    if(chatVisible()){ drawList(false); markSeen(); }
     else renderBadge();
     if(m.sender!==me.uid){
       if(m.kind==="poke"){ SFX.meow(1.12); haptic(); floatSvg(sprite(m.cat||"white","wave")); }
       else if(m.kind==="sticker"){ SFX.heart(); }
       else SFX.msg();
-      if(route!=="chat" && m.kind!=="game"){
+      if(!chatVisible() && m.kind!=="game"){
         const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.body;
         toast(`${sprite(m.cat||"white","happy")}<span><b style="font-weight:400">${esc(m.name||"另一半")}</b>：${esc(txt.slice(0,40))}</span>`);
       }
@@ -394,7 +416,7 @@ const App = (function(){
   function go(r){ if(location.hash!=="#"+r) location.hash=r; else render(); }
   function render(){
     const r = (location.hash||"#home").slice(1) || "home";
-    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; kb=null; document.body.classList.remove("kbd");
+    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove();
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");
     document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on", b.dataset.go===route || (route==="game"&&b.dataset.go==="home")));
@@ -406,8 +428,9 @@ const App = (function(){
       if(!g){ go("home"); return; }
       v.innerHTML = `<div class="gtop"><button class="btn sub" id="bBack">◀ 回小窩</button><span class="gname">${esc(g.name)}</span></div><div id="gArea"></div>`;
       $("bBack").addEventListener("click", ()=>go("home"));
-      curGame = g; g.mount($("gArea"), ctx);
-    } else viewHome(v);
+      curGame = g; lastGame = r; g.mount($("gArea"), ctx);
+      const fab=document.createElement("button"); fab.id="fab"; fab.className="fab"; fab.innerHTML=`${icon("chat")}<b id="fabBadge" class="hidden">0</b>`; fab.addEventListener("click", openSheet); document.body.appendChild(fab);
+    } else { if(r==="home") lastGame = null; viewHome(v); }
     renderHeader(); renderBadge();
     window.scrollTo(0,0);
   }
@@ -439,7 +462,7 @@ const App = (function(){
   async function enterNest(justCreated){
     $("top").classList.remove("hidden"); $("nav").classList.remove("hidden");
     B.on("msg", addMessage);
-    B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); else if(route==="chat") drawList(false); });
+    B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); else if(chatVisible()) drawList(false); });
     B.on("state", (game, version, state)=>{ if(!stateCache[game] || version > stateCache[game].version){ stateCache[game]={version,state}; emitState(game); } });
     B.on("presence", list=>{ online = new Set(list.map(x=>x.uid)); renderHeader(); (ctx._presence||[]).forEach(h=>h()); });
     B.on("status", s=>{ connected = s==="SUBSCRIBED"; if(s==="SUBSCRIBED") resync(); });
@@ -469,9 +492,9 @@ const App = (function(){
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear");
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");
-    document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.go)));
+    document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.go; if(t==="home" && route!=="game" && lastGame) go(lastGame); else go(t); }));
     window.addEventListener("hashchange", ()=>{ if(B && B.coupleId) render(); });
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && B && B.coupleId){ B.reconnect(); clearNotifs(); if(route==="chat") markSeen(); } });
+    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && B && B.coupleId){ B.reconnect(); clearNotifs(); if(chatVisible()) markSeen(); } });
     if("serviceWorker" in navigator && !window.__mock){ navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r=>r.update()).catch(()=>{}); navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) go(e.data.go); }); }
     if(!cfg.SUPABASE_URL && !window.__mock){ $("view").innerHTML = `<div class="box form"><h2>還沒設定好</h2><div class="help">config.js 裡還沒有填 Supabase 的網址和金鑰。</div></div>`; $("top").classList.add("hidden"); return; }
     $("view").innerHTML = `<div class="box form"><div class="preview">${sprite("orange","loaf")}</div>喵～載入中…</div>`;

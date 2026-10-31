@@ -248,3 +248,20 @@ body[data-kb="matcha"]{--kb-bg:#eef2df;--kb-dot:rgba(120,150,60,.12);--kb-top:#f
 .gmCtl .pad button[data-d="0,1"]{grid-column:2;grid-row:3}
 .gmCtl .place{flex:1;height:76px;font-size:22px;border-radius:14px}
 .gmHint{font-size:12px;color:var(--muted);text-align:center;margin-top:10px;line-height:1.6}
+
+/* chat sheet + floating chat button */
+.fab{position:fixed;right:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:25;width:58px;height:58px;border-radius:50%;border:3px solid var(--line);background:var(--pink);box-shadow:0 4px 0 var(--shadow);padding:12px;animation:bob 1.6s steps(2) infinite}
+.fab svg{width:100%;height:100%;display:block;filter:brightness(0) invert(1)}
+.fab b{position:absolute;top:-6px;right:-6px;background:#fff;color:var(--pink);border:2px solid var(--line);font-weight:400;font-size:12px;min-width:22px;height:22px;line-height:18px;border-radius:11px;padding:0 4px}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(60,35,30,.35);display:flex;align-items:flex-end;justify-content:center}
+.sheetIn{width:100%;max-width:480px;height:82dvh;background:var(--paper);border:3px solid var(--line);border-bottom:none;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
+.sheetHd{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:3px solid var(--line);background:#fff8ef}
+.sheetHd span svg{width:36px;height:36px;display:block}
+.sheetHd b{font-weight:400;font-size:16px;flex:1}
+.sheetHd button{border:2px solid var(--line);background:#fff;padding:4px 10px;font-size:13px;border-radius:8px}
+.sheetBody{flex:1;min-height:0;display:flex}
+.sheetBody .chat{height:auto!important;flex:1;border:none;box-shadow:none;min-height:0}
+.sheetIn{min-width:0}
+.sheetBody{min-width:0;width:100%}
+.sheetBody .chat{min-width:0;width:100%}
+.sheetBody .ime,.sheetBody #kbd{min-width:0;max-width:100%}
