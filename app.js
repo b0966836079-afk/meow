@@ -464,6 +464,9 @@ const App = (function(){
     const p = partner(); if(!p) return "";
     const mm = moodOf(me.uid), pm = moodOf(p.user_id), mk = (moodSt && moodSt.makeup) || {};
     const myReq = mk.req && mk.req[me.uid] && Date.now()-mk.req[me.uid] < 864e5, theirReq = mk.req && mk.req[p.user_id] && Date.now()-mk.req[p.user_id] < 864e5;
+    // the 和好 button only shows up when there's something to make up for
+    const upset = m => m && ["angry","sad","hug"].includes(m[0]);
+    const conflict = !!(truce() || upset(mm) || upset(pm) || myReq || theirReq);
     return `<div class="box care" id="care">
       <div class="careHd">💗 心情小站${mk.count?`<span>一起和好過 ${mk.count} 次</span>`:""}</div>
       <div class="careMoods">
@@ -472,8 +475,8 @@ const App = (function(){
         <div class="cm"><span class="cmCat">${sprite(p.cat, pm?pm[3]:"normal")}</span><b>${esc(p.name)}</b><i>${pm?`${pm[2]} ${pm[1]}`:"還沒設定"}</i></div>
       </div>
       ${theirReq && !myReq ? `<div class="careAsk">${esc(p.name)} 想跟你和好 🥺 <button class="btn" id="cmYes">🤝 好，我們和好</button></div>`:""}
-      <div class="careBtns">
-        <button id="cbMood"><span>🌡️</span>心情</button><button id="cbTruce"><span>🏳️</span>休戰旗</button><button id="cbLetter"><span>💌</span>寫信</button><button id="cbMake" class="${myReq?"on":""}"><span>🤝</span>${myReq?"等 ta 回應":"和好"}</button>
+      <div class="careBtns ${conflict?"":"three"}">
+        <button id="cbMood"><span>🌡️</span>心情</button><button id="cbTruce"><span>🏳️</span>休戰旗</button><button id="cbLetter"><span>💌</span>寫信</button>${conflict?`<button id="cbMake" class="${myReq?"on":""}"><span>🤝</span>${myReq?"等 ta 回應":"和好"}</button>`:""}
       </div></div>`;
   }
   function bindCare(root){

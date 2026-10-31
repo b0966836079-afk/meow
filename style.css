@@ -582,3 +582,5 @@ body.rnLock{overflow:hidden}
 .envFlap{position:absolute;left:0;right:0;top:0;height:60%;z-index:3;transform-origin:top;background:linear-gradient(to bottom right,#ffd3dd 50%,transparent 50%) left/50% 100% no-repeat,linear-gradient(to bottom left,#ffd3dd 50%,transparent 50%) right/50% 100% no-repeat;backface-visibility:hidden}
 .envSeal{position:absolute;left:50%;top:58%;z-index:5;font-size:34px;transform:translate(-50%,-50%)}
 .hugFx .lfBig{font-size:60px}
+
+.careBtns.three{grid-template-columns:repeat(3,1fr)}
