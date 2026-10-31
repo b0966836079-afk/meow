@@ -724,10 +724,11 @@ const App = (function(){
   // ---- our cat (strip on home; the room itself lives in games/pet.js) ----
   function petStrip(){
     const P = window.PetLogic; if(!P || !partner()) return "";
-    const ps = stateCache.pet && stateCache.pet.state;
-    if(!ps) return `<button class="box petStrip" id="petGo"><span class="psCat">${sprite("white","curl",{soft:true})}</span><span class="psTx"><b>領養一隻我們的貓 🐾</b><i>兩個人一起餵牠、陪牠長大</i></span><span class="psGo">▶</span></button>`;
-    const f = P.fullness(ps), md = P.mood(ps), stg = P.stage(ps);
-    return `<button class="box petStrip ${md.hungry?"hungry":""}" id="petGo"><span class="psCat">${sprite(ps.color, md.face)}</span><span class="psTx"><b>${esc(ps.name)}・${stg.name}</b><i>${md.text}</i><span class="pbBar"><i class="${f<15?"low":f<40?"mid":""}" style="width:${f}%"></i></span></span><span class="psGo">▶</span></button>`;
+    const ps = stateCache.pet && P.norm(stateCache.pet.state);
+    if(!ps || !ps.cats.length) return `<button class="box petStrip" id="petGo"><span class="psCat">${sprite("white","curl",{soft:true})}</span><span class="psTx"><b>領養一隻我們的貓 🐾</b><i>兩個人一起餵牠、陪牠長大</i></span><span class="psGo">▶</span></button>`;
+    const cs = ps.cats, hungry = cs.filter(c=>P.mood(c).hungry), lo = Math.min(...cs.map(c=>P.fullness(c)));
+    const text = hungry.length ? `${hungry.map(c=>esc(c.name)).join("、")} 肚子餓了～` : cs.length>1 ? "兩隻在家裡玩得很開心 💗" : esc(P.mood(cs[0]).text) + "・可以再養一隻喔";
+    return `<button class="box petStrip ${hungry.length?"hungry":""}" id="petGo"><span class="psCats">${cs.map(c=>`<span class="psCat">${sprite(c.color, P.mood(c).face)}</span>`).join("")}</span><span class="psTx"><b>${cs.map(c=>esc(c.name)).join(" & ")}</b><i>${text}</i><span class="pbBar"><i class="${lo<15?"low":lo<40?"mid":""}" style="width:${lo}%"></i></span></span><span class="psGo">▶</span></button>`;
   }
   // ---- 早安 / 晚安 check-in ----
   const dayKeyOf = t => { const d = new Date((t||Date.now()) - 4*3600e3); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); };

@@ -673,3 +673,26 @@ body.rnLock{overflow:hidden}
 .petLog{list-style:none;margin:0;padding:0;font-size:13px}
 .petLog li{padding:4px 0;border-bottom:1px dashed var(--shadow);display:flex;gap:4px}
 .petLog li b{font-weight:400;color:var(--pink)}.petLog li i{margin-left:auto;font-style:normal;color:var(--muted);font-size:11px}
+
+/* two cats */
+.petTabs{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.petTabs button{font:inherit;font-size:15px;color:inherit;background:#fff;border:2px solid var(--line);border-radius:10px;padding:4px 10px}
+.petTabs button i{font-style:normal;font-size:11px;color:var(--muted)}
+.petTabs button em{font-style:normal}
+.petTabs button.on{background:var(--pinkL);border-color:var(--pink)}
+.petTabs button.add{margin-left:auto;background:#e6f8ee;border-style:dashed}
+.petTabs button.rn{margin-left:auto}
+.pc{position:absolute;bottom:20px;width:140px;transform:translateX(-50%);cursor:pointer}
+.pcHop{transform-origin:50% 100%}
+.pcIn{transform:scale(calc(var(--sc)*var(--fl,1)),var(--sc));transform-origin:50% 100%;position:relative}
+.pcSp svg{width:100%;height:auto;display:block}
+.pcIn .crown{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:40px}
+.pcTag{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);font-size:11px;white-space:nowrap;background:rgba(255,255,255,.85);border:2px solid var(--line);border-radius:8px;padding:0 6px;opacity:.85}
+.pcTag b{font-weight:400}
+.pc.sel .pcTag{background:var(--pink);color:#fff;opacity:1}
+.pc.sel .pcTag::before{content:"▼ "}
+.pcBub{position:absolute;left:50%;bottom:calc(100% - 20px);transform:translateX(-50%);white-space:nowrap;background:#fff;border:2px solid var(--line);border-radius:10px;padding:2px 8px;font-size:13px;animation:pcBub .25s ease-out;z-index:3}
+@keyframes pcBub{from{transform:translate(-50%,8px) scale(.6);opacity:0}}
+.prYarn2{position:absolute;bottom:34px;font-size:28px;z-index:2}
+.prFish{transform:translateX(-50%)}
+.psCats{display:flex}.psCats .psCat+.psCat{margin-left:-18px}.psCats .psCat svg{width:56px;height:56px}
