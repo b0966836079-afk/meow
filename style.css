@@ -525,3 +525,60 @@ body[data-wall="night"] .msg .rd{color:#ffd3dd}
 .rnStage .rnMenu{min-width:min(60%,340px)}
 .rnX{position:absolute;right:calc(10px + env(safe-area-inset-right));top:10px;width:40px;height:40px;border-radius:50%;border:3px solid var(--line);background:rgba(255,255,255,.9);font-size:18px;z-index:3}
 body.rnLock{overflow:hidden}
+/* ---------- 心情小站 / 吵架救援 ---------- */
+.care{padding:10px 10px 12px}
+.careHd{display:flex;justify-content:space-between;align-items:center;font-size:16px}
+.careHd span{font-size:12px;color:var(--pink)}
+.careMoods{display:flex;align-items:center;justify-content:space-between;margin:6px 0}
+.careMoods .cm{flex:1;display:flex;flex-direction:column;align-items:center;border:none;background:none;padding:0;min-width:0}
+.careMoods .cmCat svg{width:74px;height:74px;display:block}
+.careMoods b{font-weight:400;font-size:13px}
+.careMoods i{font-style:normal;font-size:12px;color:var(--muted);white-space:nowrap}
+.careMoods button.cm i{color:var(--pink)}
+.cmMid{width:40px;text-align:center}.cmHeart svg{width:26px;height:26px;animation:beat 1.2s steps(2) infinite}.cmHeart{font-size:24px}
+.careAsk{background:#fff0f3;border:2px dashed var(--pink);border-radius:10px;padding:8px;text-align:center;font-size:14px;margin-bottom:8px;display:flex;flex-direction:column;gap:6px}
+.careAsk .btn{font-size:15px;padding:8px}
+.careBtns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.careBtns button{border:2px solid var(--line);background:#fff;border-radius:12px;box-shadow:0 3px 0 var(--shadow);padding:6px 2px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.careBtns button span{font-size:22px}
+.careBtns button.on{background:var(--pinkL)}
+.careBtns button:active{transform:translateY(2px);box-shadow:none}
+.truceBar{display:flex;align-items:center;gap:6px;background:#fff8e0;border:2px solid #f0c84a;border-radius:10px;padding:6px 10px;font-size:14px;margin-bottom:8px}
+.truceBar span{flex:1}.truceBar b{font-weight:400;font-size:18px;color:#c08a1a;font-variant-numeric:tabular-nums}
+.chatTruce .truceBar{margin:6px 8px 0;border-radius:8px}
+.chatTruce:empty{display:none}
+.careModal{position:fixed;inset:0;z-index:85;background:rgba(60,35,30,.4);display:flex;align-items:center;justify-content:center;padding:14px}
+.careModal .cmBox{background:var(--paper);border:3px solid var(--line);border-radius:16px;box-shadow:0 6px 0 var(--shadow);padding:14px;width:min(94vw,400px);text-align:center;max-height:92dvh;overflow:auto}
+.careModal h3{font-weight:400;margin:0 0 8px;font-size:19px}
+.careModal p{font-size:14px;line-height:1.6;margin:6px 0}.careModal p b{font-weight:400;color:var(--pink)}
+.careModal .k{font-size:12px;color:var(--muted);margin-top:8px}
+.mdGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mdGrid button{border:2px solid var(--shadow);background:#fff;border-radius:10px;font-size:11px;padding:2px;display:flex;flex-direction:column;align-items:center}
+.mdGrid button svg{width:52px;height:52px}
+.mdGrid button.on{border-color:var(--pink);background:var(--pinkL)}
+.tcGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.tcGrid button{border:3px solid var(--line);background:#fff;border-radius:12px;font-size:17px;padding:12px 4px;box-shadow:0 3px 0 var(--shadow)}
+.msg.sys.truce .bub{background:#fff8e0;border-color:#f0c84a}
+.letterBub{display:flex;align-items:center;gap:8px;border:3px solid var(--line);background:#fff6ec;border-radius:12px;padding:8px 12px;box-shadow:2px 2px 0 var(--shadow);text-align:left}
+.letterBub .lb1{font-size:30px}
+.letterBub b{display:block;font-weight:400;font-size:15px}.letterBub i{font-style:normal;font-size:11px;color:var(--muted)}
+.letterBub.new{background:#ffe8ee;animation:bob 1s steps(2) infinite}
+.makeupBub{display:flex;flex-direction:column;gap:6px}
+.makeupBub .btn{font-size:14px;padding:6px 10px}
+/* letter paper (writing + reading) */
+.careModal.letter .cmBox{padding:10px;background:#fbe9ee}
+.ltPaper{background:repeating-linear-gradient(#fffdf6 0 27px,#f3dfe4 27px 28px);border:2px solid #e8c4cc;border-radius:6px;padding:10px 14px;text-align:left;font-size:16px;line-height:28px;box-shadow:0 3px 0 #e8c4cc}
+.ltTo{color:var(--pink)}.ltFrom{text-align:right;color:var(--muted)}
+.ltBody{min-height:112px;max-height:180px;overflow:auto;word-break:break-word;user-select:text;-webkit-user-select:text}
+.ltBody .ph{color:#c9b3b8}
+.ltBtns{display:flex;gap:8px;margin:10px 0}.ltBtns .btn{flex:1}.ltBtns .btn.sub{flex:.6}
+.ltKb{margin:0 -10px -10px;border-top:3px solid var(--kb-line);background:var(--kb-bg);padding-top:14px}
+.ltOpen{position:fixed;inset:0;z-index:90;background:rgba(60,35,30,.6);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.env{position:relative;width:min(86vw,340px);height:220px;perspective:600px;margin-top:120px}
+.envBack{position:absolute;inset:0;background:#f4a7b9;border:3px solid var(--line);border-radius:10px}
+.env .ltPaper.inEnv{position:absolute;left:6%;right:6%;top:10px;height:200px;overflow:hidden;z-index:1}
+.env .ltPaper.inEnv.up{z-index:4;height:auto;max-height:70dvh;overflow:auto}
+.envFront{position:absolute;inset:0;z-index:2;pointer-events:none;border:3px solid var(--line);border-radius:10px;background:linear-gradient(to top right,#ffc2d0 50%,transparent 50%) left/50% 100% no-repeat,linear-gradient(to top left,#ffc2d0 50%,transparent 50%) right/50% 100% no-repeat}
+.envFlap{position:absolute;left:0;right:0;top:0;height:60%;z-index:3;transform-origin:top;background:linear-gradient(to bottom right,#ffd3dd 50%,transparent 50%) left/50% 100% no-repeat,linear-gradient(to bottom left,#ffd3dd 50%,transparent 50%) right/50% 100% no-repeat;backface-visibility:hidden}
+.envSeal{position:absolute;left:50%;top:58%;z-index:5;font-size:34px;transform:translate(-50%,-50%)}
+.hugFx .lfBig{font-size:60px}

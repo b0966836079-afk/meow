@@ -113,14 +113,16 @@ const App = (function(){
   let lastHdr="", wasOnline=null;
   function renderHeader(){
     const p = partner(); const here = p && isOnline(p.user_id);
-    const k = (me.cat||"orange")+(p?p.cat:"-")+here;
+    const k = (me.cat||"orange")+(p?p.cat:"-")+here+JSON.stringify(moodSt&&moodSt.moods||{});
     if(k!==lastHdr){ lastHdr=k;
-      $("catMe").innerHTML = sprite(me.cat||"orange","normal");
-      $("catThem").innerHTML = p ? sprite(p.cat, here?"normal":"curl") : sprite("white","normal",{soft:true});
+      $("catMe").innerHTML = sprite(me.cat||"orange", moodFace(me.uid,"normal"));
+      $("catThem").innerHTML = p ? sprite(p.cat, moodFace(p.user_id, here?"normal":"curl")) : sprite("white","normal",{soft:true});
     }
     $("nmMe").textContent = me.name||"我";
     $("nmThem").textContent = p ? p.name : "???";
-    const st=$("stThem"); st.textContent = !p ? "還沒加入" : here ? "● 在線" : "○ 睡著了"; st.className = "st"+(here?" on":"");
+    const pm = p && moodOf(p.user_id), mm = moodOf(me.uid);
+    const st=$("stThem"); st.textContent = (!p ? "還沒加入" : here ? "● 在線" : "○ 睡著了") + (pm ? " "+pm[2] : ""); st.className = "st"+(here?" on":"");
+    const sm = document.querySelector("#top .who .st:not(#stThem)"); if(sm) sm.textContent = "● 你" + (mm ? " "+mm[2] : "");
     if(p){ if(wasOnline===false && here){ SFX.join(); toast(`${sprite(p.cat,"wave")} ${esc(p.name)} 上線了！`); } wasOnline = !!here; }
   }
 
@@ -138,7 +140,7 @@ const App = (function(){
   }
   function viewHome(v){
     const p = partner();
-    let html = `<div class="title">喵喵<b>小窩</b></div><div class="box meter" id="meter"></div>`;
+    let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">另一半還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
     if(pushState()!=="on") html += `<div class="box banner"><span class="bi">${icon("bell")}</span><div style="flex:1">開啟通知，ta 傳訊息時手機會跳出來</div><button class="btn mint" id="bPush">開啟</button></div>`;
     html += `<div class="games">` + games.map(g=>`<button class="gcard" data-g="${g.id}"><span class="gi">${g.icon()}</span><span class="gn">${esc(g.name)}</span><span class="gd">${esc(g.desc)}</span>${g.badge&&g.badge()?`<span class="gb">${esc(g.badge())}</span>`:""}</button>`).join("")
@@ -146,6 +148,7 @@ const App = (function(){
     v.innerHTML = html;
     renderMeter();
     v.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>go("game-"+b.dataset.g)));
+    bindCare(v);
     const bi=$("bInv"); if(bi) bi.addEventListener("click", shareInvite);
     const bp=$("bPush"); if(bp) bp.addEventListener("click", ()=>enablePush().then(()=>render()));
   }
@@ -182,7 +185,7 @@ const App = (function(){
   };
   let lastSeen = +(store.get("mw_seen")||0);
   const imgCache = {};
-  function unread(){ return messages.filter(m=>m.id>lastSeen && m.sender!==me.uid).length; }
+  function unread(){ return messages.filter(m=>m.id>lastSeen && m.sender!==me.uid && m.kind!=="ping").length; }
   let lastReported = 0;
   function markSeen(){
     const mx=messages.reduce((a,m)=>Math.max(a,m.id),0);
@@ -218,7 +221,13 @@ const App = (function(){
   }
   function msgHtml(m){
     const mine = m.sender===me.uid;
-    if(m.kind==="game") return `<div class="msg sys"><div class="bub">🎮 ${esc(m.body)}</div></div>`;
+    if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
+    if(m.kind==="ping") return "";
+    if(m.kind==="truce") return `<div class="msg sys truce"><div class="bub">${esc(m.body)}</div></div>`;
+    if(m.kind==="letter"){ const opened = mine || openedLetters.has(m.id);
+      return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<button class="letterBub ${opened?"":"new"}" data-letter="${m.id}"><span class="lb1">💌</span><span><b>${mine?"你寫的信":"一封信"}</b><i>${opened?"點開再看一次":"點我拆信"}</i></span></button><span class="tm">${hhmm(m.created_at)}</span></div>`; }
+    if(m.kind==="makeup"){ const mk = (moodSt&&moodSt.makeup)||{}; const pending = !mine && mk.req && mk.req[m.sender] && Date.now()-mk.req[m.sender] < 864e5;
+      return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"cry")}</span>`}<div class="bub makeupBub">${mine?"你說：想跟 ta 和好 🤝":`${esc(m.name||"")} 想跟你和好 🥺`}${pending?`<button class="btn" data-makeup>🤝 好，我們和好</button>`:""}</div><span class="tm">${hhmm(m.created_at)}</span></div>`; }
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
     if(m.kind==="sticker") bub = `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
@@ -230,7 +239,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}</div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
@@ -262,7 +271,10 @@ const App = (function(){
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
-    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; } showKb(false); });
+    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
+      const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
+      if(e.target.closest("[data-makeup]")){ askMakeup(); return; }
+      showKb(false); });
     ctx._toSys = toSys;
     const unreadLove = messages.filter(m=>m.id>lastSeen && m.sender!==me.uid && isLove(m));
     if(unreadLove.length) setTimeout(()=>playLove(unreadLove.length, unreadLove[0].sender), 350);
@@ -399,8 +411,8 @@ const App = (function(){
       if(m.kind==="poke"){ SFX.meow(1.12); haptic(); floatSvg(sprite(m.cat||"white","wave")); }
       else if(m.kind==="sticker"){ SFX.heart(); }
       else SFX.msg();
-      if(!chatVisible() && m.kind!=="game"){
-        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.body;
+      if(!chatVisible() && m.kind!=="game" && m.kind!=="ping"){
+        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.kind==="letter"?"寫了一封信給你 💌":m.body;
         toast(`${sprite(m.cat||"white","happy")}<span><b style="font-weight:400">${esc(m.name||"另一半")}</b>：${esc(txt.slice(0,40))}</span>`);
       }
     }
@@ -438,6 +450,174 @@ const App = (function(){
   }
   function kbArt(){ const p=palOf(me.cat||"orange"); return { paw: icon("bigpaw",{F:p.Y,O:p.O,P:'#f7a7b8'}), heart: icon("heart"), star: icon("star"), cat: sprite(me.cat||"orange","happy") }; }
 
+
+  // ================= 吵架救援：心情、休戰旗、和好信箱、和好儀式 =================
+  const MOODS = [["happy","開心","😊","happy"],["love","超愛你","🥰","love"],["ok","普通","🙂","normal"],["tired","好累","😴","sleep"],["sad","難過","😢","cry"],["angry","生氣","😠","angry"],["hug","需要抱抱","🫂","cry"]];
+  const MOOD_BY = Object.fromEntries(MOODS.map(m=>[m[0],m]));
+  let moodSt = null, truceTimer = null;
+  const moodOf = uid => { const m = moodSt && moodSt.moods && moodSt.moods[uid]; return m && (Date.now()-m.at < 36*3600e3) ? MOOD_BY[m.m] : null; };
+  function moodFace(uid, fallback){ const m = moodOf(uid); return m ? m[3] : fallback; }
+  const truce = () => moodSt && moodSt.truce && !moodSt.truce.done ? moodSt.truce : null;
+  const fmtLeft = ms => { ms=Math.max(0,ms); const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000); return `${m}:${String(s).padStart(2,"0")}`; };
+
+  function careCard(){
+    const p = partner(); if(!p) return "";
+    const mm = moodOf(me.uid), pm = moodOf(p.user_id), mk = (moodSt && moodSt.makeup) || {};
+    const myReq = mk.req && mk.req[me.uid] && Date.now()-mk.req[me.uid] < 864e5, theirReq = mk.req && mk.req[p.user_id] && Date.now()-mk.req[p.user_id] < 864e5;
+    return `<div class="box care" id="care">
+      <div class="careHd">💗 心情小站${mk.count?`<span>一起和好過 ${mk.count} 次</span>`:""}</div>
+      <div class="careMoods">
+        <button class="cm" id="cmMe"><span class="cmCat">${sprite(me.cat||"orange", mm?mm[3]:"normal")}</span><b>${esc(me.name||"我")}</b><i>${mm?`${mm[2]} ${mm[1]}`:"點我設定心情"}</i></button>
+        <div class="cmMid">${theirReq&&!myReq?`<span class="cmHeart">🤝</span>`:`<span class="cmHeart">${icon("heart")}</span>`}</div>
+        <div class="cm"><span class="cmCat">${sprite(p.cat, pm?pm[3]:"normal")}</span><b>${esc(p.name)}</b><i>${pm?`${pm[2]} ${pm[1]}`:"還沒設定"}</i></div>
+      </div>
+      ${theirReq && !myReq ? `<div class="careAsk">${esc(p.name)} 想跟你和好 🥺 <button class="btn" id="cmYes">🤝 好，我們和好</button></div>`:""}
+      <div class="careBtns">
+        <button id="cbMood"><span>🌡️</span>心情</button><button id="cbTruce"><span>🏳️</span>休戰旗</button><button id="cbLetter"><span>💌</span>寫信</button><button id="cbMake" class="${myReq?"on":""}"><span>🤝</span>${myReq?"等 ta 回應":"和好"}</button>
+      </div></div>`;
+  }
+  function bindCare(root){
+    const q = id => root.querySelector("#"+id);
+    if(q("cmMe")) q("cmMe").addEventListener("click", moodPicker);
+    if(q("cbMood")) q("cbMood").addEventListener("click", moodPicker);
+    if(q("cbTruce")) q("cbTruce").addEventListener("click", trucePicker);
+    if(q("cbLetter")) q("cbLetter").addEventListener("click", ()=>letterWriter());
+    if(q("cbMake")) q("cbMake").addEventListener("click", askMakeup);
+    if(q("cmYes")) q("cmYes").addEventListener("click", askMakeup);
+  }
+  function modal(html, cls){
+    const o = document.createElement("div"); o.className = "careModal "+(cls||""); o.innerHTML = `<div class="cmBox">${html}</div>`;
+    o.addEventListener("click", e=>{ if(e.target===o) o.remove(); }); document.body.appendChild(o);
+    o.firstChild.animate([{transform:"translateY(40px) scale(.95)",opacity:0},{transform:"none",opacity:1}],{duration:220,easing:"ease-out"});
+    return o;
+  }
+  // ---- mood ----
+  function moodPicker(){
+    const cur = moodOf(me.uid);
+    const o = modal(`<h3>你現在的心情是？</h3><div class="mdGrid">${MOODS.map(m=>`<button data-m="${m[0]}" class="${cur&&cur[0]===m[0]?"on":""}"><span>${sprite(me.cat||"orange", m[3])}</span>${m[2]} ${m[1]}</button>`).join("")}</div><div class="k">對方會在首頁和頂端看到你的貓咪表情</div>`);
+    o.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{
+      const m = b.dataset.m; o.remove(); SFX.select();
+      await update("mood", st=>{ st = st || {}; st.moods = st.moods || {}; st.moods[me.uid] = { m, at: Date.now() }; return st; });
+      const md = MOOD_BY[m];
+      if(["sad","angry","hug","tired"].includes(m)){ const pp = partner(); if(pp){ try{ const row = await B.send(`${me.name} 現在的心情：${md[2]} ${md[1]}`, "game", me.name, me.cat); addMessage(row); }catch(e){} } }
+      toast(`${sprite(me.cat||"orange", md[3])} 心情設定成「${md[1]}」`);
+    }));
+  }
+  // ---- truce flag ----
+  function trucePicker(){
+    const t = truce();
+    if(t){ const mine = t.by===me.uid;
+      const o = modal(`<h3>🏳️ 休戰中</h3><p>${mine?"你":esc(nameOf(t.by))} 想冷靜一下，還剩 <b>${fmtLeft(t.until-Date.now())}</b></p>${mine?`<button class="btn" id="tcEnd">我好了，提早結束</button>`:`<p class="k">先讓 ta 冷靜一下，時間到會提醒你們 💗</p>`}<button class="btn sub" id="tcClose" style="width:100%;margin-top:8px">關閉</button>`);
+      o.querySelector("#tcClose").addEventListener("click", ()=>o.remove());
+      const e = o.querySelector("#tcEnd"); if(e) e.addEventListener("click", async ()=>{ o.remove(); await endTruce(true); });
+      return; }
+    const o = modal(`<h3>🏳️ 舉起休戰旗</h3><p>想先冷靜一下嗎？選一段時間，對方會知道你<b>會回來</b>，不是不理 ta。</p>
+      <div class="tcGrid">${[10,20,30,60].map(m=>`<button data-min="${m}">${m} 分鐘</button>`).join("")}</div><div class="k">時間到的時候，兩邊都會收到提醒</div>`);
+    o.querySelectorAll("[data-min]").forEach(b=>b.addEventListener("click", async ()=>{
+      const min = +b.dataset.min; o.remove(); SFX.select();
+      await update("mood", st=>{ st = st || {}; st.truce = { by: me.uid, until: Date.now()+min*60000, min, done:false }; return st; });
+      try{ const row = await B.send(`🏳️ ${me.name} 想先冷靜 ${min} 分鐘，等等一定回來找你 💗`, "truce", me.name, me.cat); addMessage(row); }catch(e){}
+    }));
+  }
+  async function endTruce(early){
+    const ok = await update("mood", st=>{ if(!st || !st.truce || st.truce.done) return undefined; st.truce.done = true; return st; });
+    if(ok){ try{ const row = await B.send(early ? `🏳️ ${me.name} 冷靜好了，想跟你聊聊 💗` : "🏳️ 冷靜時間到了，可以聊聊了嗎？💗", "game", me.name, me.cat); addMessage(row); }catch(e){} }
+  }
+  function truceBar(){
+    const t = truce(); if(!t) return "";
+    const mine = t.by===me.uid;
+    return `<div class="truceBar" data-truce>🏳️ <span>${mine?"你正在冷靜":esc(nameOf(t.by))+" 想先冷靜一下"}</span><b class="tLeft">${fmtLeft(t.until-Date.now())}</b></div>`;
+  }
+  function tickTruce(){
+    const t = truce();
+    document.querySelectorAll("[data-truce] .tLeft").forEach(e=>e.textContent = t ? fmtLeft(t.until-Date.now()) : "");
+    if(t && Date.now() >= t.until) endTruce(false);
+  }
+  // ---- letters ----
+  function letterWriter(){
+    const p = partner(); if(!p) return;
+    let text = "";
+    const o = modal(`<div class="ltPaper"><div class="ltTo">給 ${esc(p.name)}：</div><div class="ltBody" id="ltBody"><span class="ph">想說的話，寫在這裡…</span></div><div class="ltFrom">—— ${esc(me.name)}</div></div>
+      <div class="ltBtns"><button class="btn sub" id="ltCancel">取消</button><button class="btn" id="ltSend">💌 寄出</button></div><div id="ltKb" class="ltKb"></div>`, "letter");
+    const body = o.querySelector("#ltBody");
+    const paint = () => { body.innerHTML = text ? esc(text).replace(/\n/g,"<br>") : `<span class="ph">想說的話，寫在這裡…</span>`; body.scrollTop = body.scrollHeight; };
+    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK["常用語"], emojis: QK["表情"], enterLabel:"換行",
+      commit: t => { text = (text + t).slice(0, 800); paint(); }, backspace: () => { const a=[...text]; a.pop(); text=a.join(""); paint(); },
+      send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(k==="del") SFX.del(); else SFX.key(); } });
+    o.querySelector("#ltCancel").addEventListener("click", ()=>o.remove());
+    o.querySelector("#ltSend").addEventListener("click", async ()=>{
+      if(kbx.composing()) kbx.flush();
+      const t = text.trim(); if(!t){ toast("先寫點什麼吧"); return; }
+      o.remove();
+      try{ const row = await B.send("💌 寫了一封信給你", "letter", me.name, me.cat, t); addMessage(row); SFX.send(); toast(`${sprite(me.cat||"orange","love")} 信寄出去了！`); }catch(e){ toast("寄信失敗，請再試一次"); }
+    });
+  }
+  const openedLetters = new Set(JSON.parse(store.get("mw_letters")||"[]"));
+  function openLetter(m){
+    openedLetters.add(m.id); store.set("mw_letters", JSON.stringify([...openedLetters].slice(-300)));
+    const from = m.sender===me.uid ? "你" : esc(m.name||nameOf(m.sender)), to = m.sender===me.uid ? esc(partner()?partner().name:"") : esc(me.name);
+    const o = document.createElement("div"); o.className = "ltOpen";
+    o.innerHTML = `<div class="env"><div class="envBack"></div><div class="ltPaper inEnv"><div class="ltTo">給 ${to}：</div><div class="ltBody">${esc(m.media||"").replace(/\n/g,"<br>")}</div><div class="ltFrom">—— ${from}</div></div><div class="envFront"></div><div class="envFlap"></div><div class="envSeal">💗</div></div><div class="k" style="color:#fff;margin-top:14px">點一下關閉</div>`;
+    document.body.appendChild(o);
+    const flap = o.querySelector(".envFlap"), paper = o.querySelector(".inEnv"), seal = o.querySelector(".envSeal");
+    seal.animate([{transform:"translate(-50%,-50%) scale(1)"},{transform:"translate(-50%,-50%) scale(1.4)",opacity:1},{transform:"translate(-50%,-50%) scale(0)",opacity:0}],{duration:400,fill:"forwards"});
+    flap.animate([{transform:"rotateX(0)"},{transform:"rotateX(180deg)"}],{duration:500,delay:300,fill:"forwards",easing:"ease-in-out"});
+    paper.animate([{transform:"translateY(0)"},{transform:"translateY(-62%)"}],{duration:600,delay:750,fill:"forwards",easing:"ease-out"});
+    setTimeout(()=>{ paper.classList.add("up"); SFX.heart(); }, 1350);
+    SFX.select();
+    o.addEventListener("click", ()=>{ o.animate([{opacity:1},{opacity:0}],{duration:250}).onfinish=()=>o.remove(); drawList(false); });
+  }
+  // ---- make up ----
+  async function askMakeup(){
+    const p = partner(); if(!p) return;
+    let completed = false, count = 0;
+    const ok = await update("mood", st=>{
+      st = st || {}; st.makeup = st.makeup || { count:0, req:{} }; st.makeup.req = st.makeup.req || {};
+      const theirs = st.makeup.req[p.user_id];
+      if(theirs && Date.now()-theirs < 864e5){
+        st.makeup.count = (st.makeup.count||0)+1; st.makeup.req = {}; st.makeup.last = { at: Date.now(), n: st.makeup.count };
+        if(st.truce) st.truce.done = true;
+        st.moods = st.moods || {}; for(const u of [me.uid, p.user_id]) st.moods[u] = { m:"love", at: Date.now() };
+        completed = true; count = st.makeup.count;
+      } else {
+        if(st.makeup.req[me.uid] && Date.now()-st.makeup.req[me.uid] < 864e5) return undefined;
+        st.makeup.req[me.uid] = Date.now();
+      }
+      return st;
+    });
+    if(!ok){ toast("已經跟 ta 說想和好了，等 ta 回應 🥺"); return; }
+    try{
+      const row = completed ? await B.send(`🤝 我們和好了！這是第 ${count} 次一起和好 💗`, "game", me.name, me.cat)
+                            : await B.send("想跟你和好 🤝", "makeup", me.name, me.cat);
+      addMessage(row);
+    }catch(e){}
+    if(!completed) toast(`${sprite(me.cat||"orange","cry")} 已經跟 ${esc(p.name)} 說了，等 ta 按下和好`);
+  }
+  let shownMakeup = null;
+  function playHug(n){
+    const p = partner(); if(!p) return;
+    const o = document.createElement("div"); o.className = "loveFx hugFx";
+    o.innerHTML = `<div class="lfBg"></div><div class="lfStage"><div class="lfCat l" id="hgL">${sprite(me.cat||"orange","cry")}</div><div class="lfCat r" id="hgR">${sprite(p.cat,"cry")}</div>
+      <div class="lfKiss hidden" id="hgTxt">抱抱～</div><div class="lfBig hidden" id="hgBig">🤝</div></div><div class="lfTxt">和好了！第 ${n} 次一起和好 💗</div>`;
+    document.body.appendChild(o);
+    const L=o.querySelector("#hgL"), R=o.querySelector("#hgR");
+    L.animate([{transform:"translateX(0)"},{transform:"translateX(118%)"}],{duration:1200,easing:"steps(8,end)",fill:"forwards"});
+    R.animate([{transform:"translateX(0)"},{transform:"translateX(-118%)"}],{duration:1200,easing:"steps(8,end)",fill:"forwards"});
+    setTimeout(()=>{ L.innerHTML=sprite(me.cat||"orange","love"); R.innerHTML=sprite(p.cat,"love"); const t=o.querySelector("#hgTxt"); t.classList.remove("hidden"); t.animate([{transform:"translate(-50%,0) scale(.3)",opacity:0},{transform:"translate(-50%,-20px) scale(1.2)",opacity:1}],{duration:400,fill:"forwards"}); SFX.level(); burst(); haptic(); }, 1250);
+    setTimeout(()=>{ const b=o.querySelector("#hgBig"); b.classList.remove("hidden"); b.animate([{transform:"translate(-50%,-50%) scale(0)"},{transform:"translate(-50%,-50%) scale(1.3)",offset:.6},{transform:"translate(-50%,-50%) scale(1)"}],{duration:500,fill:"forwards"}); }, 1800);
+    const close=()=>{ o.animate([{opacity:1},{opacity:0}],{duration:300}).onfinish=()=>o.remove(); };
+    o.addEventListener("click", close); setTimeout(close, 4200);
+  }
+  function onMood(st){
+    const prev = moodSt; moodSt = st;
+    const mk = st && st.makeup && st.makeup.last;
+    if(mk && shownMakeup!==null && mk.n !== shownMakeup) playHug(mk.n);
+    if(mk) shownMakeup = mk.n; else if(shownMakeup===null) shownMakeup = 0;
+    lastHdr = ""; renderHeader();
+    if(route==="home"){ const c=$("care"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=careCard(); c.replaceWith(tmp.firstChild); bindCare($("view")); } const tb=$("truceHome"); if(tb) tb.innerHTML = truceBar(); }
+    document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar());
+    if(chatVisible()) drawList(false);
+  }
   // ---------- settings ----------
   function viewSettings(v){
     const ps=pushState();
@@ -575,6 +755,9 @@ const App = (function(){
     const mine = members.find(m=>m.user_id===me.uid); if(mine){ if(!me.name) me.name=mine.name; if(!me.cat) me.cat=mine.cat; }
     try{ messages = await B.messages(); }catch(e){ messages=[]; }
     await getState("moqi").catch(()=>{});
+    try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
+    onState("mood", onMood);
+    clearInterval(truceTimer); truceTimer = setInterval(tickTruce, 1000);
     B.track({ name: me.name, cat: me.cat });
     B.connect();
     if(justCreated) location.hash="settings"; else if(!location.hash || location.hash==="#") location.hash="home";
