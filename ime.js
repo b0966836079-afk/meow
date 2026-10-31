@@ -65,7 +65,8 @@ const IME = (function(){
     const st = { syl: [], cur: {i:"",m:"",f:""} };
     const curStr = () => st.cur.i + st.cur.m + st.cur.f;
     const composing = () => st.syl.length>0 || !!curStr();
-    root.innerHTML = `<div class="ime"><div class="ime-top"><div class="pre" id="imePre"></div><div class="cands" id="imeCands"></div></div><div class="ime-body" id="imeBody"></div></div>`;
+    root.innerHTML = `<div class="ime"><span class="ear l"></span><span class="ear r"></span>${opt.mascot?`<span class="mascot">${opt.mascot}</span>`:""}<div class="ime-top"><div class="pre" id="imePre"></div><div class="cands" id="imeCands"></div></div><div class="ime-body" id="imeBody"></div></div>`;
+    const imeEl = root.querySelector(".ime");
     const preEl = root.querySelector("#imePre"), candEl = root.querySelector("#imeCands"), body = root.querySelector("#imeBody");
     let dictReady = false;
     load(opt.dictUrl).then(()=>{ dictReady = true; refresh(); }).catch(()=>{ candEl.innerHTML = `<span class="hint">字典載入失敗，請檢查網路後重開聊天室</span>`; });
@@ -93,7 +94,7 @@ const IME = (function(){
       if(!composing()){ candEl.innerHTML = `<span class="hint">${dictReady ? (mode==="zh"?"用注音打字，空白鍵＝一聲":"") : "字典載入中…"}</span>${opt.toSys?`<button class="sysk">📱 手機鍵盤</button>`:""}${opt.hide?`<button class="sysk hidek">收起 ▾</button>`:""}`; const sk=candEl.querySelector(".sysk:not(.hidek)"); if(sk) sk.addEventListener("click", ()=>opt.toSys()); const hk=candEl.querySelector(".hidek"); if(hk) hk.addEventListener("click", ()=>opt.hide()); return; }
       candEl.innerHTML = cs.map((c,i)=>`<button data-i="${i}">${esc(c.w)}</button>`).join("") || `<span class="hint">沒有這個音，按 ⌫ 修改</span>`;
       candEl.scrollLeft = 0;
-      candEl.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{ pick(cs[+b.dataset.i]); pop(b); }));
+      candEl.querySelectorAll("button").forEach(b=>{ b.addEventListener("pointerdown", ()=>pop(b)); b.addEventListener("click", ()=>pick(cs[+b.dataset.i])); });
     }
     function pick(c){
       opt.commit(c.w);
@@ -127,38 +128,73 @@ const IME = (function(){
     }
     function enter(){ if(commitAll()) return; opt.send(); }
 
-    function key(label, cls, act){ return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}">${label}</button>`; }
+    function key(label, cls, act, bub){ const B = bub!==undefined ? bub : (act ? "" : label); return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}" data-bub="${esc(B)}">${label}</button>`; }
     function draw(){
       let h = "";
       if(mode==="zh"){
-        h += ZH_ROWS.map(r=>`<div class="row">${[...r].map(k=>key(k, TONE.includes(k)?"tone":"")).join("")}</div>`).join("");
+        h += ZH_ROWS.map((r,ri)=>`<div class="row r${ri}">${[...r].map(k=>key(k, TONE.includes(k)?"tone":"")).join("")}</div>`).join("");
       } else if(mode==="en"){
-        h += EN_ROWS.map((r,i)=>`<div class="row">${i===2?key("⇧","fn"+(shift?" on":""),"shift"):""}${[...r].map(k=>key(shift?k.toUpperCase():k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
+        h += EN_ROWS.map((r,i)=>`<div class="row r${i}">${i===2?key("⇧","fn"+(shift?" on":""),"shift"):""}${[...r].map(k=>key(shift?k.toUpperCase():k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
       } else if(mode==="sym"){
-        h += SYM_ROWS.map((r,i)=>`<div class="row">${r.map(k=>key(k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
+        h += SYM_ROWS.map((r,i)=>`<div class="row r${i}">${r.map(k=>key(k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
       } else if(mode==="fav" || mode==="emo"){
         const list = mode==="fav" ? opt.phrases : opt.emojis;
         h += `<div class="grid ${mode}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>`;
       }
       const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
-      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("空白","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":"傳送","send","enter")}</div>`;
+      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":"傳送 ฅ","send","enter")}</div>`;
       body.innerHTML = h;
       body.querySelectorAll(".k").forEach(b=>{
+        b.addEventListener("pointerdown", ()=>{ pop(b); bubble(b); });
         b.addEventListener("click", ()=>{
-          pop(b);
           const a = b.dataset.a, k = b.dataset.k;
-          if(a==="back") back();
-          else if(a==="space") space();
+          if(a==="back"){ back(); updEnter(); }
+          else if(a==="space"){ space(); updEnter(); }
           else if(a==="enter"){ enter(); draw(); }
           else if(a==="shift"){ shift=!shift; opt.fx("key"); draw(); }
           else if(a.startsWith("mode:")){ commitAll(); mode=a.slice(5); shift=false; opt.fx("key"); draw(); refresh(); }
           else if(a==="ins"){ opt.commit(b.textContent); opt.fx("key", [...b.textContent].length); }
-          else if(mode==="zh") { zhKey(k); draw(); }
+          else if(mode==="zh") { zhKey(k); updEnter(); }
           else { opt.commit(k); opt.fx("key"); if(shift){ shift=false; draw(); } }
         });
       });
     }
-    function pop(b){ b.animate([{transform:"translateY(2px) scale(.9)"},{transform:"translateY(-3px) scale(1.12)"},{transform:"none"}],{duration:170,easing:"steps(3,end)"}); }
+    function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) e.innerHTML = composing() ? "確定" : "傳送 ฅ"; }
+    // key press animations (chosen in settings)
+    const ANIMS = {
+      jelly(b){ b.animate([{transform:"scale(1)"},{transform:"scale(1.32) translateY(-5px)",offset:.3},{transform:"scale(.88)",offset:.62},{transform:"scale(1.06)",offset:.82},{transform:"scale(1)"}],{duration:340,easing:"ease-out"}); },
+      paw(b){ b.animate([{transform:"scale(1)"},{transform:"scale(1.12,.78) translateY(3px)",offset:.3},{transform:"scale(.95,1.1)",offset:.65},{transform:"scale(1)"}],{duration:320,easing:"ease-out"});
+        overlay(b, art("paw"), 30, [{transform:"translate(-50%,-50%) scale(.2) rotate(-20deg)",opacity:0},{transform:"translate(-50%,-50%) scale(1.25) rotate(8deg)",opacity:1,offset:.35},{transform:"translate(-50%,-50%) scale(1) rotate(0)",opacity:1,offset:.7},{transform:"translate(-50%,-50%) scale(.9)",opacity:0}], 420); },
+      hearts(b){ b.animate([{transform:"scale(1)"},{transform:"scale(1.22)",offset:.35},{transform:"scale(1)"}],{duration:260,easing:"ease-out"});
+        for(let i=0;i<6;i++){ const a=Math.PI*2*i/6+Math.random()*.5, d=26+Math.random()*12; overlay(b, art("heart"), 13, [{transform:"translate(-50%,-50%) scale(.3)",opacity:1},{transform:`translate(calc(-50% + ${Math.cos(a)*d}px),calc(-50% + ${Math.sin(a)*d}px)) scale(1.1)`,opacity:1,offset:.6},{transform:`translate(calc(-50% + ${Math.cos(a)*d*1.2}px),calc(-50% + ${Math.sin(a)*d*1.2-8}px)) scale(.6)`,opacity:0}], 520); } },
+      jump(b){ b.animate([{transform:"translateY(0)"},{transform:"translateY(-16px) scale(1.12)",offset:.35},{transform:"translateY(0) scale(1.15,.82)",offset:.65},{transform:"translateY(0) scale(.96,1.05)",offset:.82},{transform:"none"}],{duration:380,easing:"ease-out"});
+        [-1,1].forEach(sd=>overlay(b, `<i style="display:block;width:100%;height:100%;background:#fff;border:2px solid currentColor;border-radius:50%"></i>`, 8, [{transform:"translate(-50%,-50%)",opacity:0},{transform:"translate(-50%,-50%)",opacity:0,offset:.6},{transform:`translate(calc(-50% + ${sd*22}px),calc(-50% + 14px)) scale(1.3)`,opacity:.9,offset:.8},{transform:`translate(calc(-50% + ${sd*30}px),calc(-50% + 12px)) scale(.4)`,opacity:0}], 420)); },
+      spin(b){ b.animate([{transform:"rotate(0) scale(1)"},{transform:"rotate(-14deg) scale(1.28)",offset:.3},{transform:"rotate(9deg) scale(1.05)",offset:.6},{transform:"rotate(0) scale(1)"}],{duration:360,easing:"ease-out"});
+        [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([x,y])=>overlay(b, art("star"), 13, [{transform:"translate(-50%,-50%) scale(.2) rotate(0)",opacity:0},{transform:`translate(calc(-50% + ${x*22}px),calc(-50% + ${y*22}px)) scale(1.1) rotate(90deg)`,opacity:1,offset:.5},{transform:`translate(calc(-50% + ${x*28}px),calc(-50% + ${y*28}px)) scale(.4) rotate(180deg)`,opacity:0}], 460)); },
+      peek(b){ b.animate([{transform:"scale(1)"},{transform:"scale(.9)",offset:.3},{transform:"scale(1.06)",offset:.7},{transform:"scale(1)"}],{duration:300,easing:"ease-out"});
+        overlay(b, art("cat"), 30, [{transform:"translate(-50%,-10%) scale(.6)",opacity:0},{transform:"translate(-50%,-105%) scale(1.1)",opacity:1,offset:.35},{transform:"translate(-50%,-95%) scale(1)",opacity:1,offset:.7},{transform:"translate(-50%,-20%) scale(.6)",opacity:0}], 560); },
+      ripple(b){ b.animate([{transform:"scale(1)",filter:"brightness(1)"},{transform:"scale(1.15)",filter:"brightness(1.12) saturate(1.6)",offset:.3},{transform:"scale(1)",filter:"brightness(1)"}],{duration:300,easing:"ease-out"});
+        [0,120].forEach(dl=>overlay(b, `<i style="display:block;width:100%;height:100%;border:3px solid var(--kb-accent);border-radius:50%"></i>`, 20, [{transform:"translate(-50%,-50%) scale(.6)",opacity:.9},{transform:"translate(-50%,-50%) scale(3.4)",opacity:0}], 480, dl)); },
+    };
+    function art(n){ return (opt.art && opt.art[n]) || ""; }
+    function overlay(b, html, size, frames, dur, delay){
+      const r=b.getBoundingClientRect(), R=imeEl.getBoundingClientRect();
+      const d=document.createElement("div"); d.className="kfx"; d.innerHTML=html;
+      d.style.cssText=`left:${r.left-R.left+r.width/2}px;top:${r.top-R.top+r.height/2}px;width:${size}px;height:${size}px`;
+      imeEl.appendChild(d);
+      d.animate(frames,{duration:dur,delay:delay||0,easing:"ease-out",fill:"both"});
+      setTimeout(()=>d.remove(), dur+(delay||0)+40);
+    }
+    function pop(b){ const a = (opt.anim && opt.anim()) || "jelly"; (ANIMS[a]||ANIMS.jelly)(b); }
+    function bubble(b){
+      const t = b.dataset.bub; if(!t || (opt.anim && opt.anim()==="peek")) return;
+      const r = b.getBoundingClientRect(), R = imeEl.getBoundingClientRect();
+      const d = document.createElement("div"); d.className = "keybub"; d.textContent = t;
+      d.style.left = (r.left - R.left + r.width/2) + "px"; d.style.top = (r.top - R.top) + "px";
+      imeEl.appendChild(d);
+      d.animate([{transform:"translate(-50%,-30%) scale(.4)",opacity:0},{transform:"translate(-50%,-115%) scale(1.15)",opacity:1,offset:.35},{transform:"translate(-50%,-110%) scale(1)",opacity:1,offset:.7},{transform:"translate(-50%,-140%) scale(.8)",opacity:0}],{duration:420,easing:"ease-out",fill:"forwards"});
+      setTimeout(()=>d.remove(),450);
+    }
     function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
     draw(); refresh();
     return { flush: commitAll, composing };
