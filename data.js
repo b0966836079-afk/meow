@@ -51,9 +51,21 @@
       const { data, error } = await sb.from("messages").select("*").eq("couple_id", B.coupleId).order("id", { ascending: false }).limit(limit);
       if (error) throw error; return (data || []).reverse();
     };
-    B.send = async (body, kind, name, cat) => {
-      const { data, error } = await sb.from("messages").insert({ couple_id: B.coupleId, sender: B.uid, body, kind: kind || "text", name, cat }).select().single();
+    B.send = async (body, kind, name, cat, media) => {
+      const row = { couple_id: B.coupleId, sender: B.uid, body, kind: kind || "text", name, cat };
+      if (media) row.media = media;
+      const { data, error } = await sb.from("messages").insert(row).select().single();
       if (error) throw error; return data;
+    };
+    B.uploadImage = async (blob) => {
+      const ext = blob.type === "image/gif" ? "gif" : blob.type === "image/png" ? "png" : "jpg";
+      const path = `${B.coupleId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: blob.type || "image/jpeg", upsert: false });
+      if (error) throw error; return path;
+    };
+    B.imageUrl = async (path) => {
+      const { data, error } = await sb.storage.from("photos").createSignedUrl(path, 60 * 60 * 24 * 7);
+      if (error) throw error; return data.signedUrl;
     };
     B.getState = async (game) => {
       const { data, error } = await sb.from("game_state").select("version,state").eq("couple_id", B.coupleId).eq("game", game).maybeSingle();
@@ -106,7 +118,9 @@
     B.updateMe = async (patch) => call("update", { uid: B.uid, patch });
     B.members = async () => call("members", { cid: B.coupleId });
     B.messages = async () => call("messages", { cid: B.coupleId });
-    B.send = async (body, kind, name, cat) => call("send", { cid: B.coupleId, uid: B.uid, body, kind: kind || "text", name, cat });
+    B.send = async (body, kind, name, cat, media) => call("send", { cid: B.coupleId, uid: B.uid, body, kind: kind || "text", name, cat, media: media || null });
+    B.uploadImage = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl }); };
+    B.imageUrl = async (path) => call("url", { path });
     B.getState = async (game) => call("get", { cid: B.coupleId, game });
     B.casState = async (game, version, state) => call("cas", { cid: B.coupleId, game, version, state });
     B.savePush = async () => {};

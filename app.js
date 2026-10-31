@@ -41,6 +41,10 @@ const App = (function(){
       heart(){ tone(N.A5,.09,{vol:.28,type:"triangle"}); tone(N.E6,.16,{vol:.25,type:"triangle",delay:.09}); },
       msg(){ tone(N.E6,.08,{vol:.2,type:"triangle"}); tone(N.C6,.12,{vol:.2,type:"triangle",delay:.08}); },
       place(){ tone(220,.05,{vol:.35,type:"triangle"}); tone(160,.08,{vol:.25,type:"square",lp:800,delay:.02}); },
+      key(p){ const base=[1046,1175,1318,1397,1568][(Math.random()*5)|0]*(p||1); tone(base,.035,{vol:.13,type:"square",lp:4000}); tone(base*2,.02,{vol:.05,type:"triangle",delay:.01}); },
+      del(){ tone(520,.05,{to:300,vol:.12,type:"square",lp:2000}); },
+      send(){ [N.G5,N.C6,N.E6].forEach((f,i)=>tone(f,.07,{vol:.2,delay:i*.05,type:"square",lp:3500})); tone(600,.25,{to:1800,vol:.08,type:"triangle",delay:.05}); },
+      combo(){ [N.C6,N.E6,N.G6].forEach((f,i)=>tone(f,.08,{vol:.18,delay:i*.06,type:"triangle"})); },
       meow(p){ meow(p||1); }, join(){ meow(1.05); tone(N.E6,.18,{vol:.15,type:"triangle",delay:.45}); } };
   })();
 
@@ -138,7 +142,14 @@ const App = (function(){
 
   // ---------- chat ----------
   const STK=["normal","happy","love","surprised","sleep","wave","loaf"];
+  const QK = {
+    "常用語": ["我愛你 ❤️","想你了","抱抱 🫂","親親 😘","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","等等打給你","好喔 👌","哈哈哈哈"],
+    "表情": ["❤️","💕","🥰","😘","😍","🥺","😭","😂","🤣","😳","😴","🤗","👍","👌","🙏","🎉","🌙","☀️","🍰","🐱","🐾","🌸","✨","💤"],
+    "顏文字": ["ฅ^•ﻌ•^ฅ","(=^･ω･^=)","(つ≧▽≦)つ","(*´∀`)~♥","(´；ω；`)","╰(*°▽°*)╯","(｡･ω･｡)ﾉ♡","(*´з`)","(￣▽￣)ノ","( ˘ω˘ )zzZ","(๑•̀ㅂ•́)و✧","(⁄ ⁄•⁄ω⁄•⁄ ⁄)"],
+  };
+  let qkTab = "常用語";
   let lastSeen = +(store.get("mw_seen")||0);
+  const imgCache = {};
   function unread(){ return messages.filter(m=>m.id>lastSeen && m.sender!==me.uid).length; }
   function markSeen(){ const mx=messages.reduce((a,m)=>Math.max(a,m.id),0); if(mx>lastSeen){ lastSeen=mx; store.set("mw_seen",String(mx)); } renderBadge(); }
   function renderBadge(){ const n=unread(), b=$("badge"); b.textContent=n>99?"99+":n; b.classList.toggle("hidden", n===0); }
@@ -148,25 +159,93 @@ const App = (function(){
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
     if(m.kind==="sticker") bub = `<span class="stk">${m.body==="heart"?icon("heart"):sprite(m.cat||"orange", STK.includes(m.body)?m.body:"normal")}</span>`;
+    else if(m.kind==="image") bub = `<span class="pic"><img data-media="${esc(m.media||"")}" ${imgCache[m.media]?`src="${esc(imgCache[m.media])}"`:""} alt="照片"></span>`;
     else if(m.kind==="poke") bub = `<div class="bub">戳了${mine?"對方":"你"}一下 🐾</div>`;
     else bub = `<div class="bub">${esc(m.body)}</div>`;
     return `<div class="msg ${mine?"me":""} ${m.kind==="poke"?"poke":""}">${mine?"":av}${bub}<span class="tm">${hhmm(m.created_at)}</span></div>`;
   }
   function viewChat(v){
     v.innerHTML = `<div class="box chat"><div class="list" id="list"></div>
-      <div class="stickers hidden" id="stk">${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}<button data-s="heart" style="display:none"></button></div>
-      <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPoke" title="戳一下">${icon("paw")}</button>
-      <textarea id="txt" placeholder="說點什麼…" maxlength="1000"></textarea><button class="send" id="bSend">傳送</button></div></div>`;
+      <div class="stickers hidden" id="stk">${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
+      <div class="qk hidden" id="qk"></div>
+      <div class="combo hidden" id="combo"></div>
+      <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button><button id="bQk" title="快捷鍵盤">${icon("keys")}</button>
+      <textarea id="txt" placeholder="說點什麼…" maxlength="1000" enterkeyhint="send"></textarea><button class="send" id="bSend">傳送</button></div>
+      <input type="file" id="fPic" accept="image/*" class="hidden"></div>`;
     drawList(true);
     const txt=$("txt");
-    const send=async()=>{ const t=txt.value.trim(); if(!t) return; txt.value=""; txt.style.height="44px"; await sendMsg(t,"text"); txt.focus(); };
-    $("bSend").addEventListener("click", send);
-    txt.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey && !e.isComposing){ e.preventDefault(); send(); } });
-    txt.addEventListener("input", ()=>{ txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; });
-    $("bStk").addEventListener("click", ()=>$("stk").classList.toggle("hidden"));
-    $("bPoke").addEventListener("click", ()=>{ sendMsg("poke","poke"); SFX.meow(); });
+    $("bSend").addEventListener("click", sendText);
+    txt.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
+    txt.addEventListener("input", e=>{ txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
+    txt.addEventListener("focus", ()=>{ $("qk").classList.add("hidden"); $("stk").classList.add("hidden"); });
+    $("bStk").addEventListener("click", ()=>{ $("qk").classList.add("hidden"); $("stk").classList.toggle("hidden"); });
+    $("bQk").addEventListener("click", ()=>{ $("stk").classList.add("hidden"); const q=$("qk"); q.classList.toggle("hidden"); if(!q.classList.contains("hidden")){ txt.blur(); drawQk(); } });
+    $("bPic").addEventListener("click", ()=>$("fPic").click());
+    $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
+    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src) viewPhoto(im.src); });
     markSeen();
+  }
+  function drawQk(){
+    const q=$("qk"); if(!q) return;
+    const keys = QK[qkTab];
+    q.innerHTML = `<div class="tabs">${Object.keys(QK).map(t=>`<button class="${t===qkTab?"on":""}" data-t="${t}">${t}</button>`).join("")}</div>
+      <div class="keys ${qkTab==="表情"?"emo":qkTab==="顏文字"?"kao":""}">${keys.map((k,i)=>`<button class="k" data-i="${i}">${esc(k)}</button>`).join("")}</div>
+      <div class="fn"><button class="k" id="qkBk">⌫</button><button class="k" id="qkSp">空白</button><button class="k" id="qkPoke">${icon("paw")} 戳</button><button class="k send" id="qkSend">傳送 ▶</button></div>`;
+    q.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click",()=>{ qkTab=b.dataset.t; SFX.key(1.4); drawQk(); }));
+    q.querySelectorAll(".keys .k").forEach(b=>b.addEventListener("click",()=>{ insertText(keys[+b.dataset.i]); keyPop(b); }));
+    $("qkBk").addEventListener("click", e=>{ const t=$("txt"); const arr=[...t.value]; arr.pop(); t.value=arr.join(""); typeFx("del"); keyPop(e.currentTarget); });
+    $("qkSp").addEventListener("click", e=>{ insertText(" "); keyPop(e.currentTarget); });
+    $("qkPoke").addEventListener("click", ()=>{ sendMsg("poke","poke"); SFX.meow(); });
+    $("qkSend").addEventListener("click", sendText);
+  }
+  function insertText(t){ const x=$("txt"); x.value = (x.value + t).slice(0,1000); typeFx("key", [...t].length); }
+  function keyPop(btn){ btn.animate([{transform:"translate(2px,2px) scale(.92)"},{transform:"translate(0,0) scale(1.06)"},{transform:"none"}],{duration:180,easing:"steps(3,end)"}); }
+  // typing sound + effects
+  let combo = 0, comboT = null;
+  const TYPE_ICONS = ["heart","star","spark","paw","fish","sq"];
+  function typeFx(kind, n=1){
+    if(kind==="del"){ SFX.del(); combo=Math.max(0,combo-1); showCombo(); return; }
+    SFX.key(); haptic();
+    const bar = document.querySelector(".chat .bar"); if(!bar) return;
+    const r = bar.getBoundingClientRect(), t=$("txt").getBoundingClientRect();
+    for(let i=0;i<Math.min(n,4);i++){
+      const d=document.createElement("div"); const k=TYPE_ICONS[(Math.random()*TYPE_ICONS.length)|0];
+      const sz = k==="spark"||k==="sq" ? 10 : 18;
+      d.style.cssText=`position:fixed;left:${t.left+20+Math.random()*(t.width-40)}px;top:${r.top-4}px;width:${sz}px;height:${sz}px;pointer-events:none;z-index:45`;
+      d.innerHTML = (k==="spark"||k==="sq") ? icon(k,{O:SPARK_COLS[(Math.random()*6)|0]}) : icon(k);
+      document.body.appendChild(d);
+      const dx=(Math.random()-.5)*60, dy=-50-Math.random()*60;
+      d.animate([{transform:"translate(0,0) scale(.3)",opacity:0},{transform:`translate(${dx*.5}px,${dy*.6}px) scale(1.15)`,opacity:1,offset:.35},{transform:`translate(${dx}px,${dy}px) scale(.7)`,opacity:0}],{duration:700,easing:"steps(8,end)",fill:"forwards"});
+      setTimeout(()=>d.remove(),750);
+    }
+    combo += n; showCombo();
+    if(combo>0 && combo%10===0){ SFX.combo(); const c=document.createElement("div"); c.className="float"; c.style.cssText+=`;left:${t.left+t.width/2-22}px;top:${r.top-50}px`; c.innerHTML=sprite(me.cat||"orange", combo%20===0?"love":"happy"); document.body.appendChild(c); setTimeout(()=>c.remove(),2300); }
+  }
+  function showCombo(){
+    const c=$("combo"); if(!c) return;
+    clearTimeout(comboT);
+    if(combo<3){ c.classList.add("hidden"); }
+    else { c.classList.remove("hidden"); c.innerHTML=`${icon("star")}<b>${combo}</b> 連擊！`; c.animate([{transform:"scale(1.3)"},{transform:"scale(1)"}],{duration:160,easing:"steps(2,end)"}); }
+    comboT=setTimeout(()=>{ combo=0; c.classList.add("hidden"); },1600);
+  }
+  async function sendText(){
+    const txt=$("txt"); const t=txt.value.trim(); if(!t) return;
+    txt.value=""; txt.style.height="44px"; combo=0; showCombo();
+    SFX.send(); sendFx();
+    await sendMsg(t,"text");
+  }
+  function sendFx(){
+    const b=$("bSend").getBoundingClientRect();
+    for(let i=0;i<6;i++){ const d=document.createElement("div"); d.style.cssText=`position:fixed;left:${b.left+b.width/2-9}px;top:${b.top}px;width:18px;height:18px;pointer-events:none;z-index:45`; d.innerHTML=icon(i%2?"heart":"star"); document.body.appendChild(d);
+      const dx=-30-Math.random()*120, dy=-80-Math.random()*120;
+      d.animate([{transform:"translate(0,0) scale(.5)"},{transform:`translate(${dx}px,${dy}px) scale(1.2)`,opacity:1,offset:.6},{transform:`translate(${dx*1.2}px,${dy*1.3}px) scale(.5)`,opacity:0}],{duration:650,easing:"steps(8,end)",fill:"forwards"}); setTimeout(()=>d.remove(),700); }
+  }
+  function fillImages(){
+    document.querySelectorAll(".pic img[data-media]").forEach(async im=>{
+      const pth=im.dataset.media; if(!pth || im.getAttribute("src")) return;
+      try{ if(!imgCache[pth]) imgCache[pth]=await B.imageUrl(pth); im.src=imgCache[pth]; }catch(e){ im.alt="照片載入失敗"; }
+    });
   }
   function drawList(force){
     const L=$("list"); if(!L) return;
@@ -175,7 +254,35 @@ const App = (function(){
     if(!messages.length) html = `<div class="day">還沒有訊息，先打個招呼吧 🐾</div>`;
     messages.forEach(m=>{ const d=dayStr(m.created_at); if(d!==lastDay){ html+=`<div class="day">${d}</div>`; lastDay=d; } html+=msgHtml(m); });
     L.innerHTML=html;
+    L.querySelectorAll(".pic img").forEach(im=>im.addEventListener("load",()=>{ if(atBottom) L.scrollTop=L.scrollHeight; }));
+    fillImages();
     if(atBottom) L.scrollTop=L.scrollHeight;
+  }
+  async function shrink(file){
+    if(file.type==="image/gif" && file.size<6e6) return file;
+    const url=URL.createObjectURL(file);
+    try{
+      const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+      const max=1440, sc=Math.min(1, max/Math.max(img.naturalWidth,img.naturalHeight));
+      const c=document.createElement("canvas"); c.width=Math.round(img.naturalWidth*sc); c.height=Math.round(img.naturalHeight*sc);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      return await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
+    } finally { URL.revokeObjectURL(url); }
+  }
+  async function sendPhoto(file){
+    if(!file.type.startsWith("image/")){ toast("只能傳圖片喔"); return; }
+    toast(`${sprite(me.cat||"orange","happy")} 照片傳送中…`, 20000);
+    try{
+      const blob = await shrink(file);
+      const path = await B.uploadImage(blob);
+      imgCache[path] = URL.createObjectURL(blob);
+      const row = await B.send("傳了一張照片 📷","image",me.name,me.cat,path);
+      addMessage(row); SFX.send(); toast(`${sprite(me.cat||"orange","wave")} 照片傳出去了！`);
+    }catch(e){ console.error(e); toast("照片傳送失敗："+esc(e.message||e), 5000); }
+  }
+  function viewPhoto(src){
+    const o=document.createElement("div"); o.className="viewer"; o.innerHTML=`<img src="${esc(src)}" alt="照片"><div class="vx">點一下關閉</div>`;
+    o.addEventListener("click",()=>o.remove()); document.body.appendChild(o);
   }
   async function sendMsg(body, kind){
     try{ const row = await B.send(body, kind, me.name, me.cat); addMessage(row); }
@@ -191,7 +298,7 @@ const App = (function(){
       else if(m.kind==="sticker"){ SFX.heart(); }
       else SFX.msg();
       if(route!=="chat" && m.kind!=="game"){
-        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.body;
+        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.body;
         toast(`${sprite(m.cat||"white","happy")}<span><b style="font-weight:400">${esc(m.name||"另一半")}</b>：${esc(txt.slice(0,40))}</span>`);
       }
     }
