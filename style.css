@@ -584,3 +584,5 @@ body.rnLock{overflow:hidden}
 .hugFx .lfBig{font-size:60px}
 
 .careBtns.three{grid-template-columns:repeat(3,1fr)}
+
+.makeupBub .mkDone{font-style:normal;font-size:11px;color:var(--muted)}

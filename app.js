@@ -227,7 +227,7 @@ const App = (function(){
     if(m.kind==="letter"){ const opened = mine || openedLetters.has(m.id);
       return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<button class="letterBub ${opened?"":"new"}" data-letter="${m.id}"><span class="lb1">💌</span><span><b>${mine?"你寫的信":"一封信"}</b><i>${opened?"點開再看一次":"點我拆信"}</i></span></button><span class="tm">${hhmm(m.created_at)}</span></div>`; }
     if(m.kind==="makeup"){ const mk = (moodSt&&moodSt.makeup)||{}; const pending = !mine && mk.req && mk.req[m.sender] && Date.now()-mk.req[m.sender] < 864e5;
-      return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"cry")}</span>`}<div class="bub makeupBub">${mine?"你說：想跟 ta 和好 🤝":`${esc(m.name||"")} 想跟你和好 🥺`}${pending?`<button class="btn" data-makeup>🤝 好，我們和好</button>`:""}</div><span class="tm">${hhmm(m.created_at)}</span></div>`; }
+      return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"cry")}</span>`}<div class="bub makeupBub">${mine?"你說：想跟 ta 和好 🤝":`${esc(m.name||"")} 想跟你和好 🥺`}${pending?`<button class="btn" data-makeup>🤝 好，我們和好</button>`:""}${!mk.req||!mk.req[m.sender]?`<i class="mkDone">${m.created_at && mk.last && mk.last.at > new Date(m.created_at).getTime() ? "已和好 💗" : "（已取消）"}</i>`:""}</div><span class="tm">${hhmm(m.created_at)}</span></div>`; }
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
     if(m.kind==="sticker") bub = `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
@@ -485,7 +485,14 @@ const App = (function(){
     if(q("cbMood")) q("cbMood").addEventListener("click", moodPicker);
     if(q("cbTruce")) q("cbTruce").addEventListener("click", trucePicker);
     if(q("cbLetter")) q("cbLetter").addEventListener("click", ()=>letterWriter());
-    if(q("cbMake")) q("cbMake").addEventListener("click", askMakeup);
+    if(q("cbMake")) q("cbMake").addEventListener("click", ()=>{
+      const mk = (moodSt && moodSt.makeup) || {}, mine = mk.req && mk.req[me.uid] && Date.now()-mk.req[me.uid] < 864e5;
+      if(!mine){ askMakeup(); return; }
+      const o = modal(`<h3>🤝 已經跟 ta 說想和好了</h3><p>在等 ${esc(partner()?partner().name:"ta")} 按下和好。<br>不小心按到的話可以取消。</p>
+        <button class="btn sub" id="mkCancel" style="width:100%">取消和好請求</button><button class="btn" id="mkKeep" style="width:100%;margin-top:8px">繼續等 ta</button>`);
+      o.querySelector("#mkKeep").addEventListener("click", ()=>o.remove());
+      o.querySelector("#mkCancel").addEventListener("click", async ()=>{ o.remove(); await cancelMakeup(); });
+    });
     if(q("cmYes")) q("cmYes").addEventListener("click", askMakeup);
   }
   function modal(html, cls){
@@ -595,6 +602,10 @@ const App = (function(){
       addMessage(row);
     }catch(e){}
     if(!completed) toast(`${sprite(me.cat||"orange","cry")} 已經跟 ${esc(p.name)} 說了，等 ta 按下和好`);
+  }
+  async function cancelMakeup(){
+    const ok = await update("mood", st=>{ if(!st || !st.makeup || !st.makeup.req || !st.makeup.req[me.uid]) return undefined; delete st.makeup.req[me.uid]; return st; });
+    if(ok) toast(`${sprite(me.cat||"orange","normal")} 已經取消和好請求`);
   }
   let shownMakeup = null;
   function playHug(n){
