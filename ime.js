@@ -142,7 +142,7 @@ const IME = (function(){
         h += `<div class="grid ${mode}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>`;
       }
       const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
-      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":"傳送 ฅ","send","enter")}</div>`;
+      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
       body.querySelectorAll(".k").forEach(b=>{
         b.addEventListener("pointerdown", ()=>{ pop(b); bubble(b); });
@@ -159,7 +159,7 @@ const IME = (function(){
         });
       });
     }
-    function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) e.innerHTML = composing() ? "確定" : "傳送 ฅ"; }
+    function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) e.innerHTML = composing() ? "確定" : (opt.enterLabel||"傳送 ฅ"); }
     // key press animations (chosen in settings)
     const ANIMS = {
       jelly(b){ b.animate([{transform:"scale(1)"},{transform:"scale(1.32) translateY(-5px)",offset:.3},{transform:"scale(.88)",offset:.62},{transform:"scale(1.06)",offset:.82},{transform:"scale(1)"}],{duration:340,easing:"ease-out"}); },
