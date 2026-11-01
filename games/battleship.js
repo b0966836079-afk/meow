@@ -19,6 +19,27 @@ const COATS = {
   mint:   { n:"薄荷", M:"#bfe9d2", D:"#93d3b2", W:"#f0fff6", O:"#2f6b50", E:"#2b1d18", pat:"tabby" },
   cow:    { n:"乳牛", M:"#ffffff", D:"#e3ddd6", C:"#2c2833", W:"#ffffff", O:"#3a3542", E:"#2b1d18", pat:"cow" },
   ginger: { n:"橘白", M:"#f2b06a", D:"#d98546", W:"#ffffff", O:"#5a3b2e", E:"#2b1d18", pat:"tux" },
+  tortie: { n:"玳瑁", M:"#3e3434", D:"#e59a4f", C:"#b06a3a", W:"#5a4a44", O:"#1d1a22", E:"#f5d36b", H:"#fff6c8", pat:"patch" },
+  bengal: { n:"豹貓", M:"#e9b872", D:"#7a5636", W:"#fff1df", O:"#4a3020", E:"#3fae74", pat:"spots" },
+  ragdoll:{ n:"布偶", M:"#f7efe2", D:"#9a8a7a", W:"#ffffff", O:"#5a4a3e", E:"#4a90d6", pat:"points" },
+  maine:  { n:"緬因", M:"#9a7656", D:"#5e4430", W:"#f0dcc4", O:"#3a281a", E:"#e8a920", pat:"tabby", tuft:1 },
+  silver: { n:"美短", M:"#d8dce6", D:"#5e6478", W:"#f2f4f8", O:"#3a3f50", E:"#3fae74", pat:"tiger" },
+  chin:   { n:"金吉拉", M:"#fdf6ee", D:"#efe2d2", W:"#ffffff", O:"#7a6a5a", E:"#3fae74" },
+  fold:   { n:"折耳", M:"#b9c2d4", D:"#9aa4b9", W:"#eef1f6", O:"#454b5e", E:"#e8a920", pat:"tabby", fold:1 },
+  foldc:  { n:"奶茶折耳", M:"#f0d6b4", D:"#ddb98e", W:"#fff6ea", O:"#6a4a32", E:"#2b1d18", fold:1 },
+  sphynx: { n:"無毛", M:"#f2c9b8", D:"#e0a993", W:"#f8dccf", O:"#7a4a3a", E:"#4a90d6", pat:"wrinkle" },
+  choco:  { n:"巧克力", M:"#6b4a3a", D:"#553a2d", W:"#8a6a58", O:"#2c1d16", E:"#f5d36b", H:"#fff6c8" },
+  van:    { n:"土耳其梵", M:"#ffffff", D:"#f0a35a", W:"#ffffff", O:"#5a3b2e", E:"#e8a920", pat:"van" },
+  aby:    { n:"阿比西尼亞", M:"#d6955a", D:"#a8693a", W:"#f3d2ae", O:"#4a2a18", E:"#3fae74", pat:"ticked" },
+  tiger:  { n:"小老虎", M:"#f6a54f", D:"#3a2a28", W:"#fff1df", O:"#3a2418", E:"#2b1d18", pat:"tiger" },
+  panda:  { n:"熊貓", M:"#ffffff", D:"#e3ddd6", C:"#2c2833", W:"#ffffff", O:"#2c2833", E:"#ffffff", H:"#2c2833", pat:"panda" },
+  rainbow:{ n:"彩虹", M:"#ffffff", D:"#f0f0f0", W:"#ffffff", O:"#5b5566", E:"#2b2630", pat:"rainbow" },
+  galaxy: { n:"星空", M:"#2f3a6e", D:"#4b4f8c", W:"#5c6aa8", O:"#141a38", E:"#ffd36b", H:"#ffffff", N:"#f0a0c8", pat:"stars" },
+  lav:    { n:"薰衣草", M:"#d8c4f0", D:"#b9a0e0", W:"#f6f0ff", O:"#4a3a6a", E:"#2b1d18", pat:"tabby" },
+  sky:    { n:"天空", M:"#bfe0fb", D:"#95c8f0", W:"#f2f9ff", O:"#2f4f7a", E:"#2b1d18", pat:"tabby" },
+  lemon:  { n:"檸檬", M:"#ffe58f", D:"#f5cc55", W:"#fffbe8", O:"#7a5a1a", E:"#2b1d18", pat:"tabby" },
+  snow:   { n:"雪豹", M:"#e6e8ee", D:"#5e6478", W:"#ffffff", O:"#3a3f50", E:"#7fc4ff", pat:"spots" },
+  tabbyw: { n:"虎斑白", M:"#a7aec2", D:"#6e7487", W:"#ffffff", O:"#3a3f50", E:"#e8a920", pat:"tabbytux" },
 };
 const ACCS = ["none","none","bow","sailor","pirate","scarf","flower","crown","captain","glasses","bandana","bell"];
 const ACC_N = { none:"", bow:"蝴蝶結", sailor:"水手帽", pirate:"海盜眼罩", scarf:"小圍巾", flower:"小花", crown:"皇冠", captain:"船長帽", glasses:"眼鏡", bandana:"頭巾", bell:"鈴鐺" };
@@ -63,16 +84,27 @@ function catSVG(cat, len, vert, cry){
     for(const lx of [3, 8]) { set(lx,11,"L"); set(lx+1,11,"L"); }          // front paws tucked on the chest
     [[11,H-6],[12,H-7],[12,H-8],[12,H-9],[11,H-10]].forEach(([x,y])=>set(x,y,"T"));
   }
-  HEADM.forEach((row,y)=>[...row].forEach((c,x)=>{ if(c!==".") set(x,y,c); }));
+  HEADM.forEach((row,y)=>[...row].forEach((c,x)=>{ if(c===".") return; if(C.fold && y<=3){ if(y===1) return; if(y===2){ if(x===1||x===11) return; c = "M"; } if(y===3) c = "M"; } set(x,y,c); }));
+  if(C.fold){ set(2,2,"M"); set(3,2,"M"); set(9,2,"M"); set(10,2,"M"); }
+  if(C.tuft){ set(2,0,"D"); set(10,0,"D"); }
   // coat patterns on M/T/L pixels
   const pat = C.pat;
   let seed = [...(cat.name||"喵")].reduce((t,ch)=>t*31+ch.charCodeAt(0), 7) >>> 0;
   const rnd = () => (seed = (seed*1103515245 + 12345) >>> 0) / 4294967296;
-  const blobs = (pat==="patch"||pat==="cow") ? [...Array(3+len)].map((_,i)=>({ x: i===0 ? 3+rnd()*6 : rnd()*W, y: i===0 ? 2+rnd()*3 : (vert ? rnd()*H : 4+rnd()*7), r: 2.4+rnd()*1.8, c: pat==="cow" ? "C" : (i%2 ? "C" : "D") })) : [];
+  const blobs = pat==="spots" ? [...Array(Math.round(W*H/22))].map(()=>({ x: rnd()*W, y: rnd()*H, r: .7+rnd()*.7, c:"D" }))
+    : (pat==="patch"||pat==="cow") ? [...Array(3+len)].map((_,i)=>({ x: i===0 ? 3+rnd()*6 : rnd()*W, y: i===0 ? 2+rnd()*3 : (vert ? rnd()*H : 4+rnd()*7), r: 2.4+rnd()*1.8, c: pat==="cow" ? "C" : (i%2 ? "C" : "D") })) : [];
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c = g[y][x]; if(!"MTL".includes(c)) continue;
     const inHead = y<=10 && x<=12;
     if(pat==="tabby"){ if(inHead ? (y===4 && (x===4||x===6||x===8)) || (y===5 && x===6) : (vert ? (y%3===0 && (x<=3||x>=9)) : (x%3===0 && y<=7)) || (c==="T" && (x+y)%2===0)) g[y][x] = "D"; }
     if(blobs.length && !(inHead && y>=6)){ const bl = blobs.find(b=>Math.hypot(x-b.x, (y-b.y)*1.2) < b.r); if(bl) g[y][x] = bl.c; }
+    if(pat==="tiger"){ if(inHead ? (y===4 && (x===3||x===5||x===7||x===9)) || (y===5 && (x===5||x===7)) : (vert ? (y%3===0) : (x%3===0)) || (c==="T" && (x+y)%2===0)) g[y][x] = "D"; }
+    if(pat==="tabbytux"){ if(c==="L"||(inHead && y>=8 && x>=4 && x<=8)) g[y][x] = "W"; else if(inHead ? (y===4 && (x===4||x===6||x===8)) : (vert ? (y%3===0 && (x<=3||x>=9)) : (x%3===0 && y<=7)) || (c==="T" && (x+y)%2===0)) g[y][x] = "D"; }
+    if(pat==="ticked"){ if(!(inHead && y>=6) && (x+y)%2===0 && (x*3+y)%5<2) g[y][x] = "D"; }
+    if(pat==="wrinkle"){ if(inHead && y===4 && x>=4 && x<=8 && x%2===0) g[y][x] = "D"; if(!inHead && (vert ? (y%4===0 && x>=4 && x<=8) : (x%4===0 && y===6))) g[y][x] = "D"; }
+    if(pat==="van"){ if((inHead && y<=4) || c==="T") g[y][x] = "D"; }
+    if(pat==="panda"){ if(c==="L" || (inHead && y<=3 && c==="M") || (inHead && y>=5 && y<=8 && ((x>=2&&x<=5)||(x>=7&&x<=10)))) g[y][x] = "C"; }
+    if(pat==="rainbow" && !inHead){ const k = Math.floor((vert ? y : x)/3) % 6; g[y][x] = "123456"[k]; }
+    if(pat==="stars"){ const h = (x*17 + y*31 + len*7) % 23; if(!(inHead && y>=6) && h===0) g[y][x] = "Y"; else if(!(inHead && y>=6) && h===11) g[y][x] = "X"; }
     if(pat==="points"){ if(c==="T"||c==="L"||(inHead && y>=7 && x>=4 && x<=8)) g[y][x] = "D"; }
     if(pat==="tux"){ if(c==="L"||(inHead && y>=8 && x>=4 && x<=8)) g[y][x] = "W"; }
   }
@@ -96,7 +128,8 @@ function catSVG(cat, len, vert, cry){
   if(A==="scarf"){ if(vert) put(["RRRRRRRRR",".......RR",".......RR"], 2, 10); else put(["RR","RR","RR","RR","RR","RR"], 12, 4); }
   if(A==="bell"){ if(vert) put(["RRRRRRRRR","....Y...."], 2, 10); else put(["R","R","R","R","Y"], 12, 5); }
   const PAL = { M:C.M, T:C.M, L:C.M, D:C.D, C:C.C||C.D, W:C.W, O:C.O, E:C.E, H:C.H||"#ffffff", P:"#f2a1ae", N:C.N||"#e8798a", B:"#f59aa6",
-    U:"#6fb7e8", R:"#e5486a", K:"#f7a7b8", Y:"#ffcf4a", X:"#ffffff", Z:"#2f437d", Q:"#2b1d18" };
+    U:"#6fb7e8", R:"#e5486a", K:"#f7a7b8", Y:"#ffcf4a", X:"#ffffff", Z:"#2f437d", Q:"#2b1d18",
+    1:"#f7a7b8", 2:"#ffc38a", 3:"#ffe58f", 4:"#a8e6c4", 5:"#9fd0f5", 6:"#cdb4f0" };
   let r = "";
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c = PAL[g[y][x]]; if(c) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; }
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${r}</svg>`;
