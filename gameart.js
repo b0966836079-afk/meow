@@ -26,8 +26,8 @@ const CACTUS = ["...OO...","..OGGO..","..OGGO.O","O.OGGOOG","GOOGGOGO","OGGGGGGO
 const ROD = ["OO..........","OGO.........",".OGO........","..OGO.......","...OGO......","....OGO.....",".....OGO....","......OGO...",".......OGO..","........OGO.",".........OO."];
 const SPARK = ["....O....","...OYO...","O.OYYYO.O",".OYYWYYO.","OYYWWWYYO",".OYYWYYO.","O.OYYYO.O","...OYO...","....O...."];
 const CANVAS = ["OOOOOOOOOOOOOO","OWWWWWWWWWWWWO","OWWKKWWWWWWWWO","OWKWWKWWWKKWWO","OWWWWWKWKWWKWO","OWWWWWWKWWWWWO","OWWBBWWWWWWWWO","OWBWWBWWWWBBWO","OWWBBWWWWBWWBO","OWWWWWWWWWBBWO","OOOOOOOOOOOOOO"];
-const VAC = ["...OOOO........OOOO...","..OBBBBOOOOOOOOBBBBO..","..OBBBOYYYYYYYYOBBBO..","..OBBOYYYYYYYYYYOBBO..","..OBBOYEEYYYYEEYOBBO..","..OBBOYEHYYYYEHYOBBO..","...OOYYYYWWWWYYYYOO...","....OYYYWWNNWWYYYO....","....OYYYWWWWWWYYYO....","....OYYWWWOOWWWYYO....",".....OYWWWKKWWWYO.....","......OOWWKKWWOO......","....OORRRRRRRRRROO....","...OYYYYYYGYYYYYYYO...","...OYWWYYYYYYYYWWYO...","...OOOOO......OOOOO..."];
-const VPAL = { Y:"#f5e2c4", B:"#b0784a", W:"#ffffff", E:"#2b1d18", H:"#ffffff", N:"#2b1d18", K:"#f0708d", R:"#e5486a", G:"#ffcf4a" };
+const VAC = ["....OOOO..........OOOO....", "...OBBBBOOOOOOOOOOBBBBO...", "..OBBBBOYYYYYYYYYYOBBBBO..", "..OBBBOYYYYYYYYYYYYOBBBO..", "..OBBOYYLLYYYYYYLLYYOBBO..", "..OBBOYYEEYYYYYYEEYYOBBO..", "..OBBOYYEHYYYYYYEHYYOBBO..", "...OOYYYYYYWWWWYYYYYYOO...", "....OYYCYYWWNNWWYYCYYO....", "....OYYYYWWWNNWWWYYYYO....", "....OYYYWWWWWWWWWWYYYO....", ".....OYYWWWWOOWWWWYYO.....", "......OYWWWOKKOWWWYO......", ".......OOWWWKKWWWOO.......", ".........OOOKKOOO.........", "......OORRRRRRRRRROO......", ".....OYYYYYYGGYYYYYYO.....", "....OYYYYYYYGGYYYYYYYO....", "....OYWWYYYYYYYYYYWWYO....", "....OWWWOYYYYYYYYOWWWO....", "....OOOOO........OOOOO...."];
+const VPAL = { Y:"#f5e2c4", B:"#b0784a", W:"#ffffff", E:"#2b1d18", H:"#ffffff", N:"#2b1d18", K:"#f0708d", R:"#e5486a", G:"#ffcf4a", L:"#fff6e6", C:"#f7b0bb" };
 const PAL = { K:"#f0708d", W:"#ffffff", Y:"#ffd36b", E:"#2b1d18", B:"#6fb7e8", G:"#6cc49d", R:"#e5486a" };
 
 window.GameArt = {
