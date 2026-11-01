@@ -294,11 +294,18 @@ App.registerGame({
       if(c.dead) return;
       const dir = (G.keys.R ? 1 : 0) - (G.keys.L ? 1 : 0);
       c.vx = dir * 5.6; if(dir) c.face = dir;
-      if(G.jumpReq && c.ground){ c.vy = -15.6; c.ground = false; SFX.jump(); }
-      G.jumpReq = false;
-      c.vy = Math.min(18, c.vy + 38*dt);
-      c.x += c.vx*dt; collide(c, "x");
-      c.ground = false; c.y += c.vy*dt; collide(c, "y");
+      // jump: a press is remembered for a moment (so pressing just before landing still works),
+      // you can still jump right after walking off an edge, and holding the button keeps hopping
+      if(G.jumpReq){ G.jumpBuf = .18; G.jumpReq = false; }
+      if(G.keys.J && c.ground) G.jumpBuf = Math.max(G.jumpBuf||0, .05);
+      G.jumpBuf = Math.max(0, (G.jumpBuf||0) - dt); c.coyote = c.ground ? .12 : Math.max(0, (c.coyote||0) - dt);
+      if(G.jumpBuf > 0 && c.coyote > 0){ c.vy = -16.8; c.ground = false; c.coyote = 0; G.jumpBuf = 0; SFX.jump(); }
+      // physics in small fixed steps so the jump is just as high on slow phones (≈3.6 tiles)
+      let left = dt;
+      while(left > 1e-6){ const h = Math.min(left, 1/120); left -= h;
+        c.vy = Math.min(18, c.vy + 38*h);
+        c.x += c.vx*h; collide(c, "x");
+        c.ground = false; c.y += c.vy*h; collide(c, "y"); }
       // liquids
       const fx = Math.floor(c.x + c.w/2), fy = Math.floor(c.y + c.h - .15), liq = tileAt(fx, fy);
       if(liq==="G" || (liq==="W" && role==="fire") || (liq==="L" && role==="water")){
