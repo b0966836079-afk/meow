@@ -46,7 +46,7 @@
 
 ## Album
 - Route `album` (4th nav button). Lists `kind='image'` messages (`B.images`), thumbnails at `<path>_t.jpg` (uploaded on send; old photos fall back to full image). Signed URLs cached in localStorage `mw_urls`.
-- Usage: `B.photoUsage()` lists the couple folder in storage and sums sizes; stored in game_state `album` = {bytes,count,at,warned,deleted[]}. Limit 1e9 (free plan 1 GB). Crossing 70/85/95% posts a `kind='album'` message (push to partner) + modal for the sender.
+- Usage: `B.photoUsage()` lists the couple folder in storage and sums sizes; stored in game_state `album` = {bytes,count,at,warned,deleted[]}. Limit = `couples.quota_mb` (update_7_quota.sql; default 150, owner couple 500) or 1 GB if the column is missing; uploads are blocked client-side when full. Crossing 70/85/95% posts a `kind='album'` message (push to partner) + modal for the sender.
 - Deleting needs `supabase/update_5_album.sql` (storage delete policy + rpc `delete_photos` which turns messages into `kind='photo_gone'`).
 
 ## Voice

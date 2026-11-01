@@ -159,7 +159,7 @@ const App = (function(){
     const p = partner();
     let html = `<div class="title">喵喵<b>小窩</b>${isBestie()?`<span class="modeTag">${modeArt(roomMode)}${MI().name}</span>`:""}</div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">${pw()}還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
-    const alb = stateCache.album && stateCache.album.state, apct = alb ? (alb.bytes||0)/ALBUM_LIMIT : 0;
+    const alb = stateCache.album && stateCache.album.state, apct = alb ? (alb.bytes||0)/albumLimit : 0;
     if(apct >= .7) html = html.replace('<div id="truceHome">', `<div class="box banner ${apct>=.85?"warn":""}" id="albBan"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div><div id="truceHome">`);
     if(false) html += `<div class="box banner ${apct>=.85?"warn":""}"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div>`;
     if(pushState()!=="on") html += `<div class="box banner"><span class="bi">${icon("bell")}</span><div style="flex:1">開啟通知，ta 傳訊息時手機會跳出來</div><button class="btn mint" id="bPush">開啟</button></div>`;
@@ -415,8 +415,15 @@ const App = (function(){
       return await new Promise(r=>c.toBlob(r,"image/jpeg",.82));
     } finally { URL.revokeObjectURL(url); }
   }
+  function albumFull(){
+    const st = stateCache.album && stateCache.album.state; if(!st || (st.bytes||0) < albumLimit) return false;
+    const o = modal(`<h3>🚨 相簿滿了</h3><p>你們的相簿已經用了 ${fmtMB(st.bytes)} / ${limitTxt()}，<br>先刪一些照片才能再傳喔 🥺</p><button class="btn" id="afGo" style="width:100%">去相簿整理</button>`);
+    o.querySelector("#afGo").addEventListener("click", ()=>{ o.remove(); go("album"); });
+    return true;
+  }
   async function sendPhoto(file){
     if(!file.type.startsWith("image/")){ toast("只能傳圖片喔"); return; }
+    if(albumFull()) return;
     toast(`${sprite(me.cat||"orange","happy")} 照片傳送中…`, 20000);
     try{
       const blob = await shrink(file);
@@ -915,6 +922,7 @@ const App = (function(){
     }catch(e){}
   }
   async function sendVoice(blob, secs){
+    if(albumFull()) return;
     toast(`${sprite(me.cat||"orange","happy")} 語音傳送中…`, 20000);
     try{
       const path = await B.uploadVoice(blob);
@@ -930,7 +938,9 @@ const App = (function(){
     }
   }
   // ---------- album ----------
-  const ALBUM_LIMIT = 1e9;   // Supabase free plan: 1 GB of file storage
+  // each nest has its own album quota (couples.quota_mb, set in SQL); 1 GB = the whole free plan if not set
+  let albumLimit = 1e9;
+  const limitTxt = () => albumLimit >= 1e9 ? "1 GB" : Math.round(albumLimit/1e6)+" MB";
   const thumbOf = p => p.replace(/\.\w+$/, "_t.jpg");
   const fmtMB = b => b >= 1e9 ? (b/1e9).toFixed(2)+" GB" : b < 1e5 ? Math.max(1,Math.round(b/1e3))+" KB" : (b/1e6).toFixed(b<1e8?1:0)+" MB";
   let urlCache = {}; try{ urlCache = JSON.parse(store.get("mw_urls")||"{}"); }catch(e){}
@@ -949,13 +959,13 @@ const App = (function(){
     p=>`📷 相簿快滿了！已經用了 ${p}%，該刪一些照片了 🥺`,
     p=>`🚨 相簿幾乎滿了（${p}%）！再不刪照片就傳不了新照片了`];
   async function checkCapacity(st){
-    const pct = (st.bytes||0)/ALBUM_LIMIT, lv = pct>=.95?3 : pct>=.85?2 : pct>=.7?1 : 0, warned = st.warned||0;
+    const pct = (st.bytes||0)/albumLimit, lv = pct>=.95?3 : pct>=.85?2 : pct>=.7?1 : 0, warned = st.warned||0;
     if(lv === warned) return;
     const ok = await update("album", s=>{ if(!s || (s.warned||0)===lv) return undefined; s.warned = lv; return s; });
     if(!ok || lv < warned) return;
     const p = Math.round(pct*100);
     try{ const row = await B.send(LEVEL_MSG[lv](p), "album", me.name, me.cat); addMessage(row); }catch(e){}
-    const o = modal(`<h3>${lv>=3?"🚨":"📷"} 相簿${lv>=2?"快滿了":"用了不少"}！</h3><p>已經用了 <b>${fmtMB(st.bytes)}</b> / 1 GB（${p}%）<br>${lv>=2?"該刪一些照片了，不然之後會傳不了新照片 🥺":"可以開始整理一下舊照片囉"}</p><p class="k">${esc(partner()?partner().name:"另一半")} 也會收到通知</p>
+    const o = modal(`<h3>${lv>=3?"🚨":"📷"} 相簿${lv>=2?"快滿了":"用了不少"}！</h3><p>已經用了 <b>${fmtMB(st.bytes)}</b> / ${limitTxt()}（${p}%）<br>${lv>=2?"該刪一些照片了，不然之後會傳不了新照片 🥺":"可以開始整理一下舊照片囉"}</p><p class="k">${esc(partner()?partner().name:"另一半")} 也會收到通知</p>
       <button class="btn" id="cpGo" style="width:100%">去相簿整理</button><button class="btn sub" id="cpLater" style="width:100%;margin-top:8px">晚點再說</button>`);
     o.querySelector("#cpGo").addEventListener("click", ()=>{ o.remove(); go("album"); });
     o.querySelector("#cpLater").addEventListener("click", ()=>o.remove());
@@ -977,8 +987,8 @@ const App = (function(){
   function drawUsage(){
     const el = $("alUse"); if(!el) return;
     const st = stateCache.album && stateCache.album.state; if(!st){ el.innerHTML = "還沒有照片"; return; }
-    const pct = Math.min(1, (st.bytes||0)/ALBUM_LIMIT), avg = st.count ? st.bytes/st.count : 3e5, left = Math.max(0, Math.floor((ALBUM_LIMIT-(st.bytes||0))/avg));
-    el.innerHTML = `<div class="auTop"><span>已用 <b>${fmtMB(st.bytes||0)}</b> / 1 GB</span><span>${st.count||0} 張</span></div><div class="pbBar auBar"><i class="${pct>=.85?"low":pct>=.7?"mid":""}" style="width:${Math.max(1,pct*100)}%"></i></div>
+    const pct = Math.min(1, (st.bytes||0)/albumLimit), avg = st.count ? st.bytes/st.count : 3e5, left = Math.max(0, Math.floor((albumLimit-(st.bytes||0))/avg));
+    el.innerHTML = `<div class="auTop"><span>已用 <b>${fmtMB(st.bytes||0)}</b> / ${limitTxt()}</span><span>${st.count||0} 張</span></div><div class="pbBar auBar"><i class="${pct>=.85?"low":pct>=.7?"mid":""}" style="width:${Math.max(1,pct*100)}%"></i></div>
       <div class="auTip">${pct>=.85?"🥺 快滿了，刪一些不需要的照片吧":pct>=.7?"📷 用了七成囉，可以開始整理":`大約還能再放 ${left} 張照片`}</div>`;
   }
   async function viewAlbum(v){
@@ -1234,6 +1244,7 @@ const App = (function(){
     await getState("moqi").catch(()=>{});
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);
+    try{ const q = await B.quotaMB(); if(q) albumLimit = q*1e6; }catch(e){}
     try{ const rm = await getState("room"); roomMode = validMode(rm && rm.state && rm.state.mode); }catch(e){}
     if(justCreated && pendingMode!=="couple"){ roomMode = pendingMode; await update("room", st=>Object.assign(st||{}, { mode:pendingMode })); }
     onState("room", st=>{ const m = validMode(st && st.mode); if(m!==roomMode){ roomMode = m; render(); } });

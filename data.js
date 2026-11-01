@@ -85,6 +85,11 @@
       const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "604800" });
       if (error) throw error; return path;
     };
+    B.quotaMB = async () => {
+      const { data, error } = await sb.from("couples").select("quota_mb").eq("id", B.coupleId).maybeSingle();
+      if (error || !data || data.quota_mb == null) return null;   // column not added yet → old behaviour
+      return data.quota_mb;
+    };
     B.images = async () => {
       const { data, error } = await sb.from("messages").select("id,sender,name,cat,media,created_at").eq("couple_id", B.coupleId).eq("kind", "image").order("id", { ascending: false }).limit(5000);
       if (error) throw error; return data || [];
@@ -171,6 +176,7 @@
     B.imageUrls = async (paths) => { const out = {}; for (const p of paths) { const u = await call("url", { path: p }); if (u) out[p] = u; } return out; };
     B.uploadThumb = async (path, blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path }); };
     B.images = async () => call("images", { cid: B.coupleId });
+    B.quotaMB = async () => (window.__quotaMB || null);
     B.uploadVoice = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path: B.coupleId + "/v/" + Date.now() + ".webm" }); };
     B.photoUsage = async () => call("usage", { cid: B.coupleId });
     B.deletePhotos = async (rows) => call("delphotos", { cid: B.coupleId, ids: rows.map(r => r.id) });
