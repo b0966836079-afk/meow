@@ -90,7 +90,9 @@ function play(opts){
       R = { t:0, pos:0, v:7, dist:0, fish:0, gold:0, lane:1, lx:1, jump:0, slide:0, seg:null, dead:false, deadT:0, turnT:1, turnDir:0, chase:1, frame:0, msg:"", parts:[], dustT:0, shake:0 };
       R.seg = newSeg(true);
     }
-    function size(){ const r = cv.getBoundingClientRect(); const d = 1; cv.width = r.width*d; cv.height = r.height*d; out.imageSmoothingEnabled = false; }
+    function size(){ const r = cv.getBoundingClientRect();
+      const w = r.width || ov.clientWidth || window.innerWidth, h = r.height || ov.clientHeight || window.innerHeight;
+      cv.width = Math.max(1, Math.round(w)); cv.height = Math.max(1, Math.round(h)); out.imageSmoothingEnabled = false; }
 
     // ---------- controls ----------
     let sx = 0, sy = 0, swiped = true;
@@ -271,9 +273,16 @@ function play(opts){
       out.drawImage(lc, Math.round((W-dw)/2 - off + sh), Math.round((H-dh)/2 + sh*.5), Math.round(dw), Math.round(dh));
       $("#raD").textContent = `${Math.floor(R.dist)} m`; $("#raF b").textContent = R.fish;
     }
-    function loop(t){ if(done) return; const dt = Math.min(.05, (t - last)/1000 || 0); last = t; if(R) step(dt); if(R) render(); raf = requestAnimationFrame(loop); }
+    let errShown = false;
+    function loop(t){ if(done) return; const dt = Math.min(.05, (t - last)/1000 || 0); last = t;
+      try{
+        if(cv.width < 4 || cv.height < 4 || Math.abs(cv.width - cv.clientWidth) > 2) size();
+        if(R) step(dt); if(R) render();
+      }catch(e){ // keep running, but tell the player what broke so it can be fixed
+        console.error(e); if(!errShown){ errShown = true; const tp = $("#raTip"); if(tp){ tp.classList.remove("hidden"); tp.classList.add("err"); tp.textContent = "畫面出錯了，請截圖給我：" + (e && e.message || e); } } }
+      raf = requestAnimationFrame(loop); }
 
-    function start(){ reset(); $("#raM").classList.add("hidden"); $("#raTip").classList.remove("hidden"); setTimeout(()=>{ const tp = $("#raTip"); if(tp) tp.classList.add("hidden"); }, 5000); snd("select"); last = performance.now(); }
+    function start(){ reset(); $("#raM").classList.add("hidden"); $("#raTip").classList.remove("hidden"); setTimeout(()=>{ const tp = $("#raTip"); if(tp && !tp.classList.contains("err")) tp.classList.add("hidden"); }, 5000); snd("select"); last = performance.now(); }
     function end(){
       const score = Math.floor(R.dist) + R.fish*10, coins = Math.floor(R.fish/2), best = Math.max(opts.best||0, score), rec = score > (opts.best||0);
       $("#raM").innerHTML = `<div class="raEndDog">${dogSvg()}</div><b>${R.msg}</b><p>狗狗追上來舔你了 🐶💦</p><p class="raSc">${score} 分</p><p>跑了 ${Math.floor(R.dist)} m・撿到 🐟 ${R.fish}${R.gold?`（金魚 ${R.gold}）`:""}</p>
