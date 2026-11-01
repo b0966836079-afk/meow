@@ -809,7 +809,7 @@ const App = (function(){
       ["care", `<span class="tI cat">${sprite(p.cat, pm?pm[3]:"normal")}</span>`, "心情", truce() ? "休戰中" : theirReq ? "想和好" : pm ? pm[1] : "心情小站", careAlert],
       ["pet", `<span class="tI cat">${cats.length ? sprite(cats[0].color, P.mood(cats[0]).face) : sprite("white","curl",{soft:true})}</span>`, "養貓", !cats.length ? "去領養" : hungry.length ? "肚子餓了" : cats.map(c=>c.name).join("・"), !cats.length || hungry.length>0],
     ];
-    return T.map(([k,ic,name,sub,dot])=>`<button class="hTile ${dot?"alert":""}" data-tile="${k}">${ic}<b>${name}</b><i>${esc(sub)}</i>${dot?`<span class="tDot"></span>`:""}</button>`).join("");
+    return T.map(([k,ic,name,sub,dot])=>`<button class="hTile ${dot?"alert":""}" data-tile="${k}">${ic}<b>${name}</b><i>${esc(sub)}</i>${dot?`<span class="tSpark a">${icon("spark",{O:"#ffd36b"})}</span><span class="tSpark b">${icon("spark",{O:"#ffffff"})}</span>`:""}</button>`).join("");
   }
   function bindTiles(){ const h = $("hTiles"); if(!h) return; h.querySelectorAll("[data-tile]").forEach(b=>b.addEventListener("click", ()=>openTile(b.dataset.tile))); }
   function refreshTiles(){ const h = $("hTiles"); if(!h || route!=="home") return; h.innerHTML = homeTiles(); bindTiles(); }
