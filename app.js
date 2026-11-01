@@ -143,6 +143,9 @@ const App = (function(){
     const p = partner();
     let html = `<div class="title">喵喵<b>小窩</b></div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">另一半還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
+    const alb = stateCache.album && stateCache.album.state, apct = alb ? (alb.bytes||0)/ALBUM_LIMIT : 0;
+    if(apct >= .7) html = html.replace('<div id="truceHome">', `<div class="box banner ${apct>=.85?"warn":""}" id="albBan"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div><div id="truceHome">`);
+    if(false) html += `<div class="box banner ${apct>=.85?"warn":""}"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div>`;
     if(pushState()!=="on") html += `<div class="box banner"><span class="bi">${icon("bell")}</span><div style="flex:1">開啟通知，ta 傳訊息時手機會跳出來</div><button class="btn mint" id="bPush">開啟</button></div>`;
     html += `<div class="games">` + games.filter(g=>!g.hidden).map(g=>`<button class="gcard" data-g="${g.id}"><span class="gi">${g.icon()}</span><span class="gn">${esc(g.name)}</span><span class="gd">${esc(g.desc)}</span>${g.badge&&g.badge()?`<span class="gb">${esc(g.badge())}</span>`:""}</button>`).join("")
       + `<div class="gcard soon"><span class="gi">${sprite("gray","sleep",{soft:true})}</span><span class="gn">新遊戲</span><span class="gd">敬請期待…</span></div></div>`;
@@ -151,6 +154,7 @@ const App = (function(){
     v.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>go("game-"+b.dataset.g)));
     bindCare(v); bindStatus(v); bindDaily(v); const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet"));
     const bi=$("bInv"); if(bi) bi.addEventListener("click", shareInvite);
+    const ba=$("bAlbum"); if(ba) ba.addEventListener("click", ()=>go("album"));
     const bp=$("bPush"); if(bp) bp.addEventListener("click", ()=>enablePush().then(()=>render()));
   }
 
@@ -224,6 +228,8 @@ const App = (function(){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
     if(m.kind==="ping") return "";
+    if(m.kind==="album") return `<div class="msg sys albumMsg"><button class="bub" data-goalbum>${esc(m.body)}<br><small>點我去整理相簿 ▶</small></button></div>`;
+    if(m.kind==="photo_gone") return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<div class="bub gone">📷 照片已刪除</div><span class="tm">${hhmm(m.created_at)}</span></div>`;
     if(m.kind==="greet") return `<div class="msg sys greet"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="status") return `<div class="msg sys status"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="truce") return `<div class="msg sys truce"><div class="bub">${esc(m.body)}</div></div>`;
@@ -275,6 +281,7 @@ const App = (function(){
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
     $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
+      if(e.target.closest("[data-goalbum]")){ go("album"); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
       if(e.target.closest("[data-makeup]")){ askMakeup(); return; }
       showKb(false); });
@@ -393,9 +400,22 @@ const App = (function(){
       const blob = await shrink(file);
       const path = await B.uploadImage(blob);
       imgCache[path] = URL.createObjectURL(blob);
+      let tsz = 0; try{ const tb = await makeThumb(blob); if(tb){ await B.uploadThumb(thumbOf(path), tb); tsz = tb.size; } }catch(e){}
       const row = await B.send("傳了一張照片 📷","image",me.name,me.cat,path);
       addMessage(row); SFX.send(); toast(`${sprite(me.cat||"orange","wave")} 照片傳出去了！`);
-    }catch(e){ console.error(e); toast("照片傳送失敗："+esc(e.message||e), 5000); }
+      const st = await update("album", st=>{ st = st || { bytes:0, count:0, warned:0 }; st.bytes = (st.bytes||0) + blob.size + tsz; st.count = (st.count||0)+1; return st; });
+      if(st) checkCapacity(st);
+    }catch(e){ console.error(e); const full = /exceed|quota|size|limit/i.test(String(e.message||e)); toast(full ? "照片傳不出去，相簿可能滿了，去「相簿」刪一些照片吧" : "照片傳送失敗："+esc(e.message||e), 5000); }
+  }
+  async function makeThumb(blob){
+    const url = URL.createObjectURL(blob);
+    try{
+      const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+      const sc = Math.min(1, 360/Math.min(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth*sc); c.height = Math.round(img.naturalHeight*sc);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      return await new Promise(r=>c.toBlob(r, "image/jpeg", .72));
+    } finally { URL.revokeObjectURL(url); }
   }
   function viewPhoto(src){
     const o=document.createElement("div"); o.className="viewer"; o.innerHTML=`<img src="${esc(src)}" alt="照片"><div class="vx">點一下關閉</div>`;
@@ -791,6 +811,163 @@ const App = (function(){
     refreshStatus(true);
     if(chatVisible()) drawList(false);
   }
+
+  // ---------- album ----------
+  const ALBUM_LIMIT = 1e9;   // Supabase free plan: 1 GB of file storage
+  const thumbOf = p => p.replace(/\.\w+$/, "_t.jpg");
+  const fmtMB = b => b >= 1e9 ? (b/1e9).toFixed(2)+" GB" : b < 1e5 ? Math.max(1,Math.round(b/1e3))+" KB" : (b/1e6).toFixed(b<1e8?1:0)+" MB";
+  let urlCache = {}; try{ urlCache = JSON.parse(store.get("mw_urls")||"{}"); }catch(e){}
+  async function getUrls(paths){
+    const now = Date.now(), need = [...new Set(paths)].filter(p=>!(urlCache[p] && urlCache[p][1] > now+3600e3));
+    if(need.length){
+      for(let i=0;i<need.length;i+=60){ const part = need.slice(i,i+60); let got = {}; try{ got = await B.imageUrls(part); }catch(e){} for(const p of part) urlCache[p] = [got[p]||"", now+6.5*864e5]; }
+      const keys = Object.keys(urlCache); if(keys.length > 4000) keys.slice(0, keys.length-4000).forEach(k=>delete urlCache[k]);
+      store.set("mw_urls", JSON.stringify(urlCache));
+    }
+    return Object.fromEntries(paths.map(p=>[p, urlCache[p] ? urlCache[p][0] : ""]));
+  }
+  async function urlFor(path){ if(imgCache[path]) return imgCache[path]; const u = (await getUrls([path]))[path]; if(u) imgCache[path] = u; return u; }
+  const LEVEL_MSG = [null,
+    p=>`📷 相簿已經用了 ${p}%，可以開始整理一下照片囉`,
+    p=>`📷 相簿快滿了！已經用了 ${p}%，該刪一些照片了 🥺`,
+    p=>`🚨 相簿幾乎滿了（${p}%）！再不刪照片就傳不了新照片了`];
+  async function checkCapacity(st){
+    const pct = (st.bytes||0)/ALBUM_LIMIT, lv = pct>=.95?3 : pct>=.85?2 : pct>=.7?1 : 0, warned = st.warned||0;
+    if(lv === warned) return;
+    const ok = await update("album", s=>{ if(!s || (s.warned||0)===lv) return undefined; s.warned = lv; return s; });
+    if(!ok || lv < warned) return;
+    const p = Math.round(pct*100);
+    try{ const row = await B.send(LEVEL_MSG[lv](p), "album", me.name, me.cat); addMessage(row); }catch(e){}
+    const o = modal(`<h3>${lv>=3?"🚨":"📷"} 相簿${lv>=2?"快滿了":"用了不少"}！</h3><p>已經用了 <b>${fmtMB(st.bytes)}</b> / 1 GB（${p}%）<br>${lv>=2?"該刪一些照片了，不然之後會傳不了新照片 🥺":"可以開始整理一下舊照片囉"}</p><p class="k">${esc(partner()?partner().name:"另一半")} 也會收到通知</p>
+      <button class="btn" id="cpGo" style="width:100%">去相簿整理</button><button class="btn sub" id="cpLater" style="width:100%;margin-top:8px">晚點再說</button>`);
+    o.querySelector("#cpGo").addEventListener("click", ()=>{ o.remove(); go("album"); });
+    o.querySelector("#cpLater").addEventListener("click", ()=>o.remove());
+  }
+  async function recountAlbum(){
+    const u = await B.photoUsage();
+    const st = await update("album", s=>{ s = s || { warned:0 }; s.bytes = u.bytes; s.count = u.count; s.at = Date.now(); return s; });
+    if(st) checkCapacity(st);
+    return u;
+  }
+  function onAlbumState(st){
+    const del = new Set((st && st.deleted) || []); let changed = false;
+    for(const m of messages){ if(del.has(m.id) && m.kind==="image"){ m.kind = "photo_gone"; m.media = null; changed = true; } }
+    if(changed && chatVisible()) drawList(false);
+    if(route==="album" && album.rows){ const before = album.rows.length; album.rows = album.rows.filter(r=>!del.has(r.id)); if(album.rows.length!==before) drawAlbum(); }
+    if(route==="album") drawUsage();
+  }
+  const album = { rows:null, filter:"all", sel:null };
+  function drawUsage(){
+    const el = $("alUse"); if(!el) return;
+    const st = stateCache.album && stateCache.album.state; if(!st){ el.innerHTML = "還沒有照片"; return; }
+    const pct = Math.min(1, (st.bytes||0)/ALBUM_LIMIT), avg = st.count ? st.bytes/st.count : 3e5, left = Math.max(0, Math.floor((ALBUM_LIMIT-(st.bytes||0))/avg));
+    el.innerHTML = `<div class="auTop"><span>已用 <b>${fmtMB(st.bytes||0)}</b> / 1 GB</span><span>${st.count||0} 張</span></div><div class="pbBar auBar"><i class="${pct>=.85?"low":pct>=.7?"mid":""}" style="width:${Math.max(1,pct*100)}%"></i></div>
+      <div class="auTip">${pct>=.85?"🥺 快滿了，刪一些不需要的照片吧":pct>=.7?"📷 用了七成囉，可以開始整理":`大約還能再放 ${left} 張照片`}</div>`;
+  }
+  async function viewAlbum(v){
+    const p = partner();
+    album.sel = null;
+    v.innerHTML = `<div class="box album"><div class="alHd"><h2>📷 我們的相簿</h2><button class="btn sub" id="alSel">選取</button></div>
+      <div class="alUse" id="alUse"></div>
+      <div class="alTabs" id="alTabs">${[["all","全部"],["me","我傳的"],["them",(p?esc(p.name):"ta")+" 傳的"]].map(([k,n])=>`<button data-f="${k}" class="${album.filter===k?"on":""}">${n}</button>`).join("")}</div>
+      <div class="alGrid" id="alGrid"><div class="k">載入中…</div></div></div>`;
+    const bar = document.createElement("div"); bar.className = "alBar hidden"; bar.id = "alBar";
+    bar.innerHTML = `<span id="alCnt">已選 0 張</span><button class="btn sub" id="alOld">選最舊 30 張</button><button class="btn" id="alDel">🗑 刪除</button>`;
+    document.body.appendChild(bar);
+    drawUsage();
+    $("alTabs").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ album.filter = b.dataset.f; $("alTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); drawAlbum(); }));
+    $("alSel").addEventListener("click", ()=>{ album.sel = album.sel ? null : new Set(); $("alSel").textContent = album.sel ? "取消" : "選取"; drawAlbum(); });
+    $("alOld").addEventListener("click", ()=>{ const rows = shownRows(); rows.slice(-30).forEach(r=>album.sel.add(r.id)); drawAlbum(); });
+    $("alDel").addEventListener("click", ()=>{ if(album.sel && album.sel.size) confirmDelete(album.rows.filter(r=>album.sel.has(r.id))); });
+    try{ album.rows = await B.images(); }catch(e){ $("alGrid").innerHTML = `<div class="k">相簿載入失敗，請檢查網路</div>`; return; }
+    if(route!=="album") return;
+    drawAlbum();
+    recountAlbum().then(()=>drawUsage()).catch(()=>{});
+  }
+  const shownRows = () => (album.rows||[]).filter(r=> album.filter==="all" || (album.filter==="me") === (r.sender===me.uid));
+  let alObs = null;
+  function drawAlbum(){
+    const g = $("alGrid"); if(!g || !album.rows) return;
+    const rows = shownRows();
+    if(!rows.length){ g.innerHTML = `<div class="alEmpty">${sprite(me.cat||"orange","sleep")}<div>${album.rows.length?"這裡還沒有照片":"還沒有照片～<br>在聊天室按 📷 傳照片，就會自動收進相簿"}</div></div>`; updBar(); return; }
+    let html = "", mon = "";
+    for(const r of rows){
+      const d = new Date(r.created_at), mk = `${d.getFullYear()} 年 ${d.getMonth()+1} 月`;
+      if(mk!==mon){ if(mon) html += `</div>`; mon = mk; html += `<div class="alMon">${mk}</div><div class="alRow">`; }
+      const on = album.sel && album.sel.has(r.id);
+      html += `<button class="alCell ${on?"on":""} ${album.sel?"selmode":""}" data-id="${r.id}"><img data-p="${esc(r.media)}" alt="">${r.sender!==me.uid?`<span class="alWho">${sprite(r.cat||catOf(r.sender),"normal")}</span>`:""}${album.sel?`<span class="alChk">${on?"✔":""}</span>`:""}</button>`;
+    }
+    g.innerHTML = html + `</div>`;
+    g.querySelectorAll(".alCell").forEach(c=>c.addEventListener("click", ()=>{
+      const id = +c.dataset.id;
+      if(album.sel){ album.sel.has(id) ? album.sel.delete(id) : album.sel.add(id); c.classList.toggle("on"); c.querySelector(".alChk").textContent = album.sel.has(id)?"✔":""; updBar(); return; }
+      openAlbumPhoto(rows.findIndex(r=>r.id===id), rows);
+    }));
+    if(alObs) alObs.disconnect();
+    let pend = [], tmr = null;
+    const flush = async ()=>{ const imgs = pend; pend = []; tmr = null;
+      const th = await getUrls(imgs.map(i=>thumbOf(i.dataset.p)));
+      const miss = imgs.filter(i=>!th[thumbOf(i.dataset.p)]);
+      const full = miss.length ? await getUrls(miss.map(i=>i.dataset.p)) : {};
+      for(const i of imgs){ const u = th[thumbOf(i.dataset.p)] || full[i.dataset.p] || imgCache[i.dataset.p]; if(u) i.src = u; else i.alt = "載入失敗"; } };
+    alObs = new IntersectionObserver(es=>{ for(const e of es){ if(e.isIntersecting){ alObs.unobserve(e.target); pend.push(e.target); } } if(pend.length && !tmr) tmr = setTimeout(flush, 80); }, { rootMargin:"300px" });
+    g.querySelectorAll("img[data-p]").forEach(i=>alObs.observe(i));
+    updBar();
+  }
+  function updBar(){
+    const bar = $("alBar"); if(!bar) return;
+    bar.classList.toggle("hidden", !album.sel);
+    if(album.sel){ const st = stateCache.album && stateCache.album.state, avg = st && st.count ? st.bytes/st.count : 3e5;
+      $("alCnt").innerHTML = `已選 <b>${album.sel.size}</b> 張${album.sel.size?`<br><small>約可空出 ${fmtMB(album.sel.size*avg)}</small>`:""}`; $("alDel").disabled = !album.sel.size; }
+  }
+  async function openAlbumPhoto(i, rows){
+    const r = rows[i]; if(!r) return;
+    const o = document.createElement("div"); o.className = "viewer alView";
+    const d = new Date(r.created_at);
+    o.innerHTML = `<div class="avTop"><span>${esc(r.sender===me.uid?"你":(r.name||nameOf(r.sender)))}・${d.getMonth()+1}/${d.getDate()} ${hhmm(r.created_at)}</span><button class="avX">✕</button></div>
+      <div class="avImg">${i>0?`<button class="avNav l">◀</button>`:""}<img alt="照片">${i<rows.length-1?`<button class="avNav r">▶</button>`:""}</div>
+      <div class="avBtns"><button class="btn sub" id="avSave">⬇ 存到手機</button><button class="btn" id="avDel">🗑 刪除</button></div>`;
+    document.body.appendChild(o);
+    const img = o.querySelector("img"); const th = urlCache[thumbOf(r.media)]; if(th && th[0]) img.src = th[0];
+    urlFor(r.media).then(u=>{ if(u) img.src = u; });
+    const close = ()=>o.remove();
+    o.querySelector(".avX").addEventListener("click", close);
+    o.addEventListener("click", e=>{ if(e.target===o || e.target.classList.contains("avImg")) close(); });
+    const l = o.querySelector(".avNav.l"), rr = o.querySelector(".avNav.r");
+    if(l) l.addEventListener("click", ()=>{ close(); openAlbumPhoto(i-1, rows); });
+    if(rr) rr.addEventListener("click", ()=>{ close(); openAlbumPhoto(i+1, rows); });
+    let sx = null; img.addEventListener("touchstart", e=>{ sx = e.touches[0].clientX; }, {passive:true});
+    img.addEventListener("touchend", e=>{ if(sx==null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if(Math.abs(dx)>60){ const j = dx<0 ? i+1 : i-1; if(rows[j]){ close(); openAlbumPhoto(j, rows); } } });
+    o.querySelector("#avSave").addEventListener("click", async ()=>{
+      try{ const u = await urlFor(r.media); const blob = await (await fetch(u)).blob(); const f = new File([blob], `meow-${r.id}.jpg`, { type: blob.type||"image/jpeg" });
+        if(navigator.canShare && navigator.canShare({ files:[f] })){ await navigator.share({ files:[f] }); return; }
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); toast("照片下載中 📥");
+      }catch(e){ if(e && e.name==="AbortError") return; toast("存不下來的話，長按照片選「下載圖片」", 4000); }
+    });
+    o.querySelector("#avDel").addEventListener("click", ()=>{ confirmDelete([r], close); });
+  }
+  function confirmDelete(rows, after){
+    const n = rows.length;
+    const o = modal(`<h3>🗑 要刪掉 ${n} 張照片嗎？</h3><p>你們兩個的相簿和聊天室裡都會消失，<br><b>刪了就救不回來喔</b></p>
+      <button class="btn" id="dlYes" style="width:100%">確定刪除</button><button class="btn sub" id="dlNo" style="width:100%;margin-top:8px">不要刪</button>`);
+    o.querySelector("#dlNo").addEventListener("click", ()=>o.remove());
+    o.querySelector("#dlYes").addEventListener("click", async ()=>{
+      o.querySelector("#dlYes").disabled = true; o.querySelector("#dlYes").textContent = "刪除中…";
+      try{
+        for(let i=0;i<rows.length;i+=50) await B.deletePhotos(rows.slice(i,i+50));
+        o.remove(); if(after) after();
+        const ids = rows.map(r=>r.id);
+        await update("album", s=>{ s = s || {}; s.deleted = (s.deleted||[]).concat(ids).slice(-400); return s; });
+        album.rows = (album.rows||[]).filter(r=>!ids.includes(r.id)); if(album.sel) album.sel = new Set();
+        drawAlbum(); SFX.del(); toast(`${sprite(me.cat||"orange","happy")} 刪掉 ${n} 張照片了`);
+        recountAlbum().then(()=>drawUsage()).catch(()=>{});
+      }catch(e){
+        o.remove(); console.error(e);
+        if(String(e.message||e).includes("NEED_SQL")) modal(`<h3>還差一步 🔧</h3><p>刪除照片要先在 Supabase 開啟權限：<br>用電腦到 Supabase → <b>SQL Editor</b>，執行 <b>update_5_album.sql</b> 就好（只要做一次）。</p>`);
+        else toast("刪除失敗："+esc(e.message||e), 5000);
+      }
+    });
+  }
   // ---------- settings ----------
   function viewSettings(v){
     const ps=pushState();
@@ -873,6 +1050,7 @@ const App = (function(){
   function go(r){ if(location.hash!=="#"+r) location.hash=r; else render(); }
   function render(){
     const r = (location.hash||"#home").slice(1) || "home";
+    { const ab=$("alBar"); if(ab) ab.remove(); }
     if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove();
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");
@@ -881,6 +1059,7 @@ const App = (function(){
     const v=$("view");
     if(route==="chat") viewChat(v);
     else if(route==="settings") viewSettings(v);
+    else if(route==="album") viewAlbum(v);
     else if(route==="game"){
       const g = games.find(x=>x.id===r.slice(5));
       if(!g){ go("home"); return; }
@@ -930,7 +1109,9 @@ const App = (function(){
     await getState("moqi").catch(()=>{});
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);
-    for(const g of ["daily","pet","fishing"]) await getState(g).catch(()=>{});
+    for(const g of ["daily","pet","fishing","album"]) await getState(g).catch(()=>{});
+    onState("album", onAlbumState);
+    setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);
     onState("daily", ()=>refreshHomeBox("dailyBox", dailyCard, bindDaily));
     onState("pet", ()=>refreshHomeBox("petGo", petStrip, v=>{ const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet")); }));
     clearInterval(truceTimer); truceTimer = setInterval(tickTruce, 1000);
@@ -954,7 +1135,7 @@ const App = (function(){
     setupHaptic(); applyKbTheme(); applyWall();
     document.addEventListener("pointerdown", e=>{ if(e.button>0) return; tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
     $("midHeart").innerHTML = icon("heart");
-    $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear");
+    $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear"); $("niAlb").innerHTML = icon("camera");
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");
     document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.go; if(t==="home" && route!=="game" && lastGame) go(lastGame); else go(t); }));
     window.addEventListener("hashchange", ()=>{ if(B && B.coupleId) render(); });

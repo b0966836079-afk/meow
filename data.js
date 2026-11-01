@@ -67,6 +67,38 @@
       const { data, error } = await sb.storage.from("photos").createSignedUrl(path, 60 * 60 * 24 * 7);
       if (error) throw error; return data.signedUrl;
     };
+    B.imageUrls = async (paths) => {
+      if (!paths.length) return {};
+      const { data, error } = await sb.storage.from("photos").createSignedUrls(paths, 60 * 60 * 24 * 7);
+      if (error) throw error; const out = {}; (data || []).forEach(d => { if (d.signedUrl && !d.error) out[d.path] = d.signedUrl; }); return out;
+    };
+    B.uploadThumb = async (path, blob) => {
+      const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "604800" });
+      if (error) throw error; return path;
+    };
+    B.images = async () => {
+      const { data, error } = await sb.from("messages").select("id,sender,name,cat,media,created_at").eq("couple_id", B.coupleId).eq("kind", "image").order("id", { ascending: false }).limit(5000);
+      if (error) throw error; return data || [];
+    };
+    B.photoUsage = async () => {
+      let bytes = 0, count = 0, offset = 0;
+      for (;;) {
+        const { data, error } = await sb.storage.from("photos").list(B.coupleId, { limit: 1000, offset });
+        if (error) throw error;
+        for (const f of data || []) { if (f.metadata && f.metadata.size) { bytes += f.metadata.size; if (!/_t\.jpg$/.test(f.name)) count++; } }
+        if (!data || data.length < 1000) break; offset += 1000;
+      }
+      return { bytes, count };
+    };
+    B.deletePhotos = async (rows) => {
+      const paths = []; rows.forEach(r => { if (r.media) { paths.push(r.media); paths.push(r.media.replace(/\.\w+$/, "_t.jpg")); } });
+      const { data, error } = await sb.storage.from("photos").remove(paths);
+      if (error) throw error;
+      if (!(data || []).length) throw new Error("NEED_SQL");
+      const r = await sb.rpc("delete_photos", { ids: rows.map(x => x.id) });
+      if (r.error) { if (/delete_photos|function/i.test(r.error.message || "")) throw new Error("NEED_SQL"); throw r.error; }
+      return r.data;
+    };
     B.getState = async (game) => {
       const { data, error } = await sb.from("game_state").select("version,state").eq("couple_id", B.coupleId).eq("game", game).maybeSingle();
       if (error) throw error; return data;
@@ -121,6 +153,11 @@
     B.send = async (body, kind, name, cat, media) => call("send", { cid: B.coupleId, uid: B.uid, body, kind: kind || "text", name, cat, media: media || null });
     B.uploadImage = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl }); };
     B.imageUrl = async (path) => call("url", { path });
+    B.imageUrls = async (paths) => { const out = {}; for (const p of paths) { const u = await call("url", { path: p }); if (u) out[p] = u; } return out; };
+    B.uploadThumb = async (path, blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path }); };
+    B.images = async () => call("images", { cid: B.coupleId });
+    B.photoUsage = async () => call("usage", { cid: B.coupleId });
+    B.deletePhotos = async (rows) => call("delphotos", { cid: B.coupleId, ids: rows.map(r => r.id) });
     B.getState = async (game) => call("get", { cid: B.coupleId, game });
     B.casState = async (game, version, state) => call("cas", { cid: B.coupleId, game, version, state });
     B.savePush = async () => {};

@@ -696,3 +696,42 @@ body.rnLock{overflow:hidden}
 .prYarn2{position:absolute;bottom:34px;font-size:28px;z-index:2}
 .prFish{transform:translateX(-50%)}
 .psCats{display:flex}.psCats .psCat+.psCat{margin-left:-18px}.psCats .psCat svg{width:56px;height:56px}
+
+/* album */
+#nav button{padding:5px 2px;gap:4px}
+.banner.warn{background:#fff1f3}
+.album h2{margin:0;font-weight:400;font-size:20px}
+.alHd{display:flex;justify-content:space-between;align-items:center}
+.alHd .btn{width:auto;padding:4px 14px;font-size:14px}
+.alUse{margin:10px 0;font-size:14px}
+.auTop{display:flex;justify-content:space-between}.auTop b{font-weight:400;color:var(--pink)}
+.auBar{height:14px;margin:4px 0}
+.auTip{font-size:12px;color:var(--muted)}
+.alTabs{display:flex;gap:6px;margin-bottom:6px}
+.alTabs button{font:inherit;font-size:13px;color:inherit;background:#fff;border:2px solid var(--line);border-radius:14px;padding:2px 12px}
+.alTabs button.on{background:var(--pinkL);border-color:var(--pink)}
+.alMon{font-size:14px;margin:12px 0 6px;color:var(--pink)}
+.alRow{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.alCell{position:relative;aspect-ratio:1;padding:0;border:2px solid var(--line);background:#f3e7da;overflow:hidden;cursor:pointer}
+.alCell img{width:100%;height:100%;object-fit:cover;display:block}
+.alCell.selmode img{opacity:.85}
+.alCell.on{outline:4px solid var(--pink);outline-offset:-4px}.alCell.on img{opacity:.6}
+.alWho{position:absolute;left:2px;bottom:2px;width:26px;height:26px;background:rgba(255,255,255,.85);border-radius:50%}.alWho svg{width:100%;height:100%}
+.alChk{position:absolute;right:4px;top:4px;width:24px;height:24px;border:2px solid #fff;border-radius:50%;background:rgba(0,0,0,.25);color:#fff;font-size:14px;line-height:20px;text-align:center}
+.alCell.on .alChk{background:var(--pink)}
+.alEmpty{text-align:center;color:var(--muted);font-size:14px;padding:20px 0}.alEmpty svg{width:90px;height:90px}
+.alBar{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;align-items:center;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--paper);border-top:3px solid var(--line)}
+.alBar span{flex:1;font-size:14px;line-height:1.3}.alBar span b{font-weight:400;color:var(--pink);font-size:18px}.alBar small{color:var(--muted)}
+.alBar .btn{width:auto;padding:6px 10px;font-size:14px}
+.alView{justify-content:space-between;padding:12px 10px calc(14px + env(safe-area-inset-bottom))}
+.avTop{width:100%;display:flex;justify-content:space-between;align-items:center;color:#fff;font-size:14px}
+.avX{background:none;border:0;color:#fff;font-size:24px}
+.avImg{flex:1;width:100%;display:flex;align-items:center;justify-content:center;position:relative;min-height:0}
+.avImg img{max-width:100%;max-height:100%;border:3px solid #fff;object-fit:contain}
+.avNav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.8);border:2px solid var(--line);border-radius:50%;width:40px;height:40px;font-size:16px}
+.avNav.l{left:4px}.avNav.r{right:4px}
+.avBtns{display:flex;gap:10px;width:100%}.avBtns .btn{flex:1}
+.bub.gone{color:var(--muted);background:#f4ece4;font-size:13px}
+.albumMsg .bub{background:#fff1f3;border-color:var(--pink);font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.albumMsg small{color:var(--pink)}
+.careModal{z-index:120}

@@ -32,3 +32,8 @@
 - `games/pet.js` (hidden game `pet`, opened from the home strip): state `pet` v2 = {v:2,cats:[{name,color,full,at,exp}],spent,gift,log:[{by,a,c,at}],petDay:{"uid:catIdx":day},playDay}; `PetLogic.norm` migrates v1 (single cat). Up to 2 cats; idle cat-to-cat interactions are local animations only. Food = moqi hearts + fishing total/5 + daily.done*2 + gift − spent. Fullness decays 2.2/h.
 - Daily 早安(04–14)/晚安(19–04) check-in lives in app.js (`dailyCard`, `sayGreet`), state `daily` = {days:{"Y-M-D":{m:{uid:ts},n:{uid:ts}}}, done, best}. Day boundary is 04:00. Messages kind `greet`.
 - Status board: `moodSt.status[uid]` = {s, until, at}; messages kind `status`.
+
+## Album
+- Route `album` (4th nav button). Lists `kind='image'` messages (`B.images`), thumbnails at `<path>_t.jpg` (uploaded on send; old photos fall back to full image). Signed URLs cached in localStorage `mw_urls`.
+- Usage: `B.photoUsage()` lists the couple folder in storage and sums sizes; stored in game_state `album` = {bytes,count,at,warned,deleted[]}. Limit 1e9 (free plan 1 GB). Crossing 70/85/95% posts a `kind='album'` message (push to partner) + modal for the sender.
+- Deleting needs `supabase/update_5_album.sql` (storage delete policy + rpc `delete_photos` which turns messages into `kind='photo_gone'`).
