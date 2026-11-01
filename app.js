@@ -827,12 +827,13 @@ const App = (function(){
   const fmtSec = n => `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`;
   function voiceHtml(m, mine){
     const secs = voiceSecs(m), n = Math.max(8, Math.min(22, 6 + Math.round(secs/2)));
-    let seed = m.id * 9301 + 49297; const bars = Array.from({length:n}, ()=>{ seed = (seed*9301+49297)%233280; return 30 + Math.round(seed/233280*70); });
+    let seed = m.id * 9301 + 49297; const bars = Array.from({length:n}, ()=>{ seed = (seed*9301+49297)%233280; return 1 + Math.floor(seed/233280*4); });
     const unheard = !mine && !heardVoices.has(m.id), playing = voicePlaying===m.id;
-    return `<button class="voiceBub ${unheard?"new":""} ${playing?"playing":""}" data-voice="${m.id}"><span class="vbI">${playing?"❚❚":"▶"}</span><span class="vbW">${bars.map(h=>`<i style="height:${h}%"></i>`).join("")}</span><span class="vbT">${fmtSec(secs)}</span></button>`;
+    return `<button class="voiceBub ${unheard?"new":""} ${playing?"playing":""}" data-voice="${m.id}"><span class="vbEar l"></span><span class="vbEar r"></span><span class="vbI">${icon(playing?"pause":"play",{W:"#ffffff"})}</span><span class="vbW">${bars.map(h=>`<i class="h${h}"></i>`).join("")}</span><span class="vbT">${fmtSec(secs)}</span>${unheard?`<span class="vbNew">${icon("heart")}</span>`:""}<span class="vbNotes"></span></button>`;
   }
   function voiceUi(id, playing, frac){
-    document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ b.classList.toggle("playing", playing); b.querySelector(".vbI").textContent = playing ? "❚❚" : "▶";
+    document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ const was = b.classList.contains("playing"); b.classList.toggle("playing", playing); if(was!==playing) b.querySelector(".vbI").innerHTML = icon(playing ? "pause" : "play",{W:"#ffffff"});
+      if(playing){ const nt = b.querySelector(".vbNotes"); if(nt && !nt._t){ nt._t = setInterval(()=>{ if(!b.isConnected || !b.classList.contains("playing")){ clearInterval(nt._t); nt._t = null; return; } const d = document.createElement("i"); d.innerHTML = icon("note"); d.style.left = (20+Math.random()*60)+"%"; nt.appendChild(d); setTimeout(()=>d.remove(), 1300); }, 450); } }
       const bars = b.querySelectorAll(".vbW i"); bars.forEach((x,i)=>x.classList.toggle("on", playing && i/bars.length < (frac||0))); });
   }
   async function playVoice(id){
@@ -847,7 +848,7 @@ const App = (function(){
     a.addEventListener("ended", ()=>{ voiceUi(id, false); voicePlaying = 0; });
     a.addEventListener("error", ()=>{ voiceUi(id, false); voicePlaying = 0; toast("這段語音在這支手機播不出來 🥺", 3500); });
     try{ await a.play(); voiceUi(id, true, 0); }catch(e){ voicePlaying = 0; toast("播放失敗，再點一次試試"); return; }
-    if(m.sender!==me.uid && !heardVoices.has(id)){ heardVoices.add(id); store.set("mw_heard", JSON.stringify([...heardVoices].slice(-500))); document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>b.classList.remove("new")); }
+    if(m.sender!==me.uid && !heardVoices.has(id)){ heardVoices.add(id); store.set("mw_heard", JSON.stringify([...heardVoices].slice(-500))); document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ b.classList.remove("new"); const nw=b.querySelector(".vbNew"); if(nw) nw.remove(); }); }
   }
   async function startVoice(){
     if(voiceRec) return;
