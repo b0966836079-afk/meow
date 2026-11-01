@@ -481,6 +481,7 @@ const App = (function(){
     ["gameboy","經典掌機","#b9c78f","#cfdba6","#1f3a1f","#3f6b30","#879a5e"],["night","星空夜貓","#1b1f35","#272c48","#0b0d1a","#ff8fb1","#0b0d1a"],["mono","黑白漫畫","#efefef","#fafafa","#222222","#333333","#bdbdbd"]];
   function applyTheme(){ const t = store.get("mw_theme") || "cream"; if(t==="cream") delete document.body.dataset.theme; else document.body.dataset.theme = t;
     const d = SITE_THEMES.find(x=>x[0]===t); const m = document.querySelector('meta[name="theme-color"]'); if(m && d) m.setAttribute("content", d[2]); }
+  function applyFont(){ if(store.get("mw_font")==="sys") document.body.dataset.font="sys"; else delete document.body.dataset.font; }
   function applyKbTheme(){ document.body.dataset.kb = store.get("mw_kb") || "strawberry"; }
   const WALLS = [["paws","貓掌"],["night","星空"],["aqua","魚缸"],["sky","雲朵"],["sakura","櫻花"],["picnic","野餐布"],["meadow","小花園"],["dots","點點"],["photo","我的照片"]];
   function applyWall(){
@@ -1142,6 +1143,7 @@ const App = (function(){
     v.innerHTML = `<div class="box set"><h2>我的貓</h2><div class="picks" id="pk"></div><input id="nm" maxlength="10" value="${esc(me.name)}" style="font-size:17px;padding:8px;border:3px solid var(--line);text-align:center;border-radius:0"><button class="btn" id="bSave">儲存</button></div>
       <div class="box set"><h2>小窩模式</h2><div class="modePick" id="mSet">${Object.keys(MODES).map(m=>`<button data-m="${m}" class="${roomMode===m?"on":""}">${modeArt(m)}<b>${MODES[m].name}</b></button>`).join("")}</div><div class="k">兩個人會一起切換。閨蜜／兄弟模式會換掉情侶向的題目和用語</div></div>
       <div class="box set"><h2>整體風格</h2><div class="sthemes" id="sthm">${SITE_THEMES.map(([id,n,bg,pa,ln,ac,sh])=>`<button data-st="${id}" class="${(store.get("mw_theme")||"cream")===id?"on":""}"><span class="stPrev" style="background-color:${bg};background-image:linear-gradient(${ln}14 1px,transparent 1px),linear-gradient(90deg,${ln}14 1px,transparent 1px)"><b style="background:${pa};border-color:${ln};box-shadow:2px 2px 0 ${sh}"></b><i style="background:${ac};border-color:${ln}"></i><s>${icon("heart",{K:ac,W:pa,O:ln})}</s></span>${n}</button>`).join("")}</div></div>
+      <div class="box set"><h2>字體</h2><div class="fontPick" id="fPick"><button data-f="pixel" class="${store.get("mw_font")==="sys"?"":"on"}" style="font-family:Cubic11">像素字 喵喵小窩</button><button data-f="sys" class="${store.get("mw_font")==="sys"?"on":""}" style="font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif">一般字 喵喵小窩</button></div></div>
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>
         <div class="k">點一下可以預覽，只會改變你自己的手機。</div></div>
@@ -1174,6 +1176,7 @@ const App = (function(){
     $("bReload").addEventListener("click", ()=>location.reload());
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
       await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
+    $("fPick").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_font", b.dataset.f); applyFont(); SFX.select(); $("fPick").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
     $("sthm").querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_theme", b.dataset.st); applyTheme(); SFX.select(); $("sthm").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
   }
   function previewAnim(btn){
@@ -1316,7 +1319,7 @@ const App = (function(){
   IME.hooks.listen = () => SFX.meow(1.18);
   // ---------- start ----------
   async function start(){
-    setupHaptic(); applyTheme(); applyKbTheme(); applyWall();
+    setupHaptic(); applyTheme(); applyFont(); applyKbTheme(); applyWall();
     document.addEventListener("pointerdown", e=>{ if(e.button>0) return; tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear"); $("niAlb").innerHTML = icon("camera");

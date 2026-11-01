@@ -57,3 +57,6 @@
 - game_state `room` = {mode:"couple"|"bestie"|"bro"} (MODES table in app.js); chosen on create (onboarding `#mPick`), switchable in settings. `ctx.mode()`, `ctx.pw()` ("另一半"/"閨蜜").
 - Bestie mode: moqi uses `BANK_B` (romance questions filtered by `ROMANCE` regex + `BESTIE_Q`), draw swaps the 「我們」 category for 「閨蜜」, different LV names, quick phrases, love animation says 抱抱.
 - Voice messages expire after 24 h unless saved (long-press → 儲存). Saved paths in game_state `voice` = {saved:[paths]}; `cleanupVoices()` deletes unsaved files older than 25 h from `<couple>/v/` (file names start with the upload timestamp).
+
+## Font
+- Pixel font 俐方體11號 Cubic 11 (`fonts/Cubic_11.woff2`, OFL-1.1, license in `fonts/Cubic_11-OFL.txt`) is the default UI font; settings → 字體 can switch back to the system font (`body[data-font="sys"]`, localStorage `mw_font`).

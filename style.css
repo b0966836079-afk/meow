@@ -1,6 +1,8 @@
+@font-face{font-family:"Cubic11";src:url("fonts/Cubic_11.woff2") format("woff2");font-display:swap}
 :root{--card:#fff;--onPink:#fff;--grid:rgba(90,59,46,.045);--bg:#f6eee3;--paper:#fffaf2;--ink:#5a3b2e;--line:#5a3b2e;--shadow:#e3cfba;--muted:#a48a7c;--pink:#f08aa0;--pinkL:#ffe1e7;--mint:#7cc7a5;--mintL:#e2f5ec;--sun:#f6c45f;--sky:#eaf4f4}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;min-height:100%;color:var(--ink);font-family:"DotGothic16",-apple-system,"PingFang TC","Noto Sans TC",monospace}
+html,body{margin:0;min-height:100%;color:var(--ink);font-family:"Cubic11","DotGothic16",-apple-system,"PingFang TC","Noto Sans TC",monospace}
+body[data-font="sys"]{font-family:"DotGothic16",-apple-system,"PingFang TC","Noto Sans TC",monospace}
 body{background-color:var(--bg);background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:24px 24px;
   padding:calc(10px + env(safe-area-inset-top)) 14px calc(90px + env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none;overflow-x:hidden}
 svg{image-rendering:pixelated}
@@ -885,3 +887,4 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 .vbGone{font-size:13px;color:var(--muted)}
 .msg .voiceWrap{display:flex;flex-direction:column}
 .h3i svg{width:22px;height:22px;vertical-align:-4px;display:inline-block}
+.fontPick{display:grid;grid-template-columns:1fr 1fr;gap:8px}.fontPick button{background:var(--card);border:3px solid var(--shadow);padding:10px 4px;font-size:16px;color:var(--ink)}.fontPick button.on{border-color:var(--line);background:var(--pinkL);box-shadow:3px 3px 0 var(--shadow)}
