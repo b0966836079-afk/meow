@@ -397,7 +397,7 @@ App.registerGame({
       let html = `${tag}${byTag}<div style="font-size:20px;margin:12px 0 4px;line-height:1.5">${esc(qtext)}</div><div class="muted" style="font-size:13px;margin-bottom:14px">${esc(sub)}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
         Qn.opts.map((o,i)=>{
-          const bg = done && i===mi && i===ti ? "var(--mintL)" : i===mi ? "var(--pinkL)" : "#fff";
+          const bg = done && i===mi && i===ti ? "var(--mintL)" : i===mi ? "var(--pinkL)" : "var(--card)";
           const badges = done ? (i===mi?`<span style="position:absolute;top:-14px;right:-8px;width:30px;height:30px">${sprite(ctx.me.cat,"happy")}</span>`:"") + (i===ti?`<span style="position:absolute;top:-14px;left:-8px;width:30px;height:30px">${sprite(p.cat,"happy")}</span>`:"") : "";
           return `<button data-i="${i}" ${done?"disabled":""} style="position:relative;font-size:16px;padding:14px 6px;min-height:62px;background:${bg};border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow)">${esc(o)}${badges}</button>`;
         }).join("") + `</div>`;

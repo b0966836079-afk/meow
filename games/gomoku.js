@@ -150,7 +150,7 @@ App.registerGame({
       if(s.win){ const wid = s.win.c==="b"?s.b:s.w;
         S.innerHTML = s.win.c==="draw" ? "平手！" : wid===ctx.me.uid ? `你贏了！🎉` : `${esc(ctx.nameOf(wid))} 贏了～`;
         if(shownWin!==s.n){ shownWin=s.n; if(wid===ctx.me.uid){ SFX.match(); ctx.burst(); } else SFX.miss(); } }
-      else if(mc===s.turn){ S.innerHTML = `<span style="color:var(--pink)">輪到你了！</span>`; }
+      else if(mc===s.turn){ S.innerHTML = `<span style="color:var(--pinkT)">輪到你了！</span>`; }
       else S.textContent = `等 ${ctx.nameOf(s.turn==="b"?s.b:s.w)} 下棋…`;
       draw(); updCtl();
     }
