@@ -196,7 +196,7 @@ const App = (function(){
   function stickerHtml(id, cat){
     const st = STK_BY[id];
     if(!st){ return id==="heart" ? icon("heart") : sprite(cat||"orange", STK.includes(id)?id:"normal"); }
-    return `<span class="stkArt">${sprite(cat||"orange", st[1])}${DECO[st[3]]||""}<b>${esc(st[2])}</b></span>`;
+    return `<span class="stkArt" title="${esc(st[2])}">${sprite(cat||"orange", st[1])}${DECO[st[3]]||""}</span>`;
   }
   const QK = {
     "兄弟": ["兄弟！","笑死 🤣","出來打球","開黑嗎 🎮","吃宵夜？","讚啦 👍","衝啊！","等我一下","在幹嘛？","到家了","晚安 🌙","請你喝飲料","辛苦了","抱歉啦","好喔 👌","哈哈哈哈"],
