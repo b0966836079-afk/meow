@@ -981,3 +981,21 @@ body[data-theme="gameboy"] .btn.mint{color:var(--onPink)}
 .ga .gaLine{position:absolute;left:82%;top:10%;width:2px;height:52%;background:#8a6a50}
 .ga .gaGround{position:absolute;left:0;right:0;bottom:4%;height:3px;background:var(--line)}
 .fsTabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.fsTabs button{flex:1;min-width:15%;background:var(--card);border:2px solid var(--line);font:inherit;font-size:12px;padding:3px 2px;color:var(--ink);display:flex;flex-direction:column;align-items:center}.fsTabs button i{font-style:normal;font-size:10px;color:var(--muted)}.fsTabs button.on{background:var(--pinkL);box-shadow:2px 2px 0 var(--shadow)}
+
+/* sticker props (pixel) */
+.stkArt .stkCat{position:absolute;left:9%;right:9%;top:16%;bottom:0}.stkArt .stkCat svg{width:100%;height:100%}
+.stkArt .sp{position:absolute;display:block}.stkArt .sp svg{width:100%;height:auto;display:block}
+.stkArt.low .stkCat{top:12%}
+.stkArt.bow .stkCat{transform:rotate(12deg);transform-origin:50% 100%}
+.stkArt.hug .stkCat{transform:scale(1.06)}
+.stkArt.shy .stkCat{transform:rotate(-8deg);transform-origin:50% 100%}
+.sp.beat{animation:spBeat .9s steps(2) infinite}.sp.blink{animation:spBlink 1s steps(2) infinite}.sp.blink2{animation:spBlink 1s steps(2) .5s infinite}
+.sp.float{animation:spFloat 1.4s steps(3) infinite}.sp.float2{animation:spFloat 1.4s steps(3) .5s infinite}
+.sp.sway{animation:spSway 1.2s steps(2) infinite}.sp.spin{animation:spSpin 2.4s steps(8) infinite}
+.sp.fall{animation:spFall 1.2s steps(4) infinite}.sp.fall2{animation:spFall 1.2s steps(4) .6s infinite}
+.stkArt.shake .stkCat{animation:spShake .5s steps(2) infinite}.stkArt.jump .stkCat{animation:spJump .8s steps(2) infinite}
+@keyframes spBeat{50%{transform:scale(1.18)}}@keyframes spBlink{50%{opacity:.25}}
+@keyframes spFloat{0%{transform:translateY(0)}50%{transform:translateY(-4px)}100%{transform:translateY(0)}}
+@keyframes spSway{50%{transform:rotate(12deg)}}@keyframes spSpin{to{transform:rotate(360deg)}}
+@keyframes spFall{0%{transform:translateY(0);opacity:1}100%{transform:translateY(10px);opacity:0}}
+@keyframes spShake{50%{transform:translateX(2px) rotate(2deg)}}@keyframes spJump{50%{transform:translateY(-6%)}}

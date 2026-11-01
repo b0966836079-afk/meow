@@ -176,28 +176,48 @@ const App = (function(){
   // ---------- chat ----------
   const STK=["normal","happy","love","surprised","sleep","wave","loaf"];
   // [id, face/pose, caption, decoration]
+  // [id, face, caption (used for notifications / tooltip only), props: [icon, css, palette, extraClass]]
+  const SP = (n, css, pal, cls) => [n, css, pal, cls];
   const STICKERS = [
-    ["loveyou","love","愛你","hearts"],["miss","cry","想你","hearts"],["hug","wave","抱抱","hearts"],["kiss","love","啾～","kiss"],
-    ["morning","happy","早安","sun"],["night","sleep","晚安","moon"],["sleepy","sleep","好睏","zzz"],["bye","wave","掰掰",""],
-    ["haha","happy","哈哈哈","sparkle"],["yay","happy","耶～","sparkle"],["good","happy","讚啦","star"],["ok","normal","OK","" ],
-    ["thanks","love","謝謝","flower"],["sorry","cry","對不起","sweat"],["cry","cry","哭哭","tears"],["angry","angry","哼！","anger"],
-    ["what","surprised","蛤？","q"],["shock","surprised","嚇死","excl"],["hungry","normal","好餓","food"],["eat","happy","吃飯了","food"],
-    ["shy","love","害羞","blush"],["busy","angry","忙碌中","sweat"],["home","wave","到家了","home"],["wait","normal","等我","sweat"],
-    ["cute","love","你好可愛","sparkle"],["best","happy","你最棒","star"],["jealous","angry","吃醋","anger"],["please","cry","拜託嘛","sparkle"],
-    ["loaf","loaf","耍廢中","zzz"],["curl","curl","不想動","zzz"],
+    ["loveyou","love","愛你",[SP("heart","left:28%;top:-6%;width:46%",null,"beat")]],
+    ["miss","cry","想你",[SP("heart","right:2%;top:2%;width:35%",null,"float"),SP("drop","left:18%;top:46%;width:14%"),SP("drop","right:22%;top:50%;width:14%")]],
+    ["hug","wave","抱抱",[SP("heart","left:2%;top:30%;width:27%",null,"beat"),SP("heart","right:2%;top:30%;width:27%",null,"beat")],"hug"],
+    ["kiss","love","啾～",[SP("lips","right:2%;top:4%;width:40%",null,"beat"),SP("heart","left:6%;top:8%;width:19%",null,"float")]],
+    ["morning","happy","早安",[SP("sun","right:0;top:0;width:46%",null,"spin")]],
+    ["night","sleep","晚安",[SP("moon","right:4%;top:2%;width:38%"),SP("star","left:6%;top:6%;width:22%",null,"blink")]],
+    ["sleepy","curl","好睏",[SP("zz","right:6%;top:4%;width:40%",{O:"#7a8aa0"},"float")],"low"],
+    ["bye","wave","掰掰",[SP("paw","left:2%;top:4%;width:24%",null,"blink"),SP("paw","left:20%;top:-4%;width:19%",null,"blink2")]],
+    ["haha","happy","哈哈哈",[SP("drop","left:10%;top:28%;width:18%"),SP("drop","right:12%;top:28%;width:18%")],"shake"],
+    ["yay","wave","耶～",[SP("spark","left:2%;top:2%;width:24%",{O:"#f0708d"},"blink"),SP("spark","right:2%;top:4%;width:24%",{O:"#6fb7e8"},"blink2"),SP("spark","left:40%;top:-6%;width:22%",{O:"#ffd36b"},"blink")],"jump"],
+    ["good","happy","讚啦",[SP("thumb","right:0;top:20%;width:40%",null,"beat")]],
+    ["ok","normal","OK",[SP("check","right:2%;top:4%;width:40%",{G:"#6cc49d"})]],
+    ["thanks","love","謝謝",[SP("flower","left:2%;top:26%;width:32%",null,"sway")]],
+    ["sorry","cry","對不起",[SP("drop","right:10%;top:6%;width:18%",null,"float")],"bow"],
+    ["cry","cry","哭哭",[SP("drop","left:16%;top:46%;width:16%",null,"fall"),SP("drop","right:20%;top:46%;width:16%",null,"fall2"),SP("drop","left:30%;bottom:0;width:14%")]],
+    ["angry","angry","哼！",[SP("anger","right:2%;top:2%;width:35%",null,"beat")],"shake"],
+    ["what","surprised","蛤？",[SP("qmark","right:2%;top:-2%;width:32%",null,"sway")]],
+    ["shock","surprised","嚇死",[SP("excl","right:8%;top:0;width:14%",null,"beat"),SP("excl","right:22%;top:4%;width:11%",null,"beat")],"shake"],
+    ["hungry","normal","好餓",[SP("fish","right:-2%;top:4%;width:46%",null,"sway"),SP("drop","left:44%;top:56%;width:12%")]],
+    ["eat","happy","吃飯了",[SP("onigiri","right:0;top:24%;width:40%",null,"beat")]],
+    ["shy","love","害羞",[SP("heart","right:4%;top:6%;width:22%",null,"float"),SP("heart","right:20%;top:-2%;width:16%",null,"float2")],"shy"],
+    ["busy","normal","忙碌中",[SP("laptop","left:16%;bottom:0;width:46%"),SP("drop","right:8%;top:8%;width:16%",null,"fall")]],
+    ["home","wave","到家了",[SP("home","right:0;top:0;width:43%")]],
+    ["wait","normal","等我",[SP("hourglass","right:4%;top:2%;width:30%",null,"spin")]],
+    ["cute","love","你好可愛",[SP("spark","left:4%;top:6%;width:24%",{O:"#ffd36b"},"blink"),SP("spark","right:4%;top:20%;width:19%",{O:"#f0708d"},"blink2"),SP("star","right:6%;top:-2%;width:24%",null,"blink")]],
+    ["best","happy","你最棒",[SP("crown","left:30%;top:-10%;width:46%",null,"beat")]],
+    ["jealous","angry","吃醋",[SP("bottle","right:0;top:14%;width:32%",null,"sway")]],
+    ["please","love","拜託嘛",[SP("bigpaw","left:34%;bottom:2%;width:43%"),SP("spark","right:4%;top:4%;width:22%",{O:"#ffd36b"},"blink")]],
+    ["loaf","loaf","耍廢中",[SP("note","right:6%;top:4%;width:27%",null,"float")]],
+    ["curl","curl","不想動",[SP("dots","right:8%;top:14%;width:35%",null,"blink")]],
   ];
   const STK_BY = Object.fromEntries(STICKERS.map(x=>[x[0],x]));
-  const DECO = {
-    hearts: '<span class="d d1">💗</span><span class="d d2">💕</span>', kiss:'<span class="d d1">💋</span>', sun:'<span class="d d1">☀️</span>', moon:'<span class="d d1">🌙</span><span class="d d2">⭐</span>',
-    zzz:'<span class="d d1 z">z</span><span class="d d2 z">Z</span>', sparkle:'<span class="d d1">✨</span><span class="d d2">✨</span>', star:'<span class="d d1">👍</span>', flower:'<span class="d d1">🌸</span>',
-    sweat:'<span class="d d1">💦</span>', tears:'<span class="d d1">💧</span><span class="d d2">💧</span>', anger:'<span class="d d1">💢</span>', q:'<span class="d d1 q">？</span>', excl:'<span class="d d1 q">！</span>',
-    food:'<span class="d d1">🍙</span>', blush:'<span class="d d1">///</span>', home:'<span class="d d1">🏠</span>',
-  };
   function stickerHtml(id, cat){
     const st = STK_BY[id];
     if(!st){ return id==="heart" ? icon("heart") : sprite(cat||"orange", STK.includes(id)?id:"normal"); }
-    return `<span class="stkArt" title="${esc(st[2])}">${sprite(cat||"orange", st[1])}${DECO[st[3]]||""}</span>`;
+    const props = (st[3]||[]).map(([n,css,pal,cls])=>`<span class="sp ${cls||""}" style="${css}">${icon(n,pal||undefined)}</span>`).join("");
+    return `<span class="stkArt ${st[4]||""}" title="${esc(st[2])}"><span class="stkCat">${sprite(cat||"orange", st[1])}</span>${props}</span>`;
   }
+
   const QK = {
     "兄弟": ["兄弟！","笑死 🤣","出來打球","開黑嗎 🎮","吃宵夜？","讚啦 👍","衝啊！","等我一下","在幹嘛？","到家了","晚安 🌙","請你喝飲料","辛苦了","抱歉啦","好喔 👌","哈哈哈哈"],
     "閨蜜": ["愛你 ❤️","想你了","抱抱 🫂","姊妹！","笑死 🤣","出來玩！","八卦時間 👀","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","好喔 👌","哈哈哈哈"],
@@ -269,7 +289,7 @@ const App = (function(){
   let kb = null;
   function viewChat(v){
     v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="pinBar hidden"></div><div class="list" id="list"></div>
-      <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
+      <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="replyBar hidden" id="replyBar"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
