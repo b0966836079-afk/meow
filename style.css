@@ -980,3 +980,4 @@ body[data-theme="gameboy"] .btn.mint{color:var(--onPink)}
 .ga .gaL{position:absolute;display:block}.ga .gaL svg{width:100%;height:auto;display:block}
 .ga .gaLine{position:absolute;left:82%;top:10%;width:2px;height:52%;background:#8a6a50}
 .ga .gaGround{position:absolute;left:0;right:0;bottom:4%;height:3px;background:var(--line)}
+.fsTabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}.fsTabs button{flex:1;min-width:15%;background:var(--card);border:2px solid var(--line);font:inherit;font-size:12px;padding:3px 2px;color:var(--ink);display:flex;flex-direction:column;align-items:center}.fsTabs button i{font-style:normal;font-size:10px;color:var(--muted)}.fsTabs button.on{background:var(--pinkL);box-shadow:2px 2px 0 var(--shadow)}
