@@ -931,3 +931,19 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 .shArr{font-size:14px;color:var(--pink);width:14px;text-align:center}
 .setHd.open b{color:var(--pink)}
 .setBody{display:flex;flex-direction:column;gap:10px;padding:2px 2px 12px}
+/* home: slim level + quick tiles */
+.meterSlim{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);margin-top:4px}
+.meterSlim .segs{display:flex;gap:2px}.meterSlim .segs i{width:9px;height:9px;border:2px solid var(--line);background:var(--card)}.meterSlim .segs i.f{background:var(--pink)}
+.meterSlim .fish{display:flex;align-items:center;gap:2px;color:var(--pink)}.meterSlim .fish svg{width:20px;height:20px}
+.hTiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.hTile{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--paper);border:3px solid var(--line);box-shadow:4px 4px 0 var(--shadow);padding:8px 2px 6px;font:inherit;color:var(--ink);min-width:0}
+.hTile:active{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--shadow)}
+.hTile .tI{width:34px;height:34px;display:flex;align-items:center;justify-content:center}.hTile .tI svg{width:100%;height:100%;display:block}
+.hTile .tI.cat{width:44px;height:44px;margin:-5px 0}
+.hTile b{font-weight:400;font-size:14px}
+.hTile i{font-style:normal;font-size:11px;color:var(--muted);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
+.hTile.alert i{color:var(--pink)}
+.tDot{position:absolute;right:-6px;top:-6px;width:14px;height:14px;background:#e5486a;border:3px solid var(--line);animation:drBlink 1.2s steps(2) infinite}
+.hSheet{position:fixed;inset:0;z-index:80;background:rgba(60,35,30,.35);display:flex;align-items:flex-end;justify-content:center}
+.hsIn{width:100%;max-width:460px;max-height:85vh;overflow-y:auto;background:var(--bg);border-top:3px solid var(--line);padding:10px 12px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
+.hsX{align-self:center;background:none;border:0;font:inherit;font-size:13px;color:var(--muted);padding:2px 10px}

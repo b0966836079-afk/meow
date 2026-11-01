@@ -151,13 +151,12 @@ const App = (function(){
     const el=$("meter"); if(!el) return;
     const s = stateCache.moqi && stateCache.moqi.state; const h = s ? (s.hearts||0) : 0; const L=lvInfo(h);
     const frac = L.next ? (h-L.cur)/(L.next-L.cur) : 1;
-    el.innerHTML = `<div class="top"><div class="lv">${L.name}</div><div class="fish">${icon("fish")}<span>${h}</span></div></div>
-      <div class="segs">${[...Array(10)].map((_,i)=>`<i class="${i<Math.round(frac*10)?'f':''}"></i>`).join("")}</div>
-      <div class="nx">${L.next?`再收集 ${L.next-h} 條小魚乾 → ${L.nextName}`:"已經是最高等級啦，喵！"}</div>`;
+    el.innerHTML = `<span class="lv">${L.name}</span><span class="segs">${[...Array(8)].map((_,i)=>`<i class="${i<Math.round(frac*8)?'f':''}"></i>`).join("")}</span><span class="fish">${icon("fish")}${h}</span>`;
+    el.title = L.next?`再收集 ${L.next-h} 條小魚乾 → ${L.nextName}`:"已經是最高等級啦";
   }
   function viewHome(v){
     const p = partner();
-    let html = `<div class="title">喵喵<b>小窩</b>${isBestie()?`<span class="modeTag">${modeArt(roomMode)}${MI().name}</span>`:""}</div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
+    let html = `<div class="title">喵喵<b>小窩</b>${isBestie()?`<span class="modeTag">${modeArt(roomMode)}${MI().name}</span>`:""}<div class="meterSlim" id="meter"></div></div><div id="truceHome">${truceBar()}</div><div class="hTiles" id="hTiles">${homeTiles()}</div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">${pw()}還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
     const alb = stateCache.album && stateCache.album.state, apct = alb ? (alb.bytes||0)/albumLimit : 0;
     if(apct >= .7) html = html.replace('<div id="truceHome">', `<div class="box banner ${apct>=.85?"warn":""}" id="albBan"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div><div id="truceHome">`);
@@ -168,7 +167,7 @@ const App = (function(){
     v.innerHTML = html;
     renderMeter();
     v.querySelectorAll("[data-g]").forEach(b=>b.addEventListener("click",()=>go("game-"+b.dataset.g)));
-    bindCare(v); bindStatus(v); bindDaily(v); const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet"));
+    bindTiles();
     const bi=$("bInv"); if(bi) bi.addEventListener("click", shareInvite);
     const ba=$("bAlbum"); if(ba) ba.addEventListener("click", ()=>go("album"));
     const bp=$("bPush"); if(bp) bp.addEventListener("click", ()=>enablePush().then(()=>render()));
@@ -751,7 +750,7 @@ const App = (function(){
     const p = partner();
     const k = JSON.stringify([statusOf(me.uid), p && statusOf(p.user_id)]);
     if(!force && k===statusKey) return; statusKey = k;
-    if(route==="home"){ const c=$("statBox"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=statusCard(); if(tmp.firstChild){ c.replaceWith(tmp.firstChild); bindStatus($("view")); } } }
+    if(route==="home"){ const c=$("statBox"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=statusCard(); if(tmp.firstChild){ c.replaceWith(tmp.firstChild); bindStatus(document); } } } refreshTiles();
     document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar()+busyBar());
     lastHdr = ""; renderHeader();
   }
@@ -794,10 +793,43 @@ const App = (function(){
       if(p && !quiet){ try{ const row = await B.send(`${def[2]} ${me.name} ${def[1]}，${until?`大概 ${fmtUntil(until)} 有空`:"晚點回你"}`, "status", me.name, me.cat); addMessage(row); }catch(e){} }
     }
   }
+  // ---------- home quick tiles (狀態 / 打卡 / 心情 / 養貓) ----------
+  function homeTiles(){
+    const p = partner(); if(!p) return "";
+    const ps = statusOf(p.user_id), pm = moodOf(p.user_id), mk = (moodSt && moodSt.makeup) || {};
+    const slot = greetSlot(), dst = stateCache.daily && stateCache.daily.state, dk = dayKeyOf(), dx = (dst && dst.days && dst.days[dk] && slot && dst.days[dk][slot]) || {};
+    const n = streak(dst, slot || "m"), needGreet = !!slot && !dx[me.uid];
+    const P = window.PetLogic, pet = P && stateCache.pet ? P.norm(stateCache.pet.state) : null, cats = (pet && pet.cats) || [];
+    const hungry = cats.filter(c=>P.mood(c).hungry);
+    const theirReq = mk.req && mk.req[p.user_id] && Date.now()-mk.req[p.user_id] < 864e5;
+    const careAlert = !!(truce() || theirReq || (pm && ["angry","sad","hug"].includes(pm[0])));
+    const T = [
+      ["status", `<span class="tI">${icon("board")}</span>`, "狀態", ps && ps.def[0]!=="free" ? ps.def[2]+ps.def[1] : "看 ta 在幹嘛", ps && ps.def[0]!=="free"],
+      ["daily", `<span class="tI">${icon(slot==="n"?"moon":"sun")}</span>`, "打卡", needGreet ? (slot==="m"?"說早安":"說晚安") : n ? `🔥${n} 天` : "晚點再來", needGreet],
+      ["care", `<span class="tI cat">${sprite(p.cat, pm?pm[3]:"normal")}</span>`, "心情", truce() ? "休戰中" : theirReq ? "想和好" : pm ? pm[1] : "心情小站", careAlert],
+      ["pet", `<span class="tI cat">${cats.length ? sprite(cats[0].color, P.mood(cats[0]).face) : sprite("white","curl",{soft:true})}</span>`, "養貓", !cats.length ? "去領養" : hungry.length ? "肚子餓了" : cats.map(c=>c.name).join("・"), !cats.length || hungry.length>0],
+    ];
+    return T.map(([k,ic,name,sub,dot])=>`<button class="hTile ${dot?"alert":""}" data-tile="${k}">${ic}<b>${name}</b><i>${esc(sub)}</i>${dot?`<span class="tDot"></span>`:""}</button>`).join("");
+  }
+  function bindTiles(){ const h = $("hTiles"); if(!h) return; h.querySelectorAll("[data-tile]").forEach(b=>b.addEventListener("click", ()=>openTile(b.dataset.tile))); }
+  function refreshTiles(){ const h = $("hTiles"); if(!h || route!=="home") return; h.innerHTML = homeTiles(); bindTiles(); }
+  function openTile(k){
+    SFX.tap();
+    if(k==="pet"){ go("game-pet"); return; }
+    const html = k==="status" ? statusCard() : k==="daily" ? dailyCard() : careCard();
+    const o = document.createElement("div"); o.className = "hSheet";
+    o.innerHTML = `<div class="hsIn"><button class="hsX">收起 ▾</button>${html}</div>`;
+    document.body.appendChild(o);
+    o.querySelector(".hsIn").animate([{transform:"translateY(100%)"},{transform:"none"}],{duration:220,easing:"ease-out"});
+    const close = ()=>{ const a = o.querySelector(".hsIn").animate([{transform:"none"},{transform:"translateY(100%)"}],{duration:180,easing:"ease-in"}); a.onfinish = ()=>o.remove(); };
+    o.addEventListener("click", e=>{ if(e.target===o) close(); });
+    o.querySelector(".hsX").addEventListener("click", close);
+    if(k==="status") bindStatus(o); else if(k==="daily") bindDaily(o); else bindCare(o);
+  }
   // ---- home box helper ----
   function refreshHomeBox(id, html, bind){
-    if(route!=="home") return; const c=$(id); if(!c) return;
-    const tmp=document.createElement("div"); tmp.innerHTML=html(); if(tmp.firstElementChild){ c.replaceWith(tmp.firstElementChild); if(bind) bind($("view")); }
+    refreshTiles(); const c=$(id); if(!c) return;
+    const tmp=document.createElement("div"); tmp.innerHTML=html(); if(tmp.firstElementChild){ c.replaceWith(tmp.firstElementChild); if(bind) bind(document); }
   }
   // ---- our cat (strip on home; the room itself lives in games/pet.js) ----
   function petStrip(){
@@ -864,7 +896,7 @@ const App = (function(){
     if(mk && shownMakeup!==null && mk.n !== shownMakeup) playHug(mk.n);
     if(mk) shownMakeup = mk.n; else if(shownMakeup===null) shownMakeup = 0;
     lastHdr = ""; renderHeader();
-    if(route==="home"){ const c=$("care"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=careCard(); c.replaceWith(tmp.firstChild); bindCare($("view")); } const tb=$("truceHome"); if(tb) tb.innerHTML = truceBar(); }
+    if(route==="home"){ const c=$("care"); if(c){ const tmp=document.createElement("div"); tmp.innerHTML=careCard(); c.replaceWith(tmp.firstChild); bindCare(document); } refreshTiles(); const tb=$("truceHome"); if(tb) tb.innerHTML = truceBar(); }
     document.querySelectorAll(".chatTruce").forEach(e=>e.innerHTML = truceBar()+busyBar());
     refreshStatus(true);
     if(chatVisible()) drawList(false);
@@ -1346,6 +1378,7 @@ const App = (function(){
   function go(r){ if(location.hash!=="#"+r) location.hash=r; else render(); }
   function render(){
     const r = (location.hash||"#home").slice(1) || "home";
+    document.querySelectorAll(".hSheet").forEach(x=>x.remove());
     { const ab=$("alBar"); if(ab) ab.remove(); const vr=$("vrec"); if(vr){ const c=vr.querySelector("#vrX"); if(c) c.click(); else vr.remove(); } }
     if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove();
     route = r.startsWith("game-") ? "game" : r;
@@ -1419,6 +1452,7 @@ const App = (function(){
     onState("voice", ()=>{ if(chatVisible()) drawList(false); });
     await getState("pins").catch(()=>{});
     onState("pins", ()=>drawPinBar());
+    setInterval(refreshTiles, 60000);
     setTimeout(cleanupVoices, 8000); setInterval(cleanupVoices, 3*3600e3);
     setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);
     onState("daily", ()=>refreshHomeBox("dailyBox", dailyCard, bindDaily));
