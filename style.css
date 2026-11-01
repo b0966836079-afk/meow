@@ -406,6 +406,9 @@ body.ingame .gtop{position:sticky;top:0;z-index:6}
 .fsRules{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center}
 .fsTop{display:flex;justify-content:space-between;font-size:18px;margin-bottom:6px}
 .fsTop #fsS{color:var(--pinkT)}
+.fsTop{align-items:center}
+.fsQuit{font:inherit;font-size:13px;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:10px;padding:2px 10px}
+.fsQuit.ask{background:#ffe08a;border-color:#e8a920;color:#5a3b00}
 .fsPond{position:relative;height:240px;border:3px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(#bfe3ff,#e6f4ff 38%,#6fb6e8 38%,#3f86c0)}
 .fsCat{position:absolute;left:6px;top:20px;width:76px;height:76px}.fsCat svg{width:100%;height:100%}
 .fsLine{position:absolute;left:78px;top:40px;width:2px;height:0}

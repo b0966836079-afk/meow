@@ -467,12 +467,20 @@ App.registerGame({
     function start(){
       view = "play"; clearT();
       game = { t:60, score:0, caught:[], phase:"idle", fish:null, hits:0, miss:0, pos:0, dir:1, zone:0 };
-      box.innerHTML = `<div class="fsTop"><span id="fsT">⏱ 60</span><span id="fsS">0 分</span></div>
+      box.innerHTML = `<div class="fsTop"><span id="fsT">⏱ 60</span><button class="fsQuit" id="fsQuit">🏳️ 退出</button><span id="fsS">0 分</span></div>
         <div class="fsPond" id="fsPond"><div class="fsCat">${sprite(ctx.me.cat,"normal")}</div><div class="fsLine" id="fsLine"></div><div class="fsBob" id="fsBob"></div><div class="fsBang hidden" id="fsBang">！</div><div class="fsCatch hidden" id="fsCatch"></div></div>
         <div class="fsReel hidden" id="fsReel"><div class="bar"><i class="zone" id="fsZone"></i><i class="needle" id="fsNeedle"></i></div><div class="lives" id="fsLives"></div></div>
         <button class="btn fsAct" id="fsAct">拋竿！</button>`;
       const act = box.querySelector("#fsAct");
       act.addEventListener("pointerdown", e=>{ e.preventDefault(); action(); });
+      // quit mid-game: nothing from this round counts (no score, no dex, no fish for the cats)
+      let quitT = 0;
+      box.querySelector("#fsQuit").addEventListener("click", e=>{
+        const q = e.currentTarget;
+        if(!q.classList.contains("ask")){ q.classList.add("ask"); q.textContent = "確定？這場不算"; SFX.tap(); clearTimeout(quitT); quitT = setTimeout(()=>{ q.classList.remove("ask"); q.textContent = "🏳️ 退出"; }, 3000); return; }
+        clearTimeout(quitT); clearT(); game.phase = "end"; game = null; SFX.next();
+        ctx.toast(`${sprite(ctx.me.cat,"sleep")} 這場不算，下次再來釣～`); lobby();
+      });
       timers.push(setInterval(()=>{ game.t--; box.querySelector("#fsT").textContent = "⏱ "+game.t; if(game.t<=5 && game.t>0) SFX.beep(false); if(game.t<=0) finish(); }, 1000));
     }
     function setAct(t, cls){ const a = box.querySelector("#fsAct"); if(a){ a.textContent = t; a.className = "btn fsAct "+(cls||""); } }
