@@ -298,7 +298,7 @@ const App = (function(){
       <div class="combo hidden" id="combo"></div>
       <div class="replyBar hidden" id="replyBar"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
-      <textarea id="txt" placeholder="點這裡打字…" maxlength="1000" readonly inputmode="none"></textarea><button class="send" id="bSend">傳送</button></div>
+      <textarea id="txt" placeholder="點這裡打字…" maxlength="1000" inputmode="none" autocomplete="off" autocorrect="off" spellcheck="false"></textarea><button class="send" id="bSend">傳送</button></div>
       <div id="kbd" class="hidden"></div>
       <input type="file" id="fPic" accept="image/*" class="hidden"></div>`;
     drawList(true);
@@ -306,19 +306,27 @@ const App = (function(){
     const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(chatUpdSend) chatUpdSend(); };
     const showKb = (on) => {
       $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
-      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>txt.value, mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
-        commit: t => { txt.value = (txt.value + t).slice(0,1000); autoSize(); },
-        backspace: () => { const arr=[...txt.value]; arr.pop(); txt.value = arr.join(""); autoSize(); },
+      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>txt.value.slice(0, txt.selectionStart==null ? txt.value.length : txt.selectionStart), mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
+        commit: t => { insertAt(t); autoSize(); },
+        backspace: () => { delBefore(); autoSize(); },
         send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
         fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ if(kbSound()) SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); setTimeout(()=>chatUpdSend && chatUpdSend(), 0); } });
         const L=$("list"); setTimeout(()=>{ L.scrollTop=L.scrollHeight; }, 50); }
     };
     function toSys(){ return toSys_(); }
-    const toSys_ = () => { sysKb=true; showKb(false); txt.readOnly=false; txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
-    const toMeow = () => { sysKb=false; txt.readOnly=true; txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
+    // the meow keyboard types at the caret, so you can drag the cursor (or select text) and edit in the middle
+    const caret = () => { const n = txt.value.length; let a = txt.selectionStart, b = txt.selectionEnd; if(a==null || (document.activeElement!==txt && !txt._touched)) a = b = n; return [Math.min(a,n), Math.min(b,n)]; };
+    function insertAt(t){ const [a,b] = caret(); const room = 1000 - (txt.value.length - (b-a)); if(room<=0) return; t = [...t].slice(0, room).join(""); txt.setRangeText(t, a, b, "end"); keepCaret(); }
+    function delBefore(){ const [a,b] = caret(); if(a!==b){ txt.setRangeText("", a, b, "end"); keepCaret(); return; } if(a===0) return;
+      const before = txt.value.slice(0, a), last = [...before].pop() || ""; txt.setRangeText("", a - last.length, a, "end"); keepCaret(); }
+    function keepCaret(){ if(document.activeElement!==txt){ try{ txt.focus({ preventScroll:true }); }catch(e){} } }
+    txt.addEventListener("pointerdown", ()=>{ txt._touched = true; });
+    const toSys_ = () => { sysKb=true; showKb(false); txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
+    const toMeow = () => { sysKb=false; txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
     txt.insertAdjacentHTML("beforebegin", `<button id="bKb" class="hidden" title="喵喵鍵盤">${icon("keys")}</button>`);
     $("bKb").addEventListener("click", toMeow);
-    txt.addEventListener("click", ()=>{ if(!sysKb) showKb(true); });
+    txt.addEventListener("click", ()=>{ if(!sysKb){ showKb(true); keepCaret(); } });
+    txt.addEventListener("input", ()=>{ if(!sysKb){ autoSize(); if(chatUpdSend) chatUpdSend(); } });
     $("bSend").addEventListener("click", ()=>{ if(!txt.value.trim() && !(kb && kb.composing())){ startVoice(); return; } if(kb && kb.composing()) kb.flush(); sendText(); });
     const updSend = () => { const b=$("bSend"); if(!b) return; const voice = !txt.value.trim() && !(kb && kb.composing()); b.classList.toggle("mic", voice); b.innerHTML = voice ? icon("mic",{K:"#ffffff",W:"#ffd1dc"}) : "傳送"; };
     chatUpdSend = updSend; updSend();
@@ -484,7 +492,7 @@ const App = (function(){
   function startReply(m){
     replyTo = { r:m.id, n:m.sender===me.uid ? (me.name||"我") : (m.name||nameOf(m.sender)), t:msgPreview(m).slice(0,60) };
     drawReplyBar(); SFX.tap(); haptic();
-    const t = $("txt"); if(t){ if(!t.readOnly) t.focus(); else if($("kbd") && $("kbd").classList.contains("hidden")) t.click(); }
+    const t = $("txt"); if(t){ if(t.getAttribute("inputmode")!=="none") t.focus(); else if($("kbd") && $("kbd").classList.contains("hidden")) t.click(); }
   }
   function drawReplyBar(){
     const r = $("replyBar"); if(!r) return;

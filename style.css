@@ -187,7 +187,8 @@ body.kbd .chat{height:calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-
   display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--kb-text);box-shadow:0 4px 0 var(--kb-shadow);white-space:nowrap}
 .keybub::before,.keybub::after{content:"";position:absolute;top:-11px;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:9px solid var(--kb-line)}
 .keybub::before{left:5px}.keybub::after{right:5px}
-.chat textarea[readonly]{caret-color:transparent}
+.chat textarea{caret-color:var(--pink)}
+.chat textarea::selection{background:var(--pinkL)}
 .chat .bar button#bKb{padding:7px}
 /* iPhone: no double-tap zoom, no long-press popups on keys */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%}
