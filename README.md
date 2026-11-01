@@ -22,7 +22,18 @@
   - 照片存在 Storage bucket `photos`（私有）
   - 推播：Edge Function `push`（`supabase/push/index.ts`）由 Database Webhook（messages INSERT）觸發，用 Web Push / VAPID
   - 資料庫設定：`supabase/setup.sql`（整份可重跑）
-- **目前遊戲**：默契大考驗（1015 題＋自己出題）、五子棋、貓咪格鬥、砲台大戰、喵喵海戰、西部快槍手、釣魚大賽、跳跳貓每日挑戰
+- **目前遊戲**：默契大考驗（1015 題＋自己出題）、五子棋、貓咪格鬥、你畫我猜（`games/draw.js`，735 詞，合作制）、喵喵海戰、西部快槍手、釣魚大賽、跳跳貓（橫向全螢幕）、我們的貓（`games/pet.js`，隱藏遊戲，從首頁進入）。砲台大戰已依使用者要求移除。
+- **其他功能**：聊天（內建注音鍵盤、30 張貼圖、照片、已讀、「我愛你」親親動畫）、心情小站（心情/休戰旗/寫信/和好）、狀態牌（上班中…＋忙完通知）、早安晚安打卡、相簿（含容量提醒與刪除）、聊天背景、鍵盤配色與打字動畫。
+- **App 圖示**：原版吐司喵（橘色 loaf 貓、淡橘背景），在 `icons/`。
+
+## 給以後的 Claude：使用者與合作方式
+- 使用者說繁體中文（台灣），用 Redmi（Android）；男朋友用 iPhone。用 GitHub Pages 加到主畫面使用。
+- 使用者不會寫程式：**直接推到 GitHub**（Claude GitHub App 只裝在這個 repo），不要叫她上傳檔案。需要動 Supabase 資料庫時，把 SQL 放在 `supabase/update_N_*.sql`，給她 raw.githubusercontent.com 連結＋ SQL Editor 連結（https://supabase.com/dashboard/project/ezkbhfpgjcsfahmnziyn/sql/new），一步一步教。
+- 已執行過的 SQL：`setup.sql`、`update_5_album.sql`。`update_4_truce.sql`（休戰時間到推播）還沒執行。
+- 絕對不要索取 service_role key、資料庫密碼或帳號密碼。不要放線條小狗或任何有版權的角色（repo 是公開的）。
+- 風格：像素貓咪、可愛、情侶間不起衝突的合作玩法。改完功能用兩個瀏覽器的假後端（`window.__mock`）跑 Playwright 測試，截圖給她看效果。
+- 每次改檔：`sw.js` 的 `CACHE` 版本 +1，commit 後 `git push origin HEAD:main`。
+
 
 ## 更新流程
 
