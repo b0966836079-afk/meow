@@ -108,6 +108,8 @@ const App = (function(){
 
   const ctx = { get me(){return me}, partner, isOnline, nameOf, catOf, players, sprite, icon, SFX, burst, toast, floatSvg, esc,
     getState, update, onState, notifyPartner, back: ()=>go("home") };
+  ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], emojis: QK["表情"],
+    fx: (k)=>{ if(k==="del") SFX.del(); else SFX.key(); } }, o));
 
   // ---------- header ----------
   let lastHdr="", wasOnline=null;

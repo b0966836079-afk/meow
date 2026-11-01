@@ -735,3 +735,48 @@ body.rnLock{overflow:hidden}
 .albumMsg .bub{background:#fff1f3;border-color:var(--pink);font:inherit;font-size:13px;color:inherit;cursor:pointer}
 .albumMsg small{color:var(--pink)}
 .careModal{z-index:120}
+
+/* 你畫我猜 */
+.dr{padding:10px}
+.drWait{text-align:center;padding:16px 0}.drWait svg{width:110px;height:110px}.drWait p{margin:6px 0}
+.drSub{font-size:13px;color:var(--muted);margin:4px 0 10px}
+.drHd{font-size:18px}
+.drPick{display:grid;gap:8px}
+.drPick button{display:flex;align-items:center;gap:10px;background:#fff;border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:12px 14px;font:inherit;color:inherit;text-align:left}
+.drPick button i{font-style:normal;font-size:12px;background:var(--pinkL);border:2px solid var(--line);padding:0 6px}
+.drPick button b{font-weight:400;font-size:22px}
+.drWarn{font-size:13px;color:var(--pink)}
+.drStats{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}.drStats b{font-weight:400;color:var(--pink)}
+.drTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:15px}
+.drWord b{font-weight:400;font-size:20px;color:var(--pink)}.drWord b.hint{letter-spacing:2px;color:var(--ink)}
+.drTime{font-size:18px;font-variant-numeric:tabular-nums}.drTime.low{color:#e5486a;animation:drBlink .6s steps(2) infinite}
+@keyframes drBlink{50%{opacity:.4}}
+.drCv{display:block;width:100%;background:#fffaf2;border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow);touch-action:none}
+.drTools{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+.drTools button{width:28px;height:28px;border:2px solid var(--line);border-radius:50%;padding:0}
+.drTools button.on{transform:scale(1.2);box-shadow:0 0 0 3px var(--pinkL),0 0 0 5px var(--line)}
+.drTools .er{background:#fff;font-size:15px}
+.drTools2{display:flex;gap:6px;margin-top:8px;align-items:center}
+.drTools2 .btn{width:auto;padding:4px 8px;font-size:13px;letter-spacing:0}
+.drSz{display:flex;gap:4px;margin-right:auto}
+.drSz button{width:30px;height:30px;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;padding:0}
+.drSz button i{background:var(--ink);border-radius:50%;display:block}
+.drSz button.on{background:var(--pinkL)}
+.drFeed{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px;min-height:26px}
+.drFeed span{flex:none;font-size:13px;background:#fff;border:2px solid var(--line);border-radius:12px;padding:1px 8px;white-space:nowrap}
+.drFeed span.close{background:#fff4e6;border-color:#f3b062}
+.drFeed span.none{border-style:dashed;color:var(--muted)}
+.drGive{width:100%;margin-top:8px;font-size:13px}
+.drGuess{display:flex;gap:6px;margin-top:8px}
+.drIn{flex:1;min-height:38px;background:#fff;border:3px solid var(--line);padding:6px 8px;font-size:17px;display:flex;align-items:center}
+.drIn .ph{color:var(--muted);font-size:14px}
+.drGuess .btn{width:auto;padding:6px 16px}
+.drKb{margin:8px -10px -10px}
+.drRes{text-align:center}
+.drResHd{font-size:22px}
+.drRes.ok .drResHd{color:#3f9c76}
+.drAns{margin:4px 0 8px}.drAns b{font-weight:400;font-size:22px;color:var(--pink)}
+.drCats{display:flex;align-items:center;gap:6px;margin:10px 0;font-size:13px}.drCats svg{width:60px;height:60px;flex:none}.drCats span{flex:1}
+.drHist{margin-top:10px;font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.drHist b{font-weight:400;width:100%;text-align:left}
+.drHist span{background:#fff;border:2px solid var(--line);padding:0 6px;color:var(--muted)}.drHist span.ok{color:#3f9c76}
+body.drkb #fab{display:none}

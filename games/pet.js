@@ -15,10 +15,10 @@ const P = {
   },
   fullness(c, now){ if(!c) return 0; return Math.max(0, Math.min(100, c.full - ((now||Date.now()) - c.at)/3600e3*DECAY)); },
   stage(c){ let i=0; const e=(c&&c.exp)||0; while(i+1<STAGES.length && e>=STAGES[i+1][0]) i++; return { i, name:STAGES[i][1], scale:STAGES[i][2], next: STAGES[i+1]||null }; },
-  earned(moqi, fishing, daily){
+  earned(moqi, fishing, daily, draw){
     let fish = 0; const dex = fishing && fishing.dex || {};
     for(const u in dex) for(const id in dex[u]) fish += dex[u][id]||0;
-    return ((moqi&&moqi.hearts)||0) + Math.floor(fish/5) + ((daily&&daily.done)||0)*2;
+    return ((moqi&&moqi.hearts)||0) + Math.floor(fish/5) + ((daily&&daily.done)||0)*2 + ((draw&&draw.solved)||0);
   },
   food(st, earned){ return Math.max(0, earned + ((st&&st.gift)||0) - ((st&&st.spent)||0)); },
   mood(c){
@@ -45,7 +45,7 @@ App.registerGame({
   icon: () => Pix.sprite("orange","loaf"),
   mount(el, ctx){
     const { sprite, esc, SFX, icon } = ctx;
-    let s = null, src = { moqi:null, fishing:null, daily:null }, lastLog = null, timer = null, idle = null, busy = false, sel = 0, playing = false, alive = true, view = "room";
+    let s = null, src = { moqi:null, fishing:null, daily:null, draw:null }, lastLog = null, timer = null, idle = null, busy = false, sel = 0, playing = false, alive = true, view = "room";
     const subs = [];
     const me = () => ctx.me.uid;
     const $ = q => el.querySelector(q);
@@ -108,7 +108,7 @@ App.registerGame({
           <button id="ptPlay"><span>🧶</span>逗貓棒<i id="ptPlayI"></i></button>
         </div>
         <div id="ptMore"></div>
-        <div class="petHow">點貓咪可以切換要照顧哪一隻。小魚乾兩隻共用：默契大考驗答對 +1・釣魚每 5 條 +1・兩個人都說早安/晚安 +2</div>
+        <div class="petHow">點貓咪可以切換要照顧哪一隻。小魚乾兩隻共用：默契大考驗答對 +1・你畫我猜答對 +1・釣魚每 5 條 +1・兩個人都說早安/晚安 +2</div>
         <ul class="petLog" id="ptLog"></ul></div>`;
       $("#ptFeed").addEventListener("click", feed);
       $("#ptPet").addEventListener("click", ()=>care("pet"));
@@ -126,7 +126,7 @@ App.registerGame({
     function face(i, f){ const w = catEl(i); if(w) w.querySelector(".pcSp").innerHTML = sprite(cats()[i].color, f); }
     function look(i, dir){ const w = catEl(i); if(w) w.querySelector(".pcIn").style.setProperty("--fl", dir<0?-1:1); }
 
-    const earned = () => P.earned(src.moqi, src.fishing, src.daily);
+    const earned = () => P.earned(src.moqi, src.fishing, src.daily, src.draw);
     const ago = t => { const m = Math.round((Date.now()-t)/60000); return m<1?"剛剛":m<60?`${m} 分鐘前`:m<1440?`${Math.round(m/60)} 小時前`:`${Math.round(m/1440)} 天前`; };
     const LOGT = { adopt:"領養了", feed:"餵了", pet:"摸摸", play:"陪玩逗貓棒：", rename:"改了名字：" };
     const LOGE = { adopt:" 🏠", feed:" 小魚乾 🐟", pet:" ✋", play:" 🧶", rename:" ✏️" };
@@ -278,7 +278,7 @@ App.registerGame({
     async function feed(){
       if(busy || !s) return; const i = sel, c = cats()[i];
       const f = P.fullness(c), food = P.food(s, earned());
-      if(food < 1){ ctx.toast(`${sprite(c.color,"cry")} 沒有小魚乾了！玩默契大考驗、釣魚，或兩個人一起說早安晚安就能賺`, 4500); return; }
+      if(food < 1){ ctx.toast(`${sprite(c.color,"cry")} 沒有小魚乾了！玩默契大考驗、你畫我猜、釣魚，或兩個人一起說早安晚安就能賺`, 4500); return; }
       if(f >= 95){ ctx.toast(`${sprite(c.color,"happy")} ${esc(c.name)} 吃不下了，晚點再餵～`); return; }
       busy = true; const before = P.stage(c);
       const ns = await ctx.update("pet", st=>{ st = P.norm(st ? clone(st) : null); if(!st || !st.cats[i]) return undefined; const now = Date.now(); if(P.food(st, earned()) < 1) return undefined;
@@ -323,7 +323,7 @@ App.registerGame({
       render();
     }
     (async()=>{
-      for(const g of ["moqi","fishing","daily"]){ try{ const r = await ctx.getState(g); src[g] = r ? r.state : null; }catch(e){} subs.push(ctx.onState(g, st=>{ src[g] = st; if(s) render(); })); }
+      for(const g of ["moqi","fishing","daily","draw"]){ try{ const r = await ctx.getState(g); src[g] = r ? r.state : null; }catch(e){} subs.push(ctx.onState(g, st=>{ src[g] = st; if(s) render(); })); }
       const cur = await ctx.getState("pet").catch(()=>null);
       s = cur ? P.norm(clone(cur.state)) : null; lastLog = logKey(s);
       subs.push(ctx.onState("pet", onPet));
