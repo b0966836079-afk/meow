@@ -819,3 +819,7 @@ body.drkb #fab{display:none}
 .vrTime{font-size:20px;font-variant-numeric:tabular-nums}
 .vrBtns{display:flex;gap:12px;width:100%}.vrBtns .btn{flex:1}
 .vrTip{font-size:12px;color:var(--muted)}
+
+.bar .send.mic svg{width:26px;height:30px;display:block}
+.ime .k.mic .kv svg{width:20px;height:24px;display:block}
+.recDot{display:inline-block;width:12px;height:12px;background:#e5486a;border:2px solid var(--line);margin-right:8px;vertical-align:1px;animation:drBlink 1s steps(2) infinite}

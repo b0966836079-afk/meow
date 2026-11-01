@@ -277,7 +277,7 @@ const App = (function(){
     $("bKb").addEventListener("click", toMeow);
     txt.addEventListener("click", ()=>{ if(!sysKb) showKb(true); });
     $("bSend").addEventListener("click", ()=>{ if(!txt.value.trim() && !(kb && kb.composing())){ startVoice(); return; } if(kb && kb.composing()) kb.flush(); sendText(); });
-    const updSend = () => { const b=$("bSend"); if(!b) return; const voice = !txt.value.trim() && !(kb && kb.composing()); b.classList.toggle("mic", voice); b.innerHTML = voice ? "🎤" : "傳送"; };
+    const updSend = () => { const b=$("bSend"); if(!b) return; const voice = !txt.value.trim() && !(kb && kb.composing()); b.classList.toggle("mic", voice); b.innerHTML = voice ? icon("mic",{K:"#ffffff",W:"#ffd1dc"}) : "傳送"; };
     chatUpdSend = updSend; updSend();
     txt.addEventListener("input", e=>{ if(!sysKb) return; autoSize(); if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
     txt.addEventListener("keydown", e=>{ if(sysKb && e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
@@ -477,7 +477,7 @@ const App = (function(){
       inp.click();
     });
   }
-  function kbArt(){ const p=palOf(me.cat||"orange"); return { paw: icon("bigpaw",{F:p.Y,O:p.O,P:'#f7a7b8'}), heart: icon("heart"), star: icon("star"), cat: sprite(me.cat||"orange","happy") }; }
+  function kbArt(){ const p=palOf(me.cat||"orange"); return { paw: icon("bigpaw",{F:p.Y,O:p.O,P:'#f7a7b8'}), heart: icon("heart"), star: icon("star"), cat: sprite(me.cat||"orange","happy"), mic: icon("mic") }; }
 
 
   // ================= 吵架救援：心情、休戰旗、和好信箱、和好儀式 =================
@@ -883,7 +883,7 @@ const App = (function(){
     st.mr.start(250); st.t0 = Date.now();
     o.querySelector("#vrSend").disabled = false; o.classList.add("on");
     const tm = o.querySelector("#vrTime");
-    st.timer = setInterval(()=>{ const s = Math.floor((Date.now()-st.t0)/1000); tm.textContent = `🔴 ${fmtSec(s)} / 1:00`; if(s >= 60) done(true); }, 200);
+    st.timer = setInterval(()=>{ const s = Math.floor((Date.now()-st.t0)/1000); tm.innerHTML = `<i class="recDot"></i>${fmtSec(s)} / 1:00`; if(s >= 60) done(true); }, 200);
     try{ // live level bars
       const AC = window.AudioContext || window.webkitAudioContext; st.ac = new AC(); const an = st.ac.createAnalyser(); an.fftSize = 64;
       st.ac.createMediaStreamSource(st.stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount), bars = o.querySelectorAll("#vrBars i");

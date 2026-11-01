@@ -163,7 +163,7 @@ const IME = (function(){
         h += `<div class="grid ${mode}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>`;
       }
       const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
-      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
+      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key(art("mic")||"🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
       const act = b => {
         const a = b.dataset.a, k = b.dataset.k;

@@ -175,4 +175,5 @@ ICON.gear = ["...OOO...",".O.OWO.O.","OOOWWWOOO",".OWWOWWO.","OWWO.OWWO",".OWWOW
 ICON.bell = ["....O....","...OYO...","..OYYYO..","..OYYYO..",".OYYYYYO.",".OYYYYYO.","OYYYYYYYO","OOOOOOOOO","...OEO..."];
 ICON.camera = ["..OOO....","OOOWOOOOO","OWWWWWWWO","OWWOOOWWO","OWOBBBOWO","OWOBWBOWO","OWOBBBOWO","OWWOOOWWO","OOOOOOOOO"];
 ICON.keys = ["OOOOOOOOOOO","OWOWOWOWOWO","OOOOOOOOOOO","OWOWOWOWOWO","OOOOOOOOOOO","OWOOOOOOOWO","OOOOOOOOOOO"];
+ICON.mic = ["...OOO...","..OKKKO..","..OKWKO..","..OKKKO..","..OKWKO..","..OKKKO..","O.OKKKO.O","O..OOO..O",".O.....O.","..OOOOO..","....O....","..OOOOO.."];
 const Pix = { COLORS, CNAME, sprite, icon, palOf };
