@@ -248,6 +248,7 @@ const App = (function(){
     if(m.kind==="ping") return "";
     if(m.kind==="album") return `<div class="msg sys albumMsg"><button class="bub" data-goalbum>${esc(m.body)}<br><small>點我去整理相簿 ▶</small></button></div>`;
     if(m.kind==="photo_gone") return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<div class="bub gone">📷 照片已刪除</div><span class="tm">${hhmm(m.created_at)}</span></div>`;
+    if(m.kind==="pin") return `<div class="msg sys pinMsg"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="greet") return `<div class="msg sys greet"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="status") return `<div class="msg sys status"><div class="bub">${esc(m.body)}</div></div>`;
     if(m.kind==="truce") return `<div class="msg sys truce"><div class="bub">${esc(m.body)}</div></div>`;
@@ -267,7 +268,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="pinBar hidden"></div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
@@ -301,7 +302,7 @@ const App = (function(){
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
-    bindVoiceLongPress($("list")); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
+    bindVoiceLongPress($("list")); drawPinBar(); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
       const vb=e.target.closest("[data-voice]"); if(vb){ if(vb._lp){ vb._lp=false; return; } playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
@@ -398,7 +399,7 @@ const App = (function(){
     const atBottom = force || (L.scrollHeight - L.scrollTop - L.clientHeight < 80);
     let html="", lastDay="";
     if(!messages.length) html = `<div class="day">還沒有訊息，先打個招呼吧 🐾</div>`;
-    messages.forEach(m=>{ const d=dayStr(m.created_at); if(d!==lastDay){ html+=`<div class="day">${d}</div>`; lastDay=d; } html+=msgHtml(m); });
+    messages.forEach(m=>{ const d=dayStr(m.created_at); if(d!==lastDay){ html+=`<div class="day">${d}</div>`; lastDay=d; } html+=msgHtml(m).replace(/^<div class="msg/, `<div data-mid="${m.id}" class="msg`); });
     L.innerHTML=html;
     L.querySelectorAll(".pic img").forEach(im=>im.addEventListener("load",()=>{ if(atBottom) L.scrollTop=L.scrollHeight; }));
     fillImages();
@@ -464,7 +465,7 @@ const App = (function(){
       else if(m.kind==="sticker"){ SFX.heart(); }
       else SFX.msg();
       if(!chatVisible() && m.kind!=="game" && m.kind!=="ping"){
-        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.kind==="voice"?"傳了一段語音 🎤":m.kind==="letter"?"寫了一封信給你 💌":m.body;
+        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.kind==="voice"?"傳了一段語音 🎤":m.kind==="pin"?m.body:m.kind==="letter"?"寫了一封信給你 💌":m.body;
         toast(`${sprite(m.cat||"white","happy")}<span><b style="font-weight:400">${esc(m.name||pw())}</b>：${esc(txt.slice(0,40))}</span>`);
       }
     }
@@ -895,24 +896,68 @@ const App = (function(){
   function bindVoiceLongPress(L){
     let t = null, el = null;
     const clear = () => { clearTimeout(t); t = null; };
-    L.addEventListener("pointerdown", e=>{ const b = e.target.closest("[data-voice]"); if(!b || b.classList.contains("gone")) return; el = b; clear();
-      t = setTimeout(()=>{ t = null; b._lp = true; haptic(); voiceMenu(+b.dataset.voice); }, 520); });
+    L.addEventListener("pointerdown", e=>{ const b = e.target.closest("[data-mid]"); if(!b || e.target.closest(".letterBub,[data-makeup],[data-goalbum]")) return; el = b; clear();
+      t = setTimeout(()=>{ t = null; b._lp = true; const v = b.querySelector("[data-voice]"); if(v) v._lp = true; haptic(); msgMenu(+b.dataset.mid); }, 520); });
     ["pointerup","pointercancel","pointerleave","scroll"].forEach(ev=>L.addEventListener(ev, clear, {passive:true}));
     L.addEventListener("pointermove", e=>{ if(t && el && (Math.abs(e.movementX)+Math.abs(e.movementY) > 6)) clear(); });
-    L.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-voice]")) e.preventDefault(); });
+    L.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-mid]")) e.preventDefault(); });
   }
-  function voiceMenu(id){
-    const m = messages.find(x=>x.id===id); if(!m || !m.media || voiceExpired(m)) return;
-    const saved = savedVoices().has(m.media);
-    const o = modal(`<h3><span class="h3i">${icon("star")}</span> 語音訊息</h3><p>${saved ? "這段語音已經儲存，不會消失。" : "沒儲存的語音 24 小時後會自動消失，<br>想留下來就儲存吧！"}</p>
-      ${saved ? `<button class="btn sub" id="vmUn" style="width:100%">取消儲存（24 小時後消失）</button>` : `<button class="btn" id="vmSave" style="width:100%"><span class="h3i">${icon("star")}</span> 儲存這段語音</button>`}
+  function msgMenu(id){
+    const m = messages.find(x=>x.id===id); if(!m || m.kind==="ping") return;
+    const isVoice = m.kind==="voice" && m.media && !voiceExpired(m), saved = isVoice && savedVoices().has(m.media);
+    const pinned = pinList().some(p=>p.id===m.id);
+    const canCopy = m.kind==="text" || m.kind==="game" || m.kind==="status" || m.kind==="greet";
+    const o = modal(`<div class="mmPrev">${esc(msgPreview(m))}</div>
+      <button class="btn ${pinned?"sub":""}" id="mmPin" style="width:100%"><span class="h3i">${icon("pin")}</span> ${pinned?"取消置頂":"置頂這則訊息"}</button>
+      ${isVoice ? (saved ? `<button class="btn sub" id="vmUn" style="width:100%;margin-top:8px">取消儲存語音（24 小時後消失）</button>` : `<button class="btn" id="vmSave" style="width:100%;margin-top:8px"><span class="h3i">${icon("star")}</span> 儲存這段語音</button>`) : ""}
+      ${canCopy ? `<button class="btn sub" id="mmCopy" style="width:100%;margin-top:8px">複製文字</button>` : ""}
       <button class="btn sub" id="vmX" style="width:100%;margin-top:8px">關閉</button>`);
+    o.querySelector("#mmPin").addEventListener("click", ()=>{ o.remove(); togglePin(m, !pinned); });
+    const cp = o.querySelector("#mmCopy"); if(cp) cp.addEventListener("click", async ()=>{ o.remove(); try{ await navigator.clipboard.writeText(m.body); toast("複製好了"); }catch(e){ toast("複製失敗"); } });
     o.querySelector("#vmX").addEventListener("click", ()=>o.remove());
     const set = async (keep) => { o.remove(); SFX.select();
       await update("voice", st=>{ st = st || { saved:[] }; const s2 = new Set(st.saved||[]); keep ? s2.add(m.media) : s2.delete(m.media); st.saved = [...s2].slice(-2000); return st; });
       toast(keep ? `${sprite(me.cat||"orange","love")} 語音儲存好了，不會消失囉` : "已取消儲存"); if(chatVisible()) drawList(false); };
     const sv = o.querySelector("#vmSave"); if(sv) sv.addEventListener("click", ()=>set(true));
     const un = o.querySelector("#vmUn"); if(un) un.addEventListener("click", ()=>set(false));
+  }
+  // ---------- pinned messages ----------
+  const pinList = () => (stateCache.pins && stateCache.pins.state && stateCache.pins.state.list) || [];
+  function msgPreview(m){
+    const k = m.kind, b = String(m.body||"");
+    if(k==="image" || k==="photo_gone") return "📷 照片"; if(k==="voice") return "🎤 語音訊息"; if(k==="sticker") return "貼圖：" + ((STK_BY[b]||[])[2] || "貓咪");
+    if(k==="poke") return "戳了一下 🐾"; if(k==="letter") return "💌 一封信"; return b.slice(0, 80);
+  }
+  async function togglePin(m, on){
+    SFX.select();
+    const ok = await update("pins", st=>{ st = st || { list:[] }; st.list = (st.list||[]).filter(p=>p.id!==m.id);
+      if(on){ st.list.push({ id:m.id, kind:m.kind, text:msgPreview(m), name:m.name||nameOf(m.sender), cat:m.cat||catOf(m.sender), by:me.uid, at:Date.now() }); st.list = st.list.slice(-10); }
+      return st; });
+    if(!ok) return;
+    if(on){ toast(`${sprite(me.cat||"orange","happy")} 置頂好了`); try{ const row = await B.send(`📌 ${me.name} 置頂了：${msgPreview(m).slice(0,40)}`, "pin", me.name, me.cat); addMessage(row); }catch(e){} }
+    else toast("已取消置頂");
+    drawPinBar();
+  }
+  let pinOpen = false;
+  function drawPinBar(){
+    document.querySelectorAll(".pinBar").forEach(bar=>{
+      const list = pinList().slice().reverse();
+      if(!list.length){ bar.innerHTML = ""; bar.classList.add("hidden"); return; }
+      bar.classList.remove("hidden");
+      const top = list[0];
+      bar.innerHTML = `<button class="pbTop" data-pintop><span class="pbI">${icon("pin")}</span><span class="pbTx"><b>${esc(top.name)}</b>：${esc(top.text)}</span>${list.length>1?`<span class="pbN">${list.length}</span>`:""}<span class="pbArr">${pinOpen?"▴":"▾"}</span></button>
+        ${pinOpen ? `<div class="pbList">${list.map(p=>`<div class="pbItem"><button class="pbGo" data-pgo="${p.id}"><span class="pbCat">${sprite(p.cat||"orange","normal")}</span><span><b>${esc(p.name)}</b><br>${esc(p.text)}</span></button><button class="pbUn" data-pun="${p.id}">取消</button></div>`).join("")}</div>` : ""}`;
+      bar.querySelector("[data-pintop]").addEventListener("click", ()=>{ pinOpen = !pinOpen; SFX.tap(); drawPinBar(); });
+      bar.querySelectorAll("[data-pgo]").forEach(b=>b.addEventListener("click", ()=>jumpTo(+b.dataset.pgo)));
+      bar.querySelectorAll("[data-pun]").forEach(b=>b.addEventListener("click", ()=>{ const p = pinList().find(x=>x.id===+b.dataset.pun); if(p) togglePin({ id:p.id }, false); }));
+    });
+  }
+  function jumpTo(id){
+    pinOpen = false; drawPinBar();
+    const el = document.querySelector(`#list [data-mid="${id}"]`);
+    if(!el){ toast("這則訊息太舊了，看置頂的內容就好囉"); return; }
+    el.scrollIntoView({ block:"center", behavior:"smooth" });
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   }
   // delete voice files that are older than 24 h and nobody saved (frees album space)
   async function cleanupVoices(){
@@ -1296,6 +1341,8 @@ const App = (function(){
     onState("album", onAlbumState);
     await getState("voice").catch(()=>{});
     onState("voice", ()=>{ if(chatVisible()) drawList(false); });
+    await getState("pins").catch(()=>{});
+    onState("pins", ()=>drawPinBar());
     setTimeout(cleanupVoices, 8000); setInterval(cleanupVoices, 3*3600e3);
     setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);
     onState("daily", ()=>refreshHomeBox("dailyBox", dailyCard, bindDaily));

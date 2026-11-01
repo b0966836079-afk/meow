@@ -178,5 +178,6 @@ ICON.keys = ["OOOOOOOOOOO","OWOWOWOWOWO","OOOOOOOOOOO","OWOWOWOWOWO","OOOOOOOOOO
 ICON.play = ["OO.....","OWOO...","OWWWOO.","OWWWWWO","OWWWOO.","OWOO...","OO....."];
 ICON.pause = ["OOO.OOO","OWO.OWO","OWO.OWO","OWO.OWO","OWO.OWO","OWO.OWO","OOO.OOO"];
 ICON.note = ["...OOOO","...OKKO","...OOOO","...O..O","...O..O",".OOO.OO","OKKOOKO","OKKO.OO",".OO...."];
+ICON.pin = ["..OOOOO..",".OKKKKKO.",".OKWKKKO.",".OKKKKKO.","OOKKKKKOO","OKKKKKKKO","OOOOOOOOO","....O....","....O....","....O...."];
 ICON.mic = ["...OOO...","..OKKKO..","..OKWKO..","..OKKKO..","..OKWKO..","..OKKKO..","O.OKKKO.O","O..OOO..O",".O.....O.","..OOOOO..","....O....","..OOOOO.."];
 const Pix = { COLORS, CNAME, sprite, icon, palOf };

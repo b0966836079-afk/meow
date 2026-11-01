@@ -60,3 +60,6 @@
 
 ## Font
 - Pixel font 俐方體11號 Cubic 11 (`fonts/Cubic_11.woff2`, OFL-1.1, license in `fonts/Cubic_11-OFL.txt`) is the default UI font; settings → 字體 can switch back to the system font (`body[data-font="sys"]`, localStorage `mw_font`).
+
+## Pinned messages
+- Long-press any chat message (`[data-mid]`) → `msgMenu`: 置頂 / 取消置頂, copy text, and (voice) save. Pins in game_state `pins` = {list:[{id,kind,text,name,cat,by,at}]} (max 10, text copied so old messages still show). Pin bar `.pinBar` at top of chat; pinning posts a `kind='pin'` system message (pushes to partner).
