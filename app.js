@@ -123,6 +123,10 @@ const App = (function(){
   const ctx = { get me(){return me}, partner, isOnline, nameOf, catOf, players, sprite, icon, SFX, burst, toast, floatSvg, esc,
     getState, update, onState, notifyPartner, back: ()=>go("home") };
   ctx.mode = () => roomMode; ctx.pw = pw;
+  // fast, unsaved messages between the two phones (real-time co-op games)
+  const bcSubs = [];
+  ctx.broadcast = p => { if(B.bcast) B.bcast(Object.assign({ from: me.uid }, p)); };
+  ctx.onBroadcast = h => { bcSubs.push(h); return ()=>{ const i = bcSubs.indexOf(h); if(i>=0) bcSubs.splice(i,1); }; };
   ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], emojis: QK["表情"],
     fx: (k)=>{ if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } }, o));
 
@@ -1533,6 +1537,7 @@ const App = (function(){
   async function enterNest(justCreated){
     $("top").classList.remove("hidden"); $("nav").classList.remove("hidden");
     B.on("msg", addMessage);
+    B.on("bc", p=>{ if(p && p.from !== me.uid) bcSubs.slice().forEach(h=>{ try{ h(p); }catch(e){} }); });
     B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); else if(chatVisible()) drawList(false); });
     B.on("state", (game, version, state)=>{ if(!stateCache[game] || version > stateCache[game].version){ stateCache[game]={version,state}; emitState(game); } });
     B.on("presence", list=>{ online = new Set(list.map(x=>x.uid)); renderHeader(); (ctx._presence||[]).forEach(h=>h()); });

@@ -10,7 +10,7 @@
       realtime: { params: { eventsPerSecond: 10 } },
     });
     const B = { kind: "supabase", uid: null, coupleId: null, code: null, _ch: null,
-      _h: { msg: [], state: [], members: [], presence: [], status: [] } };
+      _h: { msg: [], state: [], members: [], presence: [], status: [], bc: [] } };
 
     B.init = async () => {
       let { data: { session } } = await sb.auth.getSession();
@@ -157,6 +157,7 @@
       ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: f }, p => B._h.msg.forEach(h => h(p.new)));
       ch.on("postgres_changes", { event: "*", schema: "public", table: "game_state", filter: f }, p => { const r = p.new; if (r && r.game) B._h.state.forEach(h => h(r.game, r.version, r.state)); });
       ch.on("postgres_changes", { event: "*", schema: "public", table: "members", filter: f }, () => B._h.members.forEach(h => h()));
+      ch.on("broadcast", { event: "g" }, m => { const p = m && m.payload; if (p) B._h.bc.forEach(h => h(p)); });   // fast game sync (not stored)
       ch.on("presence", { event: "sync" }, () => {
         const st = ch.presenceState(); const list = [];
         for (const k in st) { const m = st[k][0]; if (m) list.push(Object.assign({ uid: k }, m)); }
@@ -166,6 +167,7 @@
       B._ch = ch;
     };
     B.track = (meta) => { B._meta = meta; if (B._ch) B._ch.track(meta).catch(() => {}); };
+    B.bcast = (payload) => { try { if (B._ch) B._ch.send({ type: "broadcast", event: "g", payload }); } catch (e) {} };
     B.on = (what, h) => { B._h[what].push(h); };
     B.reconnect = () => { if (B.coupleId) B.connect(); };
     return B;
@@ -174,14 +176,16 @@
   // ---------------- Mock (tests only) ----------------
   function MockBackend(){
     const call = (op, args) => window.__mock(op, args || {});
-    const B = { kind: "mock", uid: null, coupleId: null, code: null, _h: { msg: [], state: [], members: [], presence: [], status: [] } };
+    const B = { kind: "mock", uid: null, coupleId: null, code: null, _h: { msg: [], state: [], members: [], presence: [], status: [], bc: [] } };
     window.__mockEvent = (ev) => {
       if (ev.coupleId !== B.coupleId) return;
       if (ev.t === "msg") B._h.msg.forEach(h => h(ev.row));
       if (ev.t === "state") B._h.state.forEach(h => h(ev.game, ev.version, ev.state));
       if (ev.t === "members") B._h.members.forEach(h => h());
       if (ev.t === "presence") B._h.presence.forEach(h => h(ev.list));
+      if (ev.t === "bc" && ev.from !== B.uid) B._h.bc.forEach(h => h(ev.payload));
     };
+    B.bcast = (payload) => { call("bc", { cid: B.coupleId, uid: B.uid, payload }); };
     B.init = async () => { let id = LS.get("mock_uid"); if (!id) { id = "u" + Math.random().toString(36).slice(2, 8); LS.set("mock_uid", id); } B.uid = id; await call("hello", { uid: id }); return id; };
     B.membership = async () => { const m = await call("membership", { uid: B.uid }); if (m) { B.coupleId = m.couple_id; B.code = m.code; } return m; };
     B.createCouple = async (name, cat) => { const d = await call("create", { uid: B.uid, name, cat }); B.coupleId = d.couple_id; B.code = d.code; return d; };
