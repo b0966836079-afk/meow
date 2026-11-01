@@ -957,3 +957,13 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 .tSpark svg{width:100%;height:100%;display:block}
 .tSpark.a{right:4px;top:4px}.tSpark.b{left:5px;top:16px;animation-delay:.7s;width:9px;height:9px}
 @keyframes tileSpark{0%{opacity:1;transform:scale(1)}50%{opacity:.2;transform:scale(.5)}}
+/* night theme: dark versions of the light "note" panels so text stays readable */
+body[data-theme="night"] .busyBar,body[data-theme="night"] .msg.sys.status .bub,body[data-theme="night"] .stT.them.busy,body[data-theme="night"] .petStrip.hungry,body[data-theme="night"] .drFeed span.close{background:#3d3346;border-color:#f3b062;color:var(--ink)}
+body[data-theme="night"] .truceBar,body[data-theme="night"] .msg.sys.truce .bub,body[data-theme="night"] .msg.sys.greet .bub,body[data-theme="night"] .fsNews{background:#3a3a44;border-color:#f0c84a;color:var(--ink)}
+body[data-theme="night"] .truceBar b{color:#ffd36b}
+body[data-theme="night"] .careAsk,body[data-theme="night"] .banner.warn,body[data-theme="night"] .prSay.hungry,body[data-theme="night"] .albumMsg .bub,body[data-theme="night"] .letterBub.new,body[data-theme="night"] .msg.sys.pinMsg .bub{background:#47344a;color:var(--ink)}
+body[data-theme="night"] .letterBub,body[data-theme="night"] .msg.poke .bub,body[data-theme="night"] .chat .bar,body[data-theme="night"] .sheetHd,body[data-theme="night"] .ftHelpBox,body[data-theme="night"] .stickers,body[data-theme="night"] .qk,body[data-theme="night"] .gcard.soon,body[data-theme="night"] .day,body[data-theme="night"] .alCell,body[data-theme="night"] .bub.gone,body[data-theme="night"] .fsCell.un,body[data-theme="night"] .careModal.letter .cmBox,body[data-theme="night"] .stickers .pokeBtn{background:var(--paper);color:var(--ink)}
+body[data-theme="night"] .segs i{background:var(--card);border-color:var(--line)}
+body[data-theme="night"] .stGrid button.free,body[data-theme="night"] .petTabs button.add,body[data-theme="night"] .msg.sys .bub{background:var(--mintL);color:var(--ink)}
+body[data-theme="night"] .rq{background:rgba(255,255,255,.08)}
+body[data-theme="night"] .msg .tm{color:var(--muted)}
