@@ -258,11 +258,12 @@ const App = (function(){
       return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"cry")}</span>`}<div class="bub makeupBub">${mine?"你說：想跟 ta 和好 🤝":`${esc(m.name||"")} 想跟你和好 🥺`}${pending?`<button class="btn" data-makeup>🤝 好，我們和好</button>`:""}${!mk.req||!mk.req[m.sender]?`<i class="mkDone">${m.created_at && mk.last && mk.last.at > new Date(m.created_at).getTime() ? "已和好 💗" : "（已取消）"}</i>`:""}</div><span class="tm">${hhmm(m.created_at)}</span></div>`; }
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
-    if(m.kind==="sticker") bub = `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
+    const rq = replyOf(m), quote = rq ? `<button class="rq" data-jump="${rq.r}"><b>${esc(rq.n||"")}</b><span>${esc(rq.t||"")}</span></button>` : "";
+    if(m.kind==="sticker") bub = quote ? `<div class="bub rqBub">${quote}<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span></div>` : `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
     else if(m.kind==="voice") bub = voiceHtml(m, mine);
     else if(m.kind==="image") bub = `<span class="pic"><img data-media="${esc(m.media||"")}" ${imgCache[m.media]?`src="${esc(imgCache[m.media])}"`:""} alt="照片"></span>`;
     else if(m.kind==="poke") bub = `<div class="bub">戳了${mine?"對方":"你"}一下 🐾</div>`;
-    else bub = `<div class="bub">${esc(m.body)}</div>`;
+    else bub = `<div class="bub ${quote?"rqBub":""}">${quote}${esc(m.body)}</div>`;
     const p = partner(); const read = mine && p && (p.last_read||0) >= m.id;
     return `<div class="msg ${mine?"me":""} ${m.kind==="poke"?"poke":""}">${mine?"":av}${bub}<span class="tm">${read?`<span class="rd">已讀</span>`:""}${hhmm(m.created_at)}</span></div>`;
   }
@@ -271,6 +272,7 @@ const App = (function(){
     v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="pinBar hidden"></div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}${STK.map(s=>`<button data-s="${s}">${sprite(me.cat||"orange",s)}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
+      <div class="replyBar hidden" id="replyBar"></div>
       <div class="bar"><button id="bStk" title="貼圖">${sprite(me.cat||"orange","happy")}</button><button id="bPic" title="照片">${icon("camera")}</button>
       <textarea id="txt" placeholder="點這裡打字…" maxlength="1000" readonly inputmode="none"></textarea><button class="send" id="bSend">傳送</button></div>
       <div id="kbd" class="hidden"></div>
@@ -302,8 +304,9 @@ const App = (function(){
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
-    bindVoiceLongPress($("list")); drawPinBar(); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
+    bindVoiceLongPress($("list")); bindSwipeReply($("list")); drawPinBar(); drawReplyBar(); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
+      const jq=e.target.closest("[data-jump]"); if(jq){ jumpTo(+jq.dataset.jump); return; }
       const vb=e.target.closest("[data-voice]"); if(vb){ if(vb._lp){ vb._lp=false; return; } playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
       if(e.target.closest("[data-makeup]")){ askMakeup(); return; }
@@ -451,8 +454,25 @@ const App = (function(){
     const o=document.createElement("div"); o.className="viewer"; o.innerHTML=`<img src="${esc(src)}" alt="照片"><div class="vx">點一下關閉</div>`;
     o.addEventListener("click",()=>o.remove()); document.body.appendChild(o);
   }
+  // replies are stored in the (otherwise unused) media column of text/sticker messages: {"r":id,"n":name,"t":preview}
+  let replyTo = null;
+  function replyOf(m){ if(!m || !m.media || (m.kind!=="text" && m.kind!=="sticker") || m.media[0]!=="{") return null; try{ const o = JSON.parse(m.media); return o && o.r ? o : null; }catch(e){ return null; } }
+  function startReply(m){
+    replyTo = { r:m.id, n:m.sender===me.uid ? (me.name||"我") : (m.name||nameOf(m.sender)), t:msgPreview(m).slice(0,60) };
+    drawReplyBar(); SFX.tap(); haptic();
+    const t = $("txt"); if(t){ if(!t.readOnly) t.focus(); else if($("kbd") && $("kbd").classList.contains("hidden")) t.click(); }
+  }
+  function drawReplyBar(){
+    const r = $("replyBar"); if(!r) return;
+    if(!replyTo){ r.classList.add("hidden"); r.innerHTML = ""; return; }
+    r.classList.remove("hidden");
+    r.innerHTML = `<span class="rbI">↩</span><span class="rbTx">回覆 <b>${esc(replyTo.n)}</b>：${esc(replyTo.t)}</span><button id="rbX">✕</button>`;
+    r.querySelector("#rbX").addEventListener("click", ()=>{ replyTo = null; drawReplyBar(); });
+  }
   async function sendMsg(body, kind){
-    try{ const row = await B.send(body, kind, me.name, me.cat); addMessage(row); }
+    const rp = (kind==="text" || kind==="sticker") && replyTo ? JSON.stringify(replyTo) : null;
+    if(rp){ replyTo = null; drawReplyBar(); }
+    try{ const row = await B.send(body, kind, me.name, me.cat, rp); addMessage(row); }
     catch(e){ toast("傳送失敗，請檢查網路"); }
   }
   function addMessage(m){
@@ -893,6 +913,16 @@ const App = (function(){
     if(m.sender!==me.uid && !heardVoices.has(id)){ heardVoices.add(id); store.set("mw_heard", JSON.stringify([...heardVoices].slice(-500))); document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ b.classList.remove("new"); const nw=b.querySelector(".vbNew"); if(nw) nw.remove(); }); }
   }
 
+  function bindSwipeReply(L){
+    let sx=0, sy=0, el=null, dx=0, lock=null;
+    L.addEventListener("touchstart", e=>{ const b = e.target.closest("[data-mid]"); if(!b || b.classList.contains("sys")) { el=null; return; } el=b; sx=e.touches[0].clientX; sy=e.touches[0].clientY; dx=0; lock=null; }, {passive:true});
+    L.addEventListener("touchmove", e=>{ if(!el) return; const x=e.touches[0].clientX-sx, y=e.touches[0].clientY-sy;
+      if(lock===null && (Math.abs(x)>8 || Math.abs(y)>8)) lock = Math.abs(x) > Math.abs(y)*1.4 && x>0 ? "x" : "y";
+      if(lock!=="x") return; dx = Math.max(0, Math.min(80, x)); el.style.transform = `translateX(${dx}px)`; el.classList.toggle("swipeOk", dx>55); }, {passive:true});
+    const end = ()=>{ if(!el) return; const b=el; el=null; b.style.transition="transform .15s"; b.style.transform=""; setTimeout(()=>{ b.style.transition=""; }, 160);
+      if(lock==="x" && dx>55){ const m = messages.find(x=>x.id===+b.dataset.mid); if(m) startReply(m); } b.classList.remove("swipeOk"); };
+    L.addEventListener("touchend", end, {passive:true}); L.addEventListener("touchcancel", end, {passive:true});
+  }
   function bindVoiceLongPress(L){
     let t = null, el = null;
     const clear = () => { clearTimeout(t); t = null; };
@@ -907,12 +937,15 @@ const App = (function(){
     const isVoice = m.kind==="voice" && m.media && !voiceExpired(m), saved = isVoice && savedVoices().has(m.media);
     const pinned = pinList().some(p=>p.id===m.id);
     const canCopy = m.kind==="text" || m.kind==="game" || m.kind==="status" || m.kind==="greet";
+    const canReply = !/^(game|status|greet|pin|album|truce|makeup|photo_gone)$/.test(m.kind);
     const o = modal(`<div class="mmPrev">${esc(msgPreview(m))}</div>
+      ${canReply ? `<button class="btn" id="mmReply" style="width:100%;margin-bottom:8px">↩ 回覆</button>` : ""}
       <button class="btn ${pinned?"sub":""}" id="mmPin" style="width:100%"><span class="h3i">${icon("pin")}</span> ${pinned?"取消置頂":"置頂這則訊息"}</button>
       ${isVoice ? (saved ? `<button class="btn sub" id="vmUn" style="width:100%;margin-top:8px">取消儲存語音（24 小時後消失）</button>` : `<button class="btn" id="vmSave" style="width:100%;margin-top:8px"><span class="h3i">${icon("star")}</span> 儲存這段語音</button>`) : ""}
       ${canCopy ? `<button class="btn sub" id="mmCopy" style="width:100%;margin-top:8px">複製文字</button>` : ""}
       <button class="btn sub" id="vmX" style="width:100%;margin-top:8px">關閉</button>`);
     o.querySelector("#mmPin").addEventListener("click", ()=>{ o.remove(); togglePin(m, !pinned); });
+    const rb = o.querySelector("#mmReply"); if(rb) rb.addEventListener("click", ()=>{ o.remove(); startReply(m); });
     const cp = o.querySelector("#mmCopy"); if(cp) cp.addEventListener("click", async ()=>{ o.remove(); try{ await navigator.clipboard.writeText(m.body); toast("複製好了"); }catch(e){ toast("複製失敗"); } });
     o.querySelector("#vmX").addEventListener("click", ()=>o.remove());
     const set = async (keep) => { o.remove(); SFX.select();

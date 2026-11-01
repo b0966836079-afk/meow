@@ -906,3 +906,16 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 @keyframes pinFlash{0%,50%{filter:brightness(1.15) drop-shadow(0 0 0 var(--pink));transform:scale(1.04)}100%{transform:none}}
 .mmPrev{background:var(--card);border:2px dashed var(--shadow);padding:8px 10px;margin-bottom:12px;font-size:14px;max-height:90px;overflow:hidden}
 .msg.sys.pinMsg .bub{background:var(--pinkL);border-color:var(--pink)}
+
+/* replies */
+.rq{display:block;width:100%;text-align:left;background:rgba(0,0,0,.05);border:0;border-left:4px solid var(--pink);padding:3px 8px;margin:-2px 0 5px;font:inherit;font-size:12px;color:var(--ink);max-width:240px}
+.rq b{font-weight:400;color:var(--pink);display:block;font-size:11px}
+.rq span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8}
+.rqBub{min-width:120px}
+.rqBub .stk{display:block}
+.replyBar{display:flex;align-items:center;gap:8px;margin:0 8px;background:var(--card);border:3px solid var(--line);border-bottom:0;padding:5px 8px;font-size:13px}
+.rbI{color:var(--pink);font-size:16px}
+.rbTx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rbTx b{font-weight:400;color:var(--pink)}
+.replyBar button{background:none;border:0;font-size:16px;color:var(--muted);padding:0 4px}
+.msg.swipeOk::before{content:"↩";position:absolute;left:-26px;top:50%;transform:translateY(-50%);color:var(--pink);font-size:20px}
+.msg{position:relative}
