@@ -100,6 +100,10 @@
       const { data, error } = await sb.storage.from("photos").remove(paths);
       if (error) throw error; return (data || []).length;
     };
+    B.siteUsage = async () => {
+      const { data, error } = await sb.rpc("site_usage");
+      if (error || !data) return null; return data;
+    };
     B.quotaMB = async () => {
       const { data, error } = await sb.from("couples").select("quota_mb").eq("id", B.coupleId).maybeSingle();
       if (error || !data || data.quota_mb == null) return null;   // column not added yet → old behaviour
@@ -192,6 +196,7 @@
     B.uploadThumb = async (path, blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path }); };
     B.images = async () => call("images", { cid: B.coupleId });
     B.quotaMB = async () => (window.__quotaMB || null);
+    B.siteUsage = async () => (window.__site || null);
     B.listVoices = async () => call("listv", { cid: B.coupleId });
     B.removeFiles = async (paths) => call("rmfiles", { paths });
     B.uploadVoice = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path: B.coupleId + "/v/" + Date.now() + ".webm" }); };

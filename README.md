@@ -64,3 +64,4 @@
 ## Pinned messages
 - Long-press any chat message (`[data-mid]`) → `msgMenu`: 置頂 / 取消置頂, copy text, and (voice) save. Pins in game_state `pins` = {list:[{id,kind,text,name,cat,by,at}]} (max 10, text copied so old messages still show). Pin bar `.pinBar` at top of chat; pinning posts a `kind='pin'` system message (pushes to partner).
 - Replies: long-press → 回覆, or swipe a message right. Stored in the `media` column of text/sticker messages as JSON `{"r":id,"n":name,"t":preview}` (no schema change); quote is tappable (jumps to the original).
+- Site limits (`update_8_site.sql`): `app_settings.max_couples` (default 4) enforced by trigger `couples_limit` (raises `site_full`); `couples.is_owner` marks the owner nest, rpc `site_usage()` returns total bucket bytes + nest count only to the owner (shown in the album, warning modal at 70/85/95%).

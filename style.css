@@ -919,3 +919,4 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 .replyBar button{background:none;border:0;font-size:16px;color:var(--muted);padding:0 4px}
 .msg.swipeOk::before{content:"↩";position:absolute;left:-26px;top:50%;transform:translateY(-50%);color:var(--pink);font-size:20px}
 .msg{position:relative}
+.siteU{margin-top:10px;padding-top:8px;border-top:2px dashed var(--shadow)}

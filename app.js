@@ -1104,12 +1104,24 @@ const App = (function(){
     if(route==="album") drawUsage();
   }
   const album = { rows:null, filter:"all", sel:null };
+  let siteU = null;
+  async function loadSite(){
+    try{ siteU = await B.siteUsage(); }catch(e){ siteU = null; }
+    if(!siteU) return;
+    const pct = siteU.bytes/1e9, lv = pct>=.95?3 : pct>=.85?2 : pct>=.7?1 : 0, seen = +(store.get("mw_sitewarn")||0);
+    if(lv > seen){ store.set("mw_sitewarn", String(lv));
+      const o = modal(`<h3>👑 全站空間提醒</h3><p>整個網站（${siteU.couples} 組）的照片和語音已經用了<br><b>${fmtMB(siteU.bytes)} / 1 GB（${Math.round(pct*100)}%）</b></p><p class="k">滿了的話大家都會傳不了照片，可以請朋友整理一下相簿</p><button class="btn" id="swOk" style="width:100%">知道了</button>`);
+      o.querySelector("#swOk").addEventListener("click", ()=>o.remove()); }
+    else if(lv < seen) store.set("mw_sitewarn", String(lv));
+    if(route==="album") drawUsage();
+  }
   function drawUsage(){
     const el = $("alUse"); if(!el) return;
     const st = stateCache.album && stateCache.album.state; if(!st){ el.innerHTML = "還沒有照片"; return; }
     const pct = Math.min(1, (st.bytes||0)/albumLimit), avg = st.count ? st.bytes/st.count : 3e5, left = Math.max(0, Math.floor((albumLimit-(st.bytes||0))/avg));
     el.innerHTML = `<div class="auTop"><span>已用 <b>${fmtMB(st.bytes||0)}</b> / ${limitTxt()}</span><span>${st.count||0} 張</span></div><div class="pbBar auBar"><i class="${pct>=.85?"low":pct>=.7?"mid":""}" style="width:${Math.max(1,pct*100)}%"></i></div>
-      <div class="auTip">${pct>=.85?"🥺 快滿了，刪一些不需要的照片吧":pct>=.7?"📷 用了七成囉，可以開始整理":`大約還能再放 ${left} 張照片`}</div>`;
+      <div class="auTip">${pct>=.85?"🥺 快滿了，刪一些不需要的照片吧":pct>=.7?"📷 用了七成囉，可以開始整理":`大約還能再放 ${left} 張照片`}</div>
+      ${siteU ? `<div class="siteU"><div class="auTop"><span>👑 全站 <b>${fmtMB(siteU.bytes)}</b> / 1 GB</span><span>${siteU.couples}${siteU.max?` / ${siteU.max}`:""} 組</span></div><div class="pbBar auBar"><i class="${siteU.bytes>=.85e9?"low":siteU.bytes>=.7e9?"mid":""}" style="width:${Math.max(1,Math.min(100,siteU.bytes/1e7))}%"></i></div><div class="auTip">只有你們這組看得到</div></div>` : ""}`;
   }
   async function viewAlbum(v){
     const p = partner();
@@ -1121,7 +1133,7 @@ const App = (function(){
     const bar = document.createElement("div"); bar.className = "alBar hidden"; bar.id = "alBar";
     bar.innerHTML = `<span id="alCnt">已選 0 張</span><button class="btn sub" id="alOld">選最舊 30 張</button><button class="btn" id="alDel">🗑 刪除</button>`;
     document.body.appendChild(bar);
-    drawUsage();
+    drawUsage(); loadSite();
     $("alTabs").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ album.filter = b.dataset.f; $("alTabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); drawAlbum(); }));
     $("alSel").addEventListener("click", ()=>{ album.sel = album.sel ? null : new Set(); $("alSel").textContent = album.sel ? "取消" : "選取"; drawAlbum(); });
     $("alOld").addEventListener("click", ()=>{ const rows = shownRows(); rows.slice(-30).forEach(r=>album.sel.add(r.id)); drawAlbum(); });
@@ -1345,7 +1357,7 @@ const App = (function(){
     const getName=()=>{ const n=$("nm").value.trim().slice(0,10); if(!n){ $("err").textContent="先取個暱稱吧～"; $("nm").focus(); return null; } return n; };
     const save=(n)=>{ me.name=n; me.cat=pick; store.set("mw_name",n); store.set("mw_cat",pick); };
     const mp=$("mPick"); if(mp) mp.querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", ()=>{ pendingMode=b.dataset.m; mp.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.select(); }));
-    const bc=$("bCreate"); if(bc) bc.addEventListener("click", async()=>{ const n=getName(); if(!n) return; bc.disabled=true; try{ save(n); await B.createCouple(n,pick); await enterNest(true); }catch(e){ bc.disabled=false; $("err").textContent="建立失敗："+(e.message||e); } });
+    const bc=$("bCreate"); if(bc) bc.addEventListener("click", async()=>{ const n=getName(); if(!n) return; bc.disabled=true; try{ save(n); await B.createCouple(n,pick); await enterNest(true); }catch(e){ bc.disabled=false; $("err").textContent = /site_full/.test(String(e.message||e)) ? "喵喵小窩的位子已經滿了 🥺 請跟分享網址給你的人說一聲" : "建立失敗："+(e.message||e); } });
     const bh=$("bHave"); if(bh) bh.addEventListener("click", ()=>{ $("joinBox").classList.remove("hidden"); bh.classList.add("hidden"); $("cd").focus(); });
     const bj=$("bJoin"); if(bj) bj.addEventListener("click", async()=>{ const n=getName(); if(!n) return; const c=$("cd").value.trim().toUpperCase(); if(c.length!==6){ $("err").textContent="邀請碼是 6 碼喔"; return; } bj.disabled=true;
       try{ save(n); await B.joinCouple(c,n,pick); history.replaceState(null,"",location.pathname+"#home"); await enterNest(false); }
@@ -1367,6 +1379,7 @@ const App = (function(){
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);
     try{ const q = await B.quotaMB(); if(q) albumLimit = q*1e6; }catch(e){}
+    setTimeout(loadSite, 5000); setInterval(loadSite, 6*3600e3);
     try{ const rm = await getState("room"); roomMode = validMode(rm && rm.state && rm.state.mode); }catch(e){}
     if(justCreated && pendingMode!=="couple"){ roomMode = pendingMode; await update("room", st=>Object.assign(st||{}, { mode:pendingMode })); }
     onState("room", st=>{ const m = validMode(st && st.mode); if(m!==roomMode){ roomMode = m; render(); } });
