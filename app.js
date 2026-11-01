@@ -319,8 +319,9 @@ const App = (function(){
     function insertAt(t){ const [a,b] = caret(); const room = 1000 - (txt.value.length - (b-a)); if(room<=0) return; t = [...t].slice(0, room).join(""); txt.setRangeText(t, a, b, "end"); keepCaret(); }
     function delBefore(){ const [a,b] = caret(); if(a!==b){ txt.setRangeText("", a, b, "end"); keepCaret(); return; } if(a===0) return;
       const before = txt.value.slice(0, a), last = [...before].pop() || ""; txt.setRangeText("", a - last.length, a, "end"); keepCaret(); }
-    function keepCaret(){ if(document.activeElement!==txt){ try{ txt.focus({ preventScroll:true }); }catch(e){} } }
+    function keepCaret(){ if(document.activeElement!==txt){ try{ txt.focus({ preventScroll:true }); }catch(e){} } if(txt._caretUpdate) txt._caretUpdate(); }
     txt.addEventListener("pointerdown", ()=>{ txt._touched = true; });
+    setupCaret(txt);
     const toSys_ = () => { sysKb=true; showKb(false); txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
     const toMeow = () => { sysKb=false; txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
     txt.insertAdjacentHTML("beforebegin", `<button id="bKb" class="hidden" title="喵喵鍵盤">${icon("keys")}</button>`);
@@ -936,6 +937,42 @@ const App = (function(){
   }
 
 
+
+  // ---------- custom pixel caret for the chat box ----------
+  const CARETS = [["ear","貓耳"],["paw","貓掌"],["heart","愛心"],["fish","小魚"],["bar","經典"]];
+  function setupCaret(txt){
+    const bar = txt.parentElement; if(!bar || bar._caret) return; bar._caret = true;
+    const style = store.get("mw_caret") || "ear";
+    if(style==="bar"){ txt.classList.remove("pxCaretOn"); return; }
+    txt.classList.add("pxCaretOn");
+    const c = document.createElement("span"); c.className = "pxCaret " + style;
+    c.innerHTML = style==="paw" ? `<i class="pcHead">${icon("paw")}</i>` : style==="heart" ? `<i class="pcHead">${icon("heart")}</i>` : style==="fish" ? `<i class="pcHead">${icon("fish")}</i>` : `<i class="pcEar l"></i><i class="pcEar r"></i>`;
+    bar.appendChild(c);
+    const mirror = document.createElement("div"); mirror.className = "pxMirror"; document.body.appendChild(mirror);
+    const PROPS = ["boxSizing","width","fontFamily","fontSize","fontWeight","lineHeight","letterSpacing","paddingTop","paddingRight","paddingBottom","paddingLeft","borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth","wordSpacing","textIndent","whiteSpace","wordBreak","overflowWrap"];
+    let raf = 0;
+    const place = () => { raf = 0;
+      if(!txt.isConnected){ c.remove(); mirror.remove(); return; }
+      const a = txt.selectionStart, b = txt.selectionEnd, focused = document.activeElement===txt;
+      const kbOpen = $("kbd") && !$("kbd").classList.contains("hidden");
+      if(!(focused || kbOpen) || a==null || a!==b){ c.style.display = "none"; return; }
+      const cs = getComputedStyle(txt); PROPS.forEach(k=>mirror.style[k] = cs[k]);
+      mirror.style.whiteSpace = "pre-wrap"; mirror.style.overflowWrap = "break-word"; mirror.style.width = txt.clientWidth + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth) + "px";
+      mirror.textContent = txt.value.slice(0, a); const mk = document.createElement("span"); mk.textContent = "​"; mirror.appendChild(mk);
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize)*1.3;
+      const x = txt.offsetLeft + mk.offsetLeft - txt.scrollLeft, y = txt.offsetTop + mk.offsetTop - txt.scrollTop;
+      if(y < txt.offsetTop - 2 || y > txt.offsetTop + txt.offsetHeight - lh + 2){ c.style.display = "none"; return; }
+      c.style.display = "block"; c.style.left = x + "px"; c.style.top = y + "px"; c.style.height = lh + "px";
+    };
+    const sched = () => { if(!raf) raf = requestAnimationFrame(place); };
+    const bump = () => { sched(); c.classList.remove("typing"); void c.offsetWidth; c.classList.add("typing"); };
+    document.addEventListener("selectionchange", ()=>{ if(document.activeElement===txt) sched(); });
+    ["input","focus","blur","click","keyup","scroll","pointerup"].forEach(ev=>txt.addEventListener(ev, ev==="input"?bump:sched));
+    window.addEventListener("resize", sched);
+    txt._caretUpdate = bump;
+    const iv = setInterval(()=>{ if(!txt.isConnected){ clearInterval(iv); c.remove(); mirror.remove(); return; } sched(); }, 400);
+    sched();
+  }
   // ---------- voice messages ----------
   let chatUpdSend = null, voiceRec = null, voiceAudio = null, voicePlaying = 0;
   const voiceCache = {};
@@ -1300,6 +1337,7 @@ const App = (function(){
       <div class="box set"><h2>整體風格</h2><div class="sthemes" id="sthm">${SITE_THEMES.map(([id,n,bg,pa,ln,ac,sh])=>`<button data-st="${id}" class="${(store.get("mw_theme")||"cream")===id?"on":""}"><span class="stPrev" style="background-color:${bg};background-image:linear-gradient(${ln}14 1px,transparent 1px),linear-gradient(90deg,${ln}14 1px,transparent 1px)"><b style="background:${pa};border-color:${ln};box-shadow:2px 2px 0 ${sh}"></b><i style="background:${ac};border-color:${ln}"></i><s>${icon("heart",{K:ac,W:pa,O:ln})}</s></span>${n}</button>`).join("")}</div></div>
       <div class="box set"><h2>字體</h2><div class="fontPick" id="fPick"><button data-f="pixel" class="${store.get("mw_font")==="sys"?"":"on"}" style="font-family:Cubic11">像素字 喵喵小窩</button><button data-f="sys" class="${store.get("mw_font")==="sys"?"on":""}" style="font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif">一般字 喵喵小窩</button></div></div>
       <div class="box set"><h2>鍵盤設定</h2>
+        <div class="kbOpt"><span>游標樣式</span><div class="seg" id="caretSty">${CARETS.map(([v,n])=>`<button data-v="${v}" class="${(store.get("mw_caret")||"ear")===v?"on":""}">${n}</button>`).join("")}</div></div>
         <div class="kbOpt"><span>按鍵大小</span><div class="seg" id="kbSize">${[["s","小"],["m","中"],["l","大"]].map(([v,n])=>`<button data-v="${v}" class="${(store.get("mw_kbsize")||"m")===v?"on":""}">${n}</button>`).join("")}</div></div>
         ${[["mw_kbsmart","智慧觸控（猜下一個注音）"],["mw_kbhint","微微提示下一個注音"],["mw_kbvib","按鍵震動"],["mw_kbsnd","按鍵音效"],["mw_kbpop","按鍵放大預覽"],["mw_kbnum","長按第一排打數字"]].map(([k,n])=>`<div class="kbOpt"><span>${n}</span><button class="tog ${store.get(k)!=="0"?"on":""}" data-tog="${k}"><i></i></button></div>`).join("")}
         <div class="k">小技巧：長按「，」有更多標點・點兩下 ⇧ 鎖定大寫・按住 ⌫ 越刪越快・打完字會出現「聯想詞」</div></div>
@@ -1336,6 +1374,7 @@ const App = (function(){
     setTimeout(()=>collapseSettings(v), 0);
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
       await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
+    $("caretSty").querySelectorAll("[data-v]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_caret", b.dataset.v); SFX.select(); $("caretSty").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
     $("kbSize").querySelectorAll("[data-v]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_kbsize", b.dataset.v); applyKbSize(); SFX.select(); $("kbSize").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
     v.querySelectorAll("[data-tog]").forEach(b=>b.addEventListener("click", ()=>{ const k = b.dataset.tog, on = store.get(k)==="0"; store.set(k, on?"1":"0"); b.classList.toggle("on", on); SFX.select(); }));
     $("fPick").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_font", b.dataset.f); applyFont(); SFX.select(); $("fPick").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
