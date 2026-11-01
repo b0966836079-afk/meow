@@ -16,9 +16,17 @@ const App = (function(){
   // ---------- helpers ----------
   const partner = () => members.find(m => m.user_id !== me.uid) || null;
   const isOnline = uid => online.has(uid);
-  let roomMode = "couple";                       // "couple" | "bestie" (stored in game_state "room")
-  const isBestie = () => roomMode==="bestie";
-  const pw = () => isBestie() ? "閨蜜" : "另一半";
+  let roomMode = "couple";                       // "couple" | "bestie" | "bro" (stored in game_state "room")
+  const MODES = {
+    couple: { name:"情侶模式", desc:"跟另一半一起", pw:"另一半", qk:"常用語", love:"啾～", a:["orange","love"], b:["white","love"], mid:"heart" },
+    bestie: { name:"閨蜜模式", desc:"跟好姊妹一起", pw:"閨蜜", qk:"閨蜜", love:"抱抱～", a:["calico","happy"], b:["white","happy"], mid:"star" },
+    bro:    { name:"兄弟模式", desc:"跟好兄弟一起", pw:"兄弟", qk:"兄弟", love:"兄弟！", a:["black","wave"], b:["gray","wave"], mid:"bigpaw" },
+  };
+  const MI = () => MODES[roomMode] || MODES.couple;
+  const validMode = m => MODES[m] ? m : "couple";
+  const isBestie = () => roomMode!=="couple";      // any friends mode (閨蜜 / 兄弟)
+  const pw = () => MI().pw;
+  function modeArt(m){ const d = MODES[m]; return `<span class="mpArt"><span class="mpA">${sprite(d.a[0], d.a[1])}</span><span class="mpMid">${icon(d.mid)}</span><span class="mpB">${sprite(d.b[0], d.b[1])}</span></span>`; }
   const nameOf = uid => uid===me.uid ? (me.name||"我") : ((members.find(m=>m.user_id===uid)||{}).name || pw());
   const catOf = uid => uid===me.uid ? (me.cat||"orange") : ((members.find(m=>m.user_id===uid)||{}).cat || "white");
   const players = () => members.map(m=>m.user_id).sort();
@@ -136,7 +144,8 @@ const App = (function(){
   // ---------- hub ----------
   const LV_C=[[0,"Lv1 陌生小貓"],[3,"Lv2 開始蹭蹭"],[8,"Lv3 心有靈喵"],[15,"Lv4 默契滿喵"],[25,"Lv5 靈魂貓伴"],[40,"Lv6 宇宙第一喵情侶"]];
   const LV_B=[[0,"Lv1 剛認識的貓"],[3,"Lv2 一起喝珍奶"],[8,"Lv3 心有靈喵"],[15,"Lv4 默契滿喵"],[25,"Lv5 靈魂姊妹喵"],[40,"Lv6 宇宙第一喵閨蜜"]];
-  function lvInfo(h){ const LV = isBestie() ? LV_B : LV_C; let i=0; while(i+1<LV.length&&h>=LV[i+1][0]) i++; const n=LV[i+1]; return {name:LV[i][1],cur:LV[i][0],next:n?n[0]:null,nextName:n?n[1]:null}; }
+  const LV_M=[[0,"Lv1 點頭之交喵"],[3,"Lv2 一起打電動"],[8,"Lv3 心有靈喵"],[15,"Lv4 默契滿喵"],[25,"Lv5 換帖兄弟喵"],[40,"Lv6 宇宙第一喵兄弟"]];
+  function lvInfo(h){ const LV = roomMode==="bro" ? LV_M : roomMode==="bestie" ? LV_B : LV_C; let i=0; while(i+1<LV.length&&h>=LV[i+1][0]) i++; const n=LV[i+1]; return {name:LV[i][1],cur:LV[i][0],next:n?n[0]:null,nextName:n?n[1]:null}; }
   ctx.lvInfo = lvInfo;
   function renderMeter(){
     const el=$("meter"); if(!el) return;
@@ -148,7 +157,7 @@ const App = (function(){
   }
   function viewHome(v){
     const p = partner();
-    let html = `<div class="title">喵喵<b>小窩</b>${isBestie()?`<span class="modeTag">👭 閨蜜模式</span>`:""}</div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
+    let html = `<div class="title">喵喵<b>小窩</b>${isBestie()?`<span class="modeTag">${modeArt(roomMode)}${MI().name}</span>`:""}</div><div id="truceHome">${truceBar()}</div>${statusCard()}${dailyCard()}${petStrip()}${careCard()}<div class="box meter" id="meter"></div>`;
     if(!p) html += `<div class="box banner"><span class="bi">${icon("heart")}</span><div style="flex:1">${pw()}還沒加入！<br>把邀請碼 <b style="font-weight:400;color:var(--pink);letter-spacing:2px">${esc(B.code||"")}</b> 傳給 ta</div><button class="btn" id="bInv">傳邀請</button></div>`;
     const alb = stateCache.album && stateCache.album.state, apct = alb ? (alb.bytes||0)/ALBUM_LIMIT : 0;
     if(apct >= .7) html = html.replace('<div id="truceHome">', `<div class="box banner ${apct>=.85?"warn":""}" id="albBan"><span class="bi">${icon("camera")}</span><div style="flex:1">相簿已經用了 ${Math.round(apct*100)}%${apct>=.85?"，該刪一些照片了 🥺":"，可以開始整理照片囉"}</div><button class="btn" id="bAlbum">去整理</button></div><div id="truceHome">`);
@@ -191,6 +200,7 @@ const App = (function(){
     return `<span class="stkArt">${sprite(cat||"orange", st[1])}${DECO[st[3]]||""}<b>${esc(st[2])}</b></span>`;
   }
   const QK = {
+    "兄弟": ["兄弟！","笑死 🤣","出來打球","開黑嗎 🎮","吃宵夜？","讚啦 👍","衝啊！","等我一下","在幹嘛？","到家了","晚安 🌙","請你喝飲料","辛苦了","抱歉啦","好喔 👌","哈哈哈哈"],
     "閨蜜": ["愛你 ❤️","想你了","抱抱 🫂","姊妹！","笑死 🤣","出來玩！","八卦時間 👀","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","好喔 👌","哈哈哈哈"],
     "常用語": ["我愛你 ❤️","想你了","抱抱 🫂","親親 😘","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","等等打給你","好喔 👌","哈哈哈哈"],
     "表情": ["❤️","💕","🥰","😘","😍","🥺","😭","😂","🤣","😳","😴","🤗","👍","👌","🙏","🎉","🌙","☀️","🍰","🐱","🐾","🌸","✨","💤"],
@@ -269,7 +279,7 @@ const App = (function(){
     const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(chatUpdSend) chatUpdSend(); };
     const showKb = (on) => {
       $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
-      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[isBestie()?"閨蜜":"常用語"].concat(QK["顏文字"]), emojis: QK["表情"],
+      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
         commit: t => { txt.value = (txt.value + t).slice(0,1000); autoSize(); },
         backspace: () => { const arr=[...txt.value]; arr.pop(); txt.value = arr.join(""); autoSize(); },
         send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
@@ -355,7 +365,7 @@ const App = (function(){
     const fromCat = catOf(fromUid), toUid = fromUid===me.uid ? p.user_id : me.uid, toCat = catOf(toUid);
     const o = document.createElement("div"); o.className = "loveFx";
     o.innerHTML = `<div class="lfBg"></div><div class="lfStage"><div class="lfCat l" id="lfL">${sprite(fromCat,"happy")}</div><div class="lfCat r" id="lfR">${sprite(toCat,"happy")}</div>
-      <div class="lfKiss hidden" id="lfKiss">${isBestie()?"抱抱～":"啾～"}</div><div class="lfBig hidden" id="lfBig">${icon("heart")}${n>1?`<b>×${n}</b>`:""}</div></div>
+      <div class="lfKiss hidden" id="lfKiss">${MI().love}</div><div class="lfBig hidden" id="lfBig">${icon("heart")}${n>1?`<b>×${n}</b>`:""}</div></div>
       <div class="lfTxt">${esc(nameOf(fromUid))} 說：我愛你${n>1?` ×${n}`:""} 💗</div>`;
     document.body.appendChild(o);
     const L = o.querySelector("#lfL"), R = o.querySelector("#lfR");
@@ -594,7 +604,7 @@ const App = (function(){
       <div class="ltBtns"><button class="btn sub" id="ltCancel">取消</button><button class="btn" id="ltSend">💌 寄出</button></div><div id="ltKb" class="ltKb"></div>`, "letter");
     const body = o.querySelector("#ltBody");
     const paint = () => { body.innerHTML = text ? esc(text).replace(/\n/g,"<br>") : `<span class="ph">想說的話，寫在這裡…</span>`; body.scrollTop = body.scrollHeight; };
-    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[isBestie()?"閨蜜":"常用語"], emojis: QK["表情"], enterLabel:"換行",
+    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], emojis: QK["表情"], enterLabel:"換行",
       commit: t => { text = (text + t).slice(0, 800); paint(); }, backspace: () => { const a=[...text]; a.pop(); text=a.join(""); paint(); },
       send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(k==="del") SFX.del(); else SFX.key(); } });
     o.querySelector("#ltCancel").addEventListener("click", ()=>o.remove());
@@ -1079,7 +1089,7 @@ const App = (function(){
   function viewSettings(v){
     const ps=pushState();
     v.innerHTML = `<div class="box set"><h2>我的貓</h2><div class="picks" id="pk"></div><input id="nm" maxlength="10" value="${esc(me.name)}" style="font-size:17px;padding:8px;border:3px solid var(--line);text-align:center;border-radius:0"><button class="btn" id="bSave">儲存</button></div>
-      <div class="box set"><h2>小窩模式</h2><div class="modePick" id="mSet"><button data-m="couple" class="${isBestie()?"":"on"}">💑<b>情侶模式</b></button><button data-m="bestie" class="${isBestie()?"on":""}">👭<b>閨蜜模式</b></button></div><div class="k">兩個人會一起切換。閨蜜模式會換掉情侶向的題目和用語</div></div>
+      <div class="box set"><h2>小窩模式</h2><div class="modePick" id="mSet">${Object.keys(MODES).map(m=>`<button data-m="${m}" class="${roomMode===m?"on":""}">${modeArt(m)}<b>${MODES[m].name}</b></button>`).join("")}</div><div class="k">兩個人會一起切換。閨蜜／兄弟模式會換掉情侶向的題目和用語</div></div>
       <div class="box set"><h2>整體風格</h2><div class="sthemes" id="sthm">${SITE_THEMES.map(([id,n,bg,pa,ln,ac,sh])=>`<button data-st="${id}" class="${(store.get("mw_theme")||"cream")===id?"on":""}"><span class="stPrev" style="background-color:${bg};background-image:linear-gradient(${ln}14 1px,transparent 1px),linear-gradient(90deg,${ln}14 1px,transparent 1px)"><b style="background:${pa};border-color:${ln};box-shadow:2px 2px 0 ${sh}"></b><i style="background:${ac};border-color:${ln}"></i><s>${icon("heart",{K:ac,W:pa,O:ln})}</s></span>${n}</button>`).join("")}</div></div>
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>
@@ -1112,7 +1122,7 @@ const App = (function(){
     $("bSnd").addEventListener("click", e=>{ SFX.toggle(); e.target.textContent = SFX.on?"♪ 音效 開":"♪ 音效 關"; });
     $("bReload").addEventListener("click", ()=>location.reload());
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
-      await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(m==="bestie"?"👭 換成閨蜜模式了":"💑 換成情侶模式了"); }));
+      await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
     $("sthm").querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_theme", b.dataset.st); applyTheme(); SFX.select(); $("sthm").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
   }
   function previewAnim(btn){
@@ -1194,7 +1204,7 @@ const App = (function(){
       <div class="box form"><div class="preview" id="pv"></div><div>選一隻代表你的貓</div><div class="picks" id="pk"></div>
       <input id="nm" maxlength="10" placeholder="你的暱稱，例如：小橘" value="${esc(me.name)}">
       ${prefCode?`<div>你收到的邀請碼</div><input id="cd" maxlength="6" value="${esc(prefCode)}" style="letter-spacing:6px;text-transform:uppercase"><button class="btn" id="bJoin">加入小窩</button>`:
-      `<div class="modePick" id="mPick"><button data-m="couple" class="on">💑<b>情侶模式</b><i>跟另一半一起</i></button><button data-m="bestie">👭<b>閨蜜模式</b><i>跟好姊妹一起</i></button></div>
+      `<div class="modePick three" id="mPick">${Object.keys(MODES).map(m=>`<button data-m="${m}" class="${m==="couple"?"on":""}">${modeArt(m)}<b>${MODES[m].name}</b><i>${MODES[m].desc}</i></button>`).join("")}</div>
        <button class="btn" id="bCreate">建立我們的小窩</button><button class="btn sub" id="bHave" style="width:100%">我有邀請碼</button>
        <div id="joinBox" class="hidden" style="display:flex;flex-direction:column;gap:10px"><input id="cd" maxlength="6" placeholder="輸入 6 碼邀請碼" style="letter-spacing:6px;text-transform:uppercase"><button class="btn" id="bJoin">加入小窩</button></div>`}
       <div class="err" id="err">${esc(errMsg||"")}</div></div>`;
@@ -1224,9 +1234,9 @@ const App = (function(){
     await getState("moqi").catch(()=>{});
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);
-    try{ const rm = await getState("room"); roomMode = rm && rm.state && rm.state.mode==="bestie" ? "bestie" : "couple"; }catch(e){}
-    if(justCreated && pendingMode==="bestie"){ roomMode = "bestie"; await update("room", st=>Object.assign(st||{}, { mode:"bestie" })); }
-    onState("room", st=>{ const m = st && st.mode==="bestie" ? "bestie" : "couple"; if(m!==roomMode){ roomMode = m; render(); } });
+    try{ const rm = await getState("room"); roomMode = validMode(rm && rm.state && rm.state.mode); }catch(e){}
+    if(justCreated && pendingMode!=="couple"){ roomMode = pendingMode; await update("room", st=>Object.assign(st||{}, { mode:pendingMode })); }
+    onState("room", st=>{ const m = validMode(st && st.mode); if(m!==roomMode){ roomMode = m; render(); } });
     for(const g of ["daily","pet","fishing","album"]) await getState(g).catch(()=>{});
     onState("album", onAlbumState);
     setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);

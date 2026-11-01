@@ -16,6 +16,8 @@ const WORDS = {
 WORDS_B = ["逛街","下午茶","自拍","交換禮物","唱KTV","敷面膜","睡衣派對","追劇","八卦","做指甲","拍貼","吃甜點","閨蜜旅行","穿同款","喝珍奶","聊通宵","化妝","夾娃娃","減肥","吃到飽","演唱會","應援棒","偶像","抱抱","生日派對","野餐","煙火","寫卡片","跳舞","瑜珈","逛夜市","自拍棒","美甲","購物袋","試衣間","咖啡廳","鬆餅","馬卡龍","拍照打卡","姊妹淘","秘密","說悄悄話","打電話聊天","一起哭","一起大笑","畢業典禮","合照","手搖飲","瀏海","捲髮棒"];
 const ALL = []; for(const c in WORDS) for(const w of WORDS[c]) ALL.push([w,c]);
 const ALL_B = ALL.filter(x=>x[1]!=="我們").concat(WORDS_B.map(w=>[w,"閨蜜"]));
+const WORDS_M = ["打籃球","打電動","烤肉","喝啤酒","機車","健身","釣魚","露營","看球賽","吃宵夜","鹹酥雞","網咖","開黑","打撞球","保齡球","爬山","騎腳踏車","衝浪","賽車","擊掌","勾肩搭背","畢業旅行","當兵","拔河","打雪仗","抓娃娃","吃到飽","漢堡","拉麵","啞鈴","球鞋","棒球帽","遊戲手把","耳機麥克風","外送","熬夜","打呼","搞笑自拍","生日驚喜","夜衝","看日出","吃火鍋","便利商店","泡麵","背包旅行","足球","桌球","滑板","烤香腸","乾杯"];
+const ALL_M = ALL.filter(x=>x[1]!=="我們").concat(WORDS_M.map(w=>[w,"兄弟"]));
 const COLORS = ["#3b2a24","#e5486a","#f39a3d","#f6c945","#5cb87a","#4a90d9","#9b6fd6","#f7a7b8","#8a5a33"];
 const SIZES = [5, 11, 22];
 const BG = "#fffaf2", W = 1000, H = 750, TIME = 100;
@@ -35,7 +37,7 @@ App.registerGame({
     const box = $("#dr");
 
     function pickWords(used){
-      const pool = (ctx.mode()==="bestie"?ALL_B:ALL).filter(x=>!(used||[]).includes(x[0])), out = [];
+      const pool = (ctx.mode()==="bestie"?ALL_B:ctx.mode()==="bro"?ALL_M:ALL).filter(x=>!(used||[]).includes(x[0])), out = [];
       const cats = [...new Set(pool.map(x=>x[1]))].sort(()=>Math.random()-.5);
       for(const c of cats){ const opts = pool.filter(x=>x[1]===c); if(opts.length) out.push(opts[Math.floor(Math.random()*opts.length)]); if(out.length===3) break; }
       return out;

@@ -333,7 +333,25 @@ const BESTIE_Q = [
  ["u","我們最想一起去的演唱會？",["韓團","華語天后","樂團","音樂祭"]],["u","我們最常互傳？",["梗圖","美食照","購物連結","語音"]],
  ["u","我們的友情像什麼？",["珍奶（甜甜的）","火鍋（很熱鬧）","咖啡（很穩定）","泡麵（隨時都在）"]],["u","我們一起拍照誰負責拍？",["你","我","輪流","找路人"]],
 ];
-const BANK_B = BANK.filter(([t,x,o])=>!ROMANCE.test(x+o.join(""))).concat(BESTIE_Q);
+const BRO_Q = [
+ ["t","{T} 最常約我做什麼？",["打電動","打球","吃宵夜","喝飲料"]],["t","{T} 最常玩的遊戲類型？",["射擊","MOBA","運動遊戲","手遊"]],
+ ["t","{T} 宵夜首選？",["鹹酥雞","麥當勞","泡麵","滷味"]],["t","{T} 最想要的車？",["跑車","重機","露營車","腳踏車就好"]],
+ ["t","{T} 最愛的運動？",["籃球","健身","跑步","不運動"]],["t","{T} 最常跟我聊？",["遊戲","運動","工作","感情"]],
+ ["t","{T} 打電動輸了會？",["怪隊友","再一場","生悶氣","笑一笑"]],["t","{T} 最怕我爆料？",["黑歷史照片","感情史","糗事","遊戲戰績"]],
+ ["t","{T} 生日最想收到？",["遊戲","球鞋","吃大餐","紅包"]],["t","{T} 飲料最常點？",["紅茶","奶茶","可樂","黑咖啡"]],
+ ["t","{T} 週末最常？",["睡到中午","打電動到天亮","出去運動","打工"]],["t","{T} 最像哪種貓？",["橘貓（貪吃）","黑貓（神秘）","三花（任性）","白貓（優雅）"]],
+ ["t","{T} 最常在我面前？",["耍廢","吐槽","狂笑","抱怨"]],["t","{T} 心情不好會？",["找我打電動","找我吃宵夜","自己去跑步","睡一覺"]],
+ ["u","我們最常一起做的事？",["打電動","打球","吃東西","聊天"]],["u","我們開黑誰比較雷？",["你","我","一樣雷","都很強"]],
+ ["u","我們最想一起去的旅行？",["環島","日本","夜衝看日出","露營"]],["u","我們最常一起吃？",["燒肉","火鍋","速食","夜市"]],
+ ["u","我們的兄弟暗號？",["一個眼神","一個貼圖","擊掌","不需要暗號"]],["u","我們老了想一起？",["釣魚","泡茶聊天","打牌","開店"]],
+ ["u","我們最想一起挑戰？",["跑全馬","爬百岳","吃到飽吃到底","24 小時不睡"]],["u","我們一起看球賽會？",["大吼大叫","賭飲料","邊吃邊看","看到睡著"]],
+ ["u","我們小吵架通常為了？",["遊戲","吃什麼","遲到","很少吵"]],["u","我們的友情像什麼？",["可樂（爽快）","烤肉（熱鬧）","泡麵（隨時都在）","咖啡（很穩）"]],
+ ["u","我們群組最常傳？",["梗圖","遊戲邀請","吃的","影片"]],["u","我們聊天最晚聊到？",["11 點","凌晨 1 點","凌晨 3 點","天亮"]],
+ ["u","我們第一次見面的感覺？",["一見如故","普通","有點尷尬","不記得了"]],["u","我們一起拍照誰負責拍？",["你","我","輪流","找路人"]],
+];
+const BANK_F = BANK.filter(([t,x,o])=>!ROMANCE.test(x+o.join("")));
+const BANK_B = BANK_F.concat(BESTIE_Q), BANK_M = BANK_F.concat(BRO_Q);
+const bankFor = m => m==="bestie" ? BANK_B : m==="bro" ? BANK_M : BANK;
 const INIT = seed => ({ seed, round:0, hearts:0, hist:[], ans:{}, bi:0, cp:[] });
 // pick the question for a round: unplayed custom questions first, then the shuffled bank
 function pickQ(st, custom, ids, bank){
@@ -361,7 +379,7 @@ App.registerGame({
     el.innerHTML = `<div class="box card" id="mq"></div>`;
     const box = el.querySelector("#mq");
 
-    function q(){ if(s.q) return s.q; return pickQ(s, [], ctx.players(), ctx.mode()==="bestie"?BANK_B:BANK); }
+    function q(){ if(s.q) return s.q; return pickQ(s, [], ctx.players(), bankFor(ctx.mode())); }
     function ansOf(uid){ const a = s && s.ans && s.ans[uid]; return a && a.r===s.round ? a.c : -1; }
 
     function draw(){
@@ -418,7 +436,7 @@ App.registerGame({
       const ns = await ctx.update("moqi", st=>{
         if(!st || st.round!==r) return undefined;
         if(!skip && p){ const a=st.ans[me], b=st.ans[p.user_id]; if(a&&b&&a.r===r&&b.r===r){ const m = a.c===b.c?1:0; st.hist=(st.hist||[]).slice(-29); st.hist.push({r,m}); st.hearts=(st.hearts||0)+m; } }
-        const cur = st.q; if(cur && cur.cid){ st.cp = (st.cp||[]).concat(cur.cid).slice(-500); } else { st.bi = (st.bi||0)+1; } st.round = r+1; st.ans = {}; st.q = pickQ(st, custom, ctx.players(), ctx.mode()==="bestie"?BANK_B:BANK); return st;
+        const cur = st.q; if(cur && cur.cid){ st.cp = (st.cp||[]).concat(cur.cid).slice(-500); } else { st.bi = (st.bi||0)+1; } st.round = r+1; st.ans = {}; st.q = pickQ(st, custom, ctx.players(), bankFor(ctx.mode())); return st;
       });
       if(ns){ s = ns; draw(); }
     }
