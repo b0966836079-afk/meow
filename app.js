@@ -90,6 +90,9 @@ const App = (function(){
   }
   let hapLabel=null;
   function setupHaptic(){ try{ const inp=document.createElement("input"); inp.type="checkbox"; inp.setAttribute("switch",""); inp.id="hapSw"; const lab=document.createElement("label"); lab.htmlFor="hapSw"; const w=document.createElement("div"); w.setAttribute("aria-hidden","true"); w.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"; w.append(inp,lab); document.body.appendChild(w); hapLabel=lab; }catch(e){} }
+  const kbPrefs = () => ({ preview: store.get("mw_kbpop")!=="0", altnum: store.get("mw_kbnum")!=="0" });
+  const kbSound = () => store.get("mw_kbsnd")!=="0", kbVib = () => store.get("mw_kbvib")!=="0";
+  function applyKbSize(){ document.body.dataset.kbsize = store.get("mw_kbsize") || "m"; }
   function haptic(){ try{ if(typeof navigator.vibrate==="function"){ navigator.vibrate(12); return; } if(hapLabel) hapLabel.click(); }catch(e){} }
   function burst(){ for(let i=0;i<10;i++) setTimeout(()=>{ const d=document.createElement("div"); d.className="float"; d.innerHTML=icon(i%3===0?"fish":i%3===1?"heart":"star"); d.style.left=(8+Math.random()*80)+"vw"; d.style.top=(60+Math.random()*20)+"vh"; document.body.appendChild(d); setTimeout(()=>d.remove(),2300); }, i*80); }
   function floatSvg(svg, left){ const d=document.createElement("div"); d.className="float"; d.innerHTML=svg; d.style.left=(left??(20+Math.random()*60))+"vw"; d.style.top="70vh"; document.body.appendChild(d); setTimeout(()=>d.remove(),2300); }
@@ -120,8 +123,8 @@ const App = (function(){
   const ctx = { get me(){return me}, partner, isOnline, nameOf, catOf, players, sprite, icon, SFX, burst, toast, floatSvg, esc,
     getState, update, onState, notifyPartner, back: ()=>go("home") };
   ctx.mode = () => roomMode; ctx.pw = pw;
-  ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], emojis: QK["表情"],
-    fx: (k)=>{ if(k==="del") SFX.del(); else SFX.key(); } }, o));
+  ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], emojis: QK["表情"],
+    fx: (k)=>{ if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } }, o));
 
   // ---------- header ----------
   let lastHdr="", wasOnline=null;
@@ -303,11 +306,11 @@ const App = (function(){
     const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(chatUpdSend) chatUpdSend(); };
     const showKb = (on) => {
       $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
-      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
+      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>txt.value, mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
         commit: t => { txt.value = (txt.value + t).slice(0,1000); autoSize(); },
         backspace: () => { const arr=[...txt.value]; arr.pop(); txt.value = arr.join(""); autoSize(); },
         send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
-        fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); setTimeout(()=>chatUpdSend && chatUpdSend(), 0); } });
+        fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ if(kbSound()) SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); setTimeout(()=>chatUpdSend && chatUpdSend(), 0); } });
         const L=$("list"); setTimeout(()=>{ L.scrollTop=L.scrollHeight; }, 50); }
     };
     function toSys(){ return toSys_(); }
@@ -343,8 +346,8 @@ const App = (function(){
   let combo = 0, comboT = null;
   const TYPE_ICONS = ["heart","star","spark","paw","fish","sq"];
   function typeFx(kind, n=1){
-    if(kind==="del"){ SFX.del(); combo=Math.max(0,combo-1); showCombo(); return; }
-    SFX.key(); haptic();
+    if(kind==="del"){ if(kbSound()) SFX.del(); combo=Math.max(0,combo-1); showCombo(); return; }
+    if(kbSound()) SFX.key();
     const bar = document.querySelector(".chat .bar"); if(!bar) return;
     const r = bar.getBoundingClientRect(), t=$("txt").getBoundingClientRect();
     for(let i=0;i<Math.min(n,4);i++){
@@ -654,9 +657,9 @@ const App = (function(){
       <div class="ltBtns"><button class="btn sub" id="ltCancel">取消</button><button class="btn" id="ltSend">💌 寄出</button></div><div id="ltKb" class="ltKb"></div>`, "letter");
     const body = o.querySelector("#ltBody");
     const paint = () => { body.innerHTML = text ? esc(text).replace(/\n/g,"<br>") : `<span class="ph">想說的話，寫在這裡…</span>`; body.scrollTop = body.scrollHeight; };
-    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], emojis: QK["表情"], enterLabel:"換行",
+    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>text, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], emojis: QK["表情"], enterLabel:"換行",
       commit: t => { text = (text + t).slice(0, 800); paint(); }, backspace: () => { const a=[...text]; a.pop(); text=a.join(""); paint(); },
-      send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(k==="del") SFX.del(); else SFX.key(); } });
+      send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } });
     o.querySelector("#ltCancel").addEventListener("click", ()=>o.remove());
     o.querySelector("#ltSend").addEventListener("click", async ()=>{
       if(kbx.composing()) kbx.flush();
@@ -1288,6 +1291,10 @@ const App = (function(){
       <div class="box set"><h2>小窩模式</h2><div class="modePick" id="mSet">${Object.keys(MODES).map(m=>`<button data-m="${m}" class="${roomMode===m?"on":""}">${modeArt(m)}<b>${MODES[m].name}</b></button>`).join("")}</div><div class="k">兩個人會一起切換。閨蜜／兄弟模式會換掉情侶向的題目和用語</div></div>
       <div class="box set"><h2>整體風格</h2><div class="sthemes" id="sthm">${SITE_THEMES.map(([id,n,bg,pa,ln,ac,sh])=>`<button data-st="${id}" class="${(store.get("mw_theme")||"cream")===id?"on":""}"><span class="stPrev" style="background-color:${bg};background-image:linear-gradient(${ln}14 1px,transparent 1px),linear-gradient(90deg,${ln}14 1px,transparent 1px)"><b style="background:${pa};border-color:${ln};box-shadow:2px 2px 0 ${sh}"></b><i style="background:${ac};border-color:${ln}"></i><s>${icon("heart",{K:ac,W:pa,O:ln})}</s></span>${n}</button>`).join("")}</div></div>
       <div class="box set"><h2>字體</h2><div class="fontPick" id="fPick"><button data-f="pixel" class="${store.get("mw_font")==="sys"?"":"on"}" style="font-family:Cubic11">像素字 喵喵小窩</button><button data-f="sys" class="${store.get("mw_font")==="sys"?"on":""}" style="font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif">一般字 喵喵小窩</button></div></div>
+      <div class="box set"><h2>鍵盤設定</h2>
+        <div class="kbOpt"><span>按鍵大小</span><div class="seg" id="kbSize">${[["s","小"],["m","中"],["l","大"]].map(([v,n])=>`<button data-v="${v}" class="${(store.get("mw_kbsize")||"m")===v?"on":""}">${n}</button>`).join("")}</div></div>
+        ${[["mw_kbvib","按鍵震動"],["mw_kbsnd","按鍵音效"],["mw_kbpop","按鍵放大預覽"],["mw_kbnum","長按第一排打數字"]].map(([k,n])=>`<div class="kbOpt"><span>${n}</span><button class="tog ${store.get(k)!=="0"?"on":""}" data-tog="${k}"><i></i></button></div>`).join("")}
+        <div class="k">小技巧：長按「，」有更多標點・點兩下 ⇧ 鎖定大寫・按住 ⌫ 越刪越快・打完字會出現「聯想詞」</div></div>
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>
         <div class="k">點一下可以預覽，只會改變你自己的手機。</div></div>
@@ -1321,6 +1328,8 @@ const App = (function(){
     setTimeout(()=>collapseSettings(v), 0);
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
       await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
+    $("kbSize").querySelectorAll("[data-v]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_kbsize", b.dataset.v); applyKbSize(); SFX.select(); $("kbSize").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
+    v.querySelectorAll("[data-tog]").forEach(b=>b.addEventListener("click", ()=>{ const k = b.dataset.tog, on = store.get(k)==="0"; store.set(k, on?"1":"0"); b.classList.toggle("on", on); SFX.select(); }));
     $("fPick").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_font", b.dataset.f); applyFont(); SFX.select(); $("fPick").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
     $("sthm").querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_theme", b.dataset.st); applyTheme(); SFX.select(); $("sthm").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
   }
@@ -1330,9 +1339,9 @@ const App = (function(){
     const th = SITE_THEMES.find(x=>x[0]===(store.get("mw_theme")||"cream")), kt = KB_THEMES.find(x=>x[0]===(store.get("mw_kb")||"strawberry")),
           an = KB_ANIMS.find(x=>x[0]===(store.get("mw_anim")||"jelly")), wl = WALLS.find(x=>x[0]===(store.get("mw_wall")||"paws"));
     return ({ "我的貓": me.name||"", "小窩模式": MI().name, "整體風格": th?th[1]:"", "字體": store.get("mw_font")==="sys"?"一般字":"像素字",
-      "鍵盤配色": kt?kt[1]:"", "打字動畫": an?an[1]:"", "聊天背景": wl?wl[1]:"", "通知": pushState()==="on"?"已開啟":"未開啟", "邀請碼": B.code||"" })[t] || "";
+      "鍵盤設定": ({s:"小",m:"中",l:"大"})[store.get("mw_kbsize")||"m"]+"鍵", "鍵盤配色": kt?kt[1]:"", "打字動畫": an?an[1]:"", "聊天背景": wl?wl[1]:"", "通知": pushState()==="on"?"已開啟":"未開啟", "邀請碼": B.code||"" })[t] || "";
   }
-  const SET_ICON = { "我的貓":()=>sprite(me.cat||"orange","happy"), "小窩模式":()=>icon("heart"), "整體風格":()=>icon("star"), "字體":()=>icon("chat"), "鍵盤配色":()=>icon("keys"),
+  const SET_ICON = { "我的貓":()=>sprite(me.cat||"orange","happy"), "小窩模式":()=>icon("heart"), "整體風格":()=>icon("star"), "字體":()=>icon("chat"), "鍵盤設定":()=>icon("keys"), "鍵盤配色":()=>icon("star",{Y:"#f0708d"}),
     "打字動畫":()=>icon("spark"), "聊天背景":()=>icon("paw"), "通知":()=>icon("bell"), "邀請碼":()=>icon("home"), "其他":()=>icon("gear") };
   function collapseSettings(v){
     v.querySelectorAll(".box.set").forEach(box=>{
@@ -1498,8 +1507,10 @@ const App = (function(){
   IME.hooks.listen = () => SFX.meow(1.18);
   // ---------- start ----------
   async function start(){
-    setupHaptic(); applyTheme(); applyFont(); applyKbTheme(); applyWall();
-    document.addEventListener("pointerdown", e=>{ if(e.button>0) return; tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
+    setupHaptic(); applyTheme(); applyFont(); applyKbTheme(); applyKbSize(); applyWall();
+    document.addEventListener("pointerdown", e=>{ if(e.button>0) return;
+      if(e.target.closest && e.target.closest(".ime")){ if(kbVib()) haptic(); return; }   // keyboard: own sound + animation
+      tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear"); $("niAlb").innerHTML = icon("camera");
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");

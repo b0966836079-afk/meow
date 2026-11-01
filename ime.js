@@ -78,9 +78,30 @@ const IME = (function(){
     let out = "", i = n; while(i>0){ const [j,w] = back[i]; out = w + out; i = j; } return out;
   }
 
+  // ---------- 聯想詞: words that start with a character ----------
+  let assocIdx = null;
+  function buildAssoc(){
+    assocIdx = new Map();
+    for(const v of dict.values()) for(const e of v.split(" ")){
+      const k = e.lastIndexOf(":"), w = k>0 ? e.slice(0,k) : e, f = k>0 ? +e.slice(k+1) : 0, ch = [...w];
+      if(ch.length < 2 || ch.length > 4) continue;
+      let l = assocIdx.get(ch[0]); if(!l){ l = []; assocIdx.set(ch[0], l); } l.push([ch.slice(1).join(""), f]);
+    }
+    for(const [k,l] of assocIdx){ l.sort((a,b)=>b[1]-a[1]); const seen = new Set(), out = []; for(const [w] of l){ if(!seen.has(w)){ seen.add(w); out.push(w); if(out.length>=18) break; } } assocIdx.set(k, out); }
+  }
+  const ALT_ZH0 = "1234567890-", ALT_EN = ["1234567890", "@#$_&-+()", "*\"':;!?"];
+  const PUNCT_ZH = ["。","？","！","、","…","～","：","；","「","」"], PUNCT_EN = [".","?","!","'","\"","-",":",";","(",")"];
+  const LS_ = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
+
   // ---------- keyboard ----------
   function mount(root, opt){
-    let mode = "zh", shift = false;
+    let mode = "zh", shift = false, caps = false, lastText = "zh", pickTab = "recent", assoc = null, lastShiftAt = 0, lastSpaceAt = 0;
+    const pref = k => (opt.prefs && opt.prefs()[k]);
+    const textBefore = () => (opt.textBefore ? String(opt.textBefore()||"") : null);
+    function setAssoc(text){ assoc = null; if(mode!=="zh" || !dict) return; const ch = [...String(text||"")].pop(); if(!ch || !/[\u3400-\u9fff]/.test(ch)) return; if(!assocIdx) buildAssoc(); const l = assocIdx.get(ch); assoc = l && l.length ? l : null; }
+    function autoCap(){ if(mode!=="en" || caps) return; const t = textBefore(); if(t===null) return; const want = t==="" || /[.!?]\s$/.test(t) || /\n$/.test(t); if(want!==shift){ shift = want; draw(); } }
+    function recentAdd(t){ let r = []; try{ r = JSON.parse(LS_.get("mw_recent_ins")||"[]"); }catch(e){} r = [t].concat(r.filter(x=>x!==t)).slice(0,24); LS_.set("mw_recent_ins", JSON.stringify(r)); }
+    function recentList(){ try{ return JSON.parse(LS_.get("mw_recent_ins")||"[]"); }catch(e){ return []; } }
     const st = { syl: [], cur: {i:"",m:"",f:""} };
     const curStr = () => st.cur.i + st.cur.m + st.cur.f;
     const composing = () => st.syl.length>0 || !!curStr();
@@ -112,7 +133,20 @@ const IME = (function(){
       const conv = dictReady ? convert(st.syl) : st.syl.join("").replace(/\*/g,"");
       preEl.innerHTML = composing() ? `<u>${esc(conv)}</u><b>${esc(curStr())}</b>` : "";
       const cs = candidates();
-      if(!composing()){ candEl.innerHTML = `<span class="hint">${dictReady ? (mode==="zh"?"用注音打字，空白鍵＝一聲":"") : "字典載入中…"}</span>${opt.toSys?`<button class="sysk">📱 手機鍵盤</button>`:""}${opt.hide?`<button class="sysk hidek">收起 ▾</button>`:""}`; const sk=candEl.querySelector(".sysk:not(.hidek)"); if(sk) sk.addEventListener("click", ()=>opt.toSys()); const hk=candEl.querySelector(".hidek"); if(hk) hk.addEventListener("click", ()=>opt.hide()); return; }
+      if(!composing()){
+        if(assoc){ // 聯想詞 after committing a word
+          candEl.innerHTML = `<span class="hint as">聯想</span>` + assoc.map((w,i)=>`<button class="asc" data-a="${i}">${esc(w)}</button>`).join("") + `<button class="sysk asx">✕</button>`;
+          candEl.scrollLeft = 0;
+          candEl.querySelectorAll("[data-a]").forEach(b=>{ b.addEventListener("pointerdown", ()=>pop(b)); b.addEventListener("click", ()=>{ const w = assoc[+b.dataset.a]; opt.commit(w); opt.fx("pick", [...w].length); setAssoc(w); refresh(); }); });
+          candEl.querySelector(".asx").addEventListener("click", ()=>{ assoc = null; refresh(); });
+          return;
+        }
+        const canPaste = !!(navigator.clipboard && navigator.clipboard.readText);
+        candEl.innerHTML = `<span class="hint">${dictReady ? (mode==="zh"?"免聲調也能打":mode==="en"?"⇧ 點兩下＝大寫鎖定":"") : "字典載入中…"}</span>${canPaste?`<button class="sysk pastek">📋 貼上</button>`:""}${opt.toSys?`<button class="sysk syskb">📱 手機鍵盤</button>`:""}${opt.hide?`<button class="sysk hidek">收起 ▾</button>`:""}`;
+        const sk=candEl.querySelector(".syskb"); if(sk) sk.addEventListener("click", ()=>opt.toSys());
+        const hk=candEl.querySelector(".hidek"); if(hk) hk.addEventListener("click", ()=>opt.hide());
+        const pk=candEl.querySelector(".pastek"); if(pk) pk.addEventListener("click", async ()=>{ try{ const t = await navigator.clipboard.readText(); if(t){ opt.commit(t); opt.fx("pick", Math.min(4,[...t].length)); } }catch(e){ pk.textContent = "沒辦法貼上"; } });
+        return; }
       candEl.innerHTML = cs.map((c,i)=>`<button data-i="${i}">${esc(c.w)}</button>`).join("") || `<span class="hint">沒有這個音，按 ⌫ 修改</span>`;
       candEl.scrollLeft = 0;
       candEl.querySelectorAll("button").forEach(b=>{ b.addEventListener("pointerdown", ()=>pop(b)); b.addEventListener("click", ()=>pick(cs[+b.dataset.i])); });
@@ -120,9 +154,10 @@ const IME = (function(){
     function pick(c){
       opt.commit(c.w);
       st.syl = st.syl.slice(c.n); if(c.takeCur) st.cur = {i:"",m:"",f:""};
-      opt.fx("pick", [...c.w].length); refresh();
+      if(!composing()) setAssoc(c.w);
+      opt.fx("pick", [...c.w].length); refresh(); updEnter();
     }
-    function commitAll(){ if(!composing()) return false; if(curStr() && dictReady) finishSyl("*"); const t = (dictReady?convert(st.syl):st.syl.join("")) + curStr(); st.syl=[]; st.cur={i:"",m:"",f:""}; if(t) opt.commit(t); opt.fx("pick",[...t].length); refresh(); return true; }
+    function commitAll(){ if(!composing()) return false; if(curStr() && dictReady) finishSyl("*"); const t = (dictReady?convert(st.syl):st.syl.join("")) + curStr(); st.syl=[]; st.cur={i:"",m:"",f:""}; if(t){ opt.commit(t); setAssoc(t); } opt.fx("pick",[...t].length); refresh(); return true; }
     function finishSyl(tone){
       const s = curStr(); if(!s) return false;
       st.syl.push(s + (tone||"")); st.cur = {i:"",m:"",f:""};
@@ -139,7 +174,9 @@ const IME = (function(){
     function space(){
       if(mode==="zh" && curStr()){ finishSyl(""); opt.fx("key"); refresh(); return; }
       if(mode==="zh" && composing()){ commitAll(); return; }
-      opt.commit(" "); opt.fx("key");
+      const now = Date.now(), t = textBefore();
+      if(mode==="en" && now - lastSpaceAt < 450 && t!==null && /[A-Za-z0-9] $/.test(t)){ opt.backspace(); opt.commit(". "); lastSpaceAt = 0; opt.fx("key"); autoCap(); return; }
+      lastSpaceAt = now; opt.commit(" "); opt.fx("key"); autoCap();
     }
     function back(){
       if(curStr()){ if(st.cur.f) st.cur.f=""; else if(st.cur.m) st.cur.m=""; else st.cur.i=""; }
@@ -149,33 +186,54 @@ const IME = (function(){
     }
     function enter(){ if(commitAll()) return; opt.send(); }
 
-    function key(label, cls, act, bub){ const B = bub!==undefined ? bub : (act ? "" : label); return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}" data-bub="${esc(B)}"><span class="kv">${label}</span></button>`; }
+    function key(label, cls, act, bub, alt){ const B = bub!==undefined ? bub : (act ? "" : label);
+      const hint = alt && alt.length===1 ? `<sup class="ka">${esc(alt)}</sup>` : alt ? `<sup class="ka">…</sup>` : "";
+      return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}" data-bub="${esc(B)}" ${alt?`data-alt="${esc(Array.isArray(alt)?alt.join("\u0001"):alt)}"`:""}><span class="kv">${label}${hint}</span></button>`; }
     function draw(){
       let h = "";
       if(mode==="zh"){
-        h += ZH_ROWS.map((r,ri)=>`<div class="row r${ri}">${[...r].map(k=>key(k, TONE.includes(k)?"tone":"")).join("")}</div>`).join("");
+        h += ZH_ROWS.map((r,ri)=>`<div class="row r${ri}">${[...r].map((k,i)=>key(k, TONE.includes(k)?"tone":"", "", undefined, ri===0 && pref("altnum")!==false ? ALT_ZH0[i] : null)).join("")}</div>`).join("");
       } else if(mode==="en"){
-        h += EN_ROWS.map((r,i)=>`<div class="row r${i}">${i===2?key("⇧","fn"+(shift?" on":""),"shift"):""}${[...r].map(k=>key(shift?k.toUpperCase():k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
+        const up = shift || caps;
+        h += EN_ROWS.map((r,i)=>`<div class="row r${i}">${i===2?key(caps?"⇪":"⇧","fn"+(up?" on":"")+(caps?" caps":""),"shift"):""}${[...r].map((k,j)=>key(up?k.toUpperCase():k, "", "", undefined, ALT_EN[i][j]||null)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
       } else if(mode==="sym"){
         h += SYM_ROWS.map((r,i)=>`<div class="row r${i}">${r.map(k=>key(k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
-      } else if(mode==="fav" || mode==="emo"){
-        const list = mode==="fav" ? opt.phrases : opt.emojis;
-        h += `<div class="grid ${mode}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>`;
+      } else if(mode==="pick"){
+        const tabs = [["recent","🕘 最近"],["emo","😀 表情"],["fav","💬 常用語"]];
+        const list = pickTab==="recent" ? recentList() : pickTab==="emo" ? opt.emojis : opt.phrases;
+        const short = list.every(x=>[...x].length<=2);
+        h += `<div class="ptabs">${tabs.map(([t,n])=>`<button class="pt ${pickTab===t?"on":""}" data-pt="${t}">${n}</button>`).join("")}</div>`;
+        h += list.length ? `<div class="grid ${short?"emo":"fav"}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>` : `<div class="pempty">還沒有最近用過的～</div>`;
       }
-      const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
-      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key(art("mic")||"🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
+      const isText = mode==="zh" || mode==="en";
+      const k123 = mode==="sym" ? key(lastText==="en"?"ABC":"注","fn sw","mode:"+lastText) : key("123","fn sw","mode:sym");
+      const kLang = key((isText?mode:lastText)==="en"?"注":"ABC","fn sw","mode:"+((isText?mode:lastText)==="en"?"zh":"en"));
+      const kPick = key("☺","fn sw"+(mode==="pick"?" on":""), mode==="pick" ? "mode:"+lastText : "mode:pick");
+      const en = (isText?mode:lastText)==="en";
+      const kPunct = key(en?",":"，","fn punct","punct", en?",":"，", en?PUNCT_EN:PUNCT_ZH);
+      h += `<div class="row bottom">${k123}${kLang}${kPick}${kPunct}${key(art("mic")||"🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="pick"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
-      const act = b => {
+      body.querySelectorAll("[data-pt]").forEach(b=>b.addEventListener("click", ()=>{ pickTab = b.dataset.pt; opt.fx("key"); draw(); }));
+      const typeChar = ch => {
+        if(mode==="zh"){ if(composing()) commitAll(); assoc = null; opt.commit(ch); opt.fx("key"); refresh(); updEnter(); return; }
+        opt.commit(ch); opt.fx("key"); if(shift && !caps){ shift=false; draw(); } autoCap();
+      };
+      const act = (b, useAlt) => {
         const a = b.dataset.a, k = b.dataset.k;
-        if(a==="back"){ back(); updEnter(); }
+        if(a!=="ins" && assoc && a!=="back"){ assoc = null; refresh(); }
+        if(useAlt!=null){ typeChar(useAlt); return; }
+        if(a==="back"){ if(assoc){ assoc = null; refresh(); } back(); updEnter(); }
         else if(a==="space"){ space(); updEnter(); }
         else if(a==="enter"){ enter(); draw(); }
         else if(a==="mic"){ mic(); }
-        else if(a==="shift"){ shift=!shift; opt.fx("key"); draw(); }
-        else if(a.startsWith("mode:")){ commitAll(); mode=a.slice(5); shift=false; opt.fx("key"); draw(); refresh(); }
-        else if(a==="ins"){ opt.commit(b.textContent); opt.fx("key", [...b.textContent].length); }
+        else if(a==="punct"){ typeChar(b.dataset.bub); }
+        else if(a==="shift"){ const now = Date.now();
+          if(caps){ caps = false; shift = false; } else if(shift && now - lastShiftAt < 350){ caps = true; } else shift = !shift;
+          lastShiftAt = now; opt.fx("key"); draw(); }
+        else if(a.startsWith("mode:")){ commitAll(); const m = a.slice(5); if(m==="zh"||m==="en") lastText = m; mode = m; shift = false; caps = false; opt.fx("key"); draw(); refresh(); autoCap(); }
+        else if(a==="ins"){ opt.commit(b.textContent); recentAdd(b.textContent); opt.fx("key", [...b.textContent].length); }
         else if(mode==="zh") { zhKey(k); updEnter(); }
-        else { opt.commit(k); opt.fx("key"); if(shift){ shift=false; draw(); } }
+        else { typeChar(k); }
       };
       body.querySelectorAll(".k").forEach(b=>{
         if(b.dataset.a==="ins"){ // list keys: a tap must not fire while scrolling the list
@@ -183,22 +241,53 @@ const IME = (function(){
           b.addEventListener("click", ()=>act(b));
           return;
         }
-        // act on touch-down: fast, works with two thumbs, and no lost taps from tiny finger slides
+        const alt = b.dataset.alt ? b.dataset.alt.split("\u0001") : null;
         b.addEventListener("pointerdown", e=>{
           if(e.pointerType==="mouse" && e.button) return;
           e.preventDefault();
           b.classList.add("down"); setTimeout(()=>b.classList.remove("down"), 110);
+          requestAnimationFrame(()=>{ pop(b); if(pref("preview")!==false) bubble(b); });
+          if(alt){ // keys with a long-press alternative act on release
+            try{ b.setPointerCapture(e.pointerId); }catch(_){}
+            b._lp = false; clearTimeout(b._lt);
+            b._lt = setTimeout(()=>{ b._lp = true; if(opt.haptic) opt.haptic(); if(alt.length===1) bubble(b, alt[0]); else altRow(b, alt); }, 380);
+            return;
+          }
           act(b);
-          requestAnimationFrame(()=>{ pop(b); bubble(b); });
-          if(b.dataset.a==="back"){ // hold to keep deleting
+          if(b.dataset.a==="back"){ // hold to keep deleting, faster after a while
             clearTimeout(rep.t); clearInterval(rep.i);
             const stop = ()=>{ clearTimeout(rep.t); clearInterval(rep.i); b.removeEventListener("pointerup", stop); b.removeEventListener("pointercancel", stop); b.removeEventListener("pointerleave", stop); };
             b.addEventListener("pointerup", stop); b.addEventListener("pointercancel", stop); b.addEventListener("pointerleave", stop);
-            rep.t = setTimeout(()=>{ rep.i = setInterval(()=>{ back(); updEnter(); }, 75); }, 420);
+            const t0 = Date.now();
+            rep.t = setTimeout(()=>{ const tick = ()=>{ back(); updEnter(); rep.i = setTimeout(tick, Date.now()-t0 > 1600 ? 35 : 75); }; tick(); }, 420);
           }
         });
+        if(alt){
+          b.addEventListener("pointermove", e=>{ if(!b._lp || alt.length===1) return; const row = imeEl.querySelector(".altRow"); if(!row) return;
+            const el = document.elementFromPoint(e.clientX, e.clientY); row.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===el)); });
+          b.addEventListener("pointerup", e=>{
+            clearTimeout(b._lt);
+            if(!b._lp){ act(b); return; }
+            b._lp = false;
+            if(alt.length===1){ act(b, alt[0]); return; }
+            const row = imeEl.querySelector(".altRow"), on = row && row.querySelector("button.on");
+            if(on){ act(b, on.dataset.v); row.remove(); }      // slid onto a choice
+          });
+          b.addEventListener("pointercancel", ()=>{ clearTimeout(b._lt); b._lp = false; });
+        }
         b.addEventListener("click", e=>{ if(e.detail===0) act(b); }); // keyboard/assistive "click" without a pointer
       });
+      function altRow(b, list){
+        const old = imeEl.querySelector(".altRow"); if(old) old.remove();
+        const r = b.getBoundingClientRect(), R = imeEl.getBoundingClientRect();
+        const row = document.createElement("div"); row.className = "altRow";
+        row.innerHTML = list.map(v=>`<button data-v="${esc(v)}">${esc(v)}</button>`).join("");
+        imeEl.appendChild(row);
+        row.style.maxWidth = (R.width - 8) + "px";
+        const w = row.offsetWidth; row.style.left = Math.max(4, Math.min(R.width - w - 4, r.left - R.left + r.width/2 - w/2)) + "px"; row.style.top = (r.top - R.top - row.offsetHeight - 6) + "px";
+        row.querySelectorAll("button").forEach(x=>x.addEventListener("click", ev=>{ ev.stopPropagation(); act(b, x.dataset.v); row.remove(); }));
+        setTimeout(()=>{ const off = ev=>{ if(!row.contains(ev.target)){ row.remove(); document.removeEventListener("pointerdown", off, true); } }; document.addEventListener("pointerdown", off, true); }, 0);
+      }
     }
     const rep = {};
     // ---------- voice input ----------
@@ -271,8 +360,9 @@ const IME = (function(){
       setTimeout(()=>d.remove(), dur+(delay||0)+40);
     }
     function pop(b){ const a = (opt.anim && opt.anim()) || "jelly"; (ANIMS[a]||ANIMS.jelly)(b.querySelector(".kv") || b); }
-    function bubble(b){
-      const t = b.dataset.bub; if(!t || (opt.anim && opt.anim()==="peek")) return;
+    function bubble(b, text){
+      const t = text || b.dataset.bub; if(!t || (!text && opt.anim && opt.anim()==="peek")) return;
+      imeEl.querySelectorAll(".keybub").forEach(x=>x.remove());
       const r = b.getBoundingClientRect(), R = imeEl.getBoundingClientRect();
       const d = document.createElement("div"); d.className = "keybub"; d.textContent = t;
       d.style.left = (r.left - R.left + r.width/2) + "px"; d.style.top = (r.top - R.top) + "px";
