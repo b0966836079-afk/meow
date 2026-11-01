@@ -1264,10 +1264,40 @@ const App = (function(){
     $("anm").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ store.set("mw_anim",b.dataset.a); $("anm").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.key(); previewAnim(b); }));
     $("bSnd").addEventListener("click", e=>{ SFX.toggle(); e.target.textContent = SFX.on?"♪ 音效 開":"♪ 音效 關"; });
     $("bReload").addEventListener("click", ()=>location.reload());
+    setTimeout(()=>collapseSettings(v), 0);
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
       await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
     $("fPick").querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_font", b.dataset.f); applyFont(); SFX.select(); $("fPick").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
     $("sthm").querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_theme", b.dataset.st); applyTheme(); SFX.select(); $("sthm").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
+  }
+  // settings: every section folds away behind its title; tap the title to open it
+  const setOpen = new Set();
+  function setSummary(t){
+    const th = SITE_THEMES.find(x=>x[0]===(store.get("mw_theme")||"cream")), kt = KB_THEMES.find(x=>x[0]===(store.get("mw_kb")||"strawberry")),
+          an = KB_ANIMS.find(x=>x[0]===(store.get("mw_anim")||"jelly")), wl = WALLS.find(x=>x[0]===(store.get("mw_wall")||"paws"));
+    return ({ "我的貓": me.name||"", "小窩模式": MI().name, "整體風格": th?th[1]:"", "字體": store.get("mw_font")==="sys"?"一般字":"像素字",
+      "鍵盤配色": kt?kt[1]:"", "打字動畫": an?an[1]:"", "聊天背景": wl?wl[1]:"", "通知": pushState()==="on"?"已開啟":"未開啟", "邀請碼": B.code||"" })[t] || "";
+  }
+  const SET_ICON = { "我的貓":()=>sprite(me.cat||"orange","happy"), "小窩模式":()=>icon("heart"), "整體風格":()=>icon("star"), "字體":()=>icon("chat"), "鍵盤配色":()=>icon("keys"),
+    "打字動畫":()=>icon("spark"), "聊天背景":()=>icon("paw"), "通知":()=>icon("bell"), "邀請碼":()=>icon("home"), "其他":()=>icon("gear") };
+  function collapseSettings(v){
+    v.querySelectorAll(".box.set").forEach(box=>{
+      if(box.dataset.folded) return; box.dataset.folded = "1";
+      const kids = [...box.childNodes]; let body = null;
+      kids.forEach(n=>{
+        if(n.nodeType===1 && n.tagName==="H2"){
+          const t = n.textContent.trim(); n.removeAttribute("style");
+          const hd = document.createElement("button"); hd.className = "setHd"; hd.dataset.t = t;
+          hd.innerHTML = `<span class="shI">${SET_ICON[t]?SET_ICON[t]():""}</span><b>${esc(t)}</b><i class="shSum"></i><span class="shArr">▸</span>`;
+          body = document.createElement("div"); body.className = "setBody"; n.replaceWith(hd); hd.after(body);
+          const bd = body;
+          const paint = ()=>{ const open = setOpen.has(t); bd.classList.toggle("hidden", !open); hd.classList.toggle("open", open); hd.querySelector(".shArr").textContent = open?"▾":"▸"; hd.querySelector(".shSum").textContent = open ? "" : setSummary(t); };
+          hd.addEventListener("click", ()=>{ setOpen.has(t) ? setOpen.delete(t) : setOpen.add(t); SFX.tap(); paint(); });
+          hd._paint = paint; paint();
+        } else if(body && !(n.nodeType===3 && !n.textContent.trim())) body.appendChild(n);
+      });
+    });
+    v.addEventListener("click", ()=>setTimeout(()=>v.querySelectorAll(".setHd").forEach(h=>h._paint && h._paint()), 60));
   }
   function previewAnim(btn){
     // play the chosen animation on a little demo keyboard key

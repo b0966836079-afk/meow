@@ -920,3 +920,14 @@ body[data-theme="mono"] svg{filter:grayscale(.85)}
 .msg.swipeOk::before{content:"↩";position:absolute;left:-26px;top:50%;transform:translateY(-50%);color:var(--pink);font-size:20px}
 .msg{position:relative}
 .siteU{margin-top:10px;padding-top:8px;border-top:2px dashed var(--shadow)}
+
+/* collapsible settings */
+.box.set{padding-top:4px;padding-bottom:4px;gap:0}
+.setHd{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:10px 4px;font:inherit;color:var(--ink);text-align:left}
+.setHd+.setBody+.setHd{border-top:2px dashed var(--shadow)}
+.setHd b{font-weight:400;font-size:17px}
+.shI{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center}.shI svg{width:100%;height:100%;display:block}
+.shSum{flex:1;font-style:normal;font-size:13px;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shArr{font-size:14px;color:var(--pink);width:14px;text-align:center}
+.setHd.open b{color:var(--pink)}
+.setBody{display:flex;flex-direction:column;gap:10px;padding:2px 2px 12px}
