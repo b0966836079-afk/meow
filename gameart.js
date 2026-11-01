@@ -26,6 +26,8 @@ const CACTUS = ["...OO...","..OGGO..","..OGGO.O","O.OGGOOG","GOOGGOGO","OGGGGGGO
 const ROD = ["OO..........","OGO.........",".OGO........","..OGO.......","...OGO......","....OGO.....",".....OGO....","......OGO...",".......OGO..","........OGO.",".........OO."];
 const SPARK = ["....O....","...OYO...","O.OYYYO.O",".OYYWYYO.","OYYWWWYYO",".OYYWYYO.","O.OYYYO.O","...OYO...","....O...."];
 const CANVAS = ["OOOOOOOOOOOOOO","OWWWWWWWWWWWWO","OWWKKWWWWWWWWO","OWKWWKWWWKKWWO","OWWWWWKWKWWKWO","OWWWWWWKWWWWWO","OWWBBWWWWWWWWO","OWBWWBWWWWBBWO","OWWBBWWWWBWWBO","OWWWWWWWWWBBWO","OOOOOOOOOOOOOO"];
+const VAC = ["...OOOO........OOOO...","..OBBBBOOOOOOOOBBBBO..","..OBBBOYYYYYYYYOBBBO..","..OBBOYYYYYYYYYYOBBO..","..OBBOYEEYYYYEEYOBBO..","..OBBOYEHYYYYEHYOBBO..","...OOYYYYWWWWYYYYOO...","....OYYYWWNNWWYYYO....","....OYYYWWWWWWYYYO....","....OYYWWWOOWWWYYO....",".....OYWWWKKWWWYO.....","......OOWWKKWWOO......","....OORRRRRRRRRROO....","...OYYYYYYGYYYYYYYO...","...OYWWYYYYYYYYWWYO...","...OOOOO......OOOOO..."];
+const VPAL = { Y:"#f5e2c4", B:"#b0784a", W:"#ffffff", E:"#2b1d18", H:"#ffffff", N:"#2b1d18", K:"#f0708d", R:"#e5486a", G:"#ffcf4a" };
 const PAL = { K:"#f0708d", W:"#ffffff", Y:"#ffd36b", E:"#2b1d18", B:"#6fb7e8", G:"#6cc49d", R:"#e5486a" };
 
 window.GameArt = {
@@ -36,6 +38,7 @@ window.GameArt = {
   battleship: () => L(P(SHIP, PAL), "left:10%;top:8%;width:80%") + L(P(WAVES, PAL), "left:6%;bottom:6%;width:88%"),
   quickdraw: () => L(S("calico","surprised"), "left:4%;bottom:0;width:62%") + L(P(HAT, { Y:"#c98a4a", R:"#e5486a" }), "left:14%;top:4%;width:42%") + L(P(EXCL, PAL), "right:10%;top:10%;width:9%"),
   fishing: () => L(S("white","happy"), "left:0;bottom:0;width:56%") + L(P(ROD, { G:"#a0703c" }), "left:40%;top:0;width:44%") + L(Pix.icon("fish"), "right:0;bottom:8%;width:30%") + `<span class="gaLine"></span>`,
+  runaway: () => L(P(VAC, VPAL), "left:2%;bottom:2%;width:44%") + L(S("orange","surprised",1), "right:2%;top:2%;width:46%") + L(P(SPARK, PAL), "left:44%;top:30%;width:14%"),
   runner: () => L(S("white","wave"), "left:4%;top:-4%;width:50%") + L(P(CACTUS, PAL), "right:10%;bottom:6%;width:22%") + `<span class="gaGround"></span>`,
 };
 })();
