@@ -37,7 +37,7 @@ App.registerGame({
       const p = ctx.partner(), btn = $("#qdBtn");
       stats();
       if(practice){ return; }
-      if(!p){ cats(); sign(""); btn.textContent="等另一半加入"; btn.disabled=true; $("#qdMsg").textContent=""; return; }
+      if(!p){ cats(); sign(""); btn.textContent=`等${ctx.pw()}加入`; btn.disabled=true; $("#qdMsg").textContent=""; return; }
       const here = ctx.isOnline(p.user_id);
       if(s.phase==="idle"){
         cats(s.ready[me()]===s.round?"happy":"normal", s.ready[p.user_id]===s.round?"happy":"normal");
@@ -162,7 +162,7 @@ App.registerGame({
         // a duel left half-finished (someone closed the app): reset it
         if(s.phase==="arming"){ await ctx.update("quickdraw", st=>{ if(!st||st.phase!=="arming") return undefined; st.phase="idle"; st.ready={}; st.res={}; st.round++; return st; }); cur = await ctx.getState("quickdraw"); s = JSON.parse(JSON.stringify(cur.state)); }
       }
-      if(s) render(); else { cats(); $("#qdMsg").textContent="等另一半加入小窩…"; }
+      if(s) render(); else { cats(); $("#qdMsg").textContent=`等${ctx.pw()}加入小窩…`; }
     })();
   },
   unmount(){ if(this._u) this._u(); if(this._p) this._p(); if(this._t) this._t(); },

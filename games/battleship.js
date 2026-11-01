@@ -64,7 +64,7 @@ App.registerGame({
     }
     function render(){
       const p = ctx.partner();
-      if(!p || ids().length<2){ $("#bsMsg").textContent = "等另一半加入小窩…"; $("#bsBody").innerHTML=""; return; }
+      if(!p || ids().length<2){ $("#bsMsg").textContent = `等${ctx.pw()}加入小窩…`; $("#bsBody").innerHTML=""; return; }
       if(!s) return;
       const pn = esc(p.name);
       if(s.phase==="place"){

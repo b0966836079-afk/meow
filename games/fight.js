@@ -85,7 +85,7 @@ App.registerGame({
     }
     function msg(){
       const p = ctx.partner();
-      if(!p){ $("#ftMsg").textContent = "等另一半加入小窩…"; return; }
+      if(!p){ $("#ftMsg").textContent = `等${ctx.pw()}加入小窩…`; return; }
       if(s.win){ $("#ftMsg").innerHTML = s.win==="draw" ? "同歸於盡！平手 🤝" : s.win===me() ? "<b>你贏了！</b> 🏆" : `${esc(ctx.nameOf(s.win))} 贏了～ 再來一局報仇！`; return; }
       const mine = s.pick[me()] && s.pick[me()].r===s.round, theirs = s.pick[opp()] && s.pick[opp()].r===s.round;
       $("#ftMsg").innerHTML = `第 ${s.round} 回合・` + (mine && !theirs ? `等 ${esc(p.name)} 出招…（可以改）` : !mine && theirs ? `<b>${esc(p.name)} 已出招，換你！</b>` : "選一招，兩人同時亮牌");
@@ -172,7 +172,7 @@ App.registerGame({
       if(!cur && I.length>=2){ await ctx.update("fight", st=> st ? undefined : fresh(I, {})); cur = await ctx.getState("fight"); }
       if(cur && I.length>=2 && !I.every(i=>i in cur.state.hp)){ await ctx.update("fight", st=>fresh(I, st?st.sc:{})); cur = await ctx.getState("fight"); }
       if(cur){ s = JSON.parse(JSON.stringify(cur.state)); shown = s.round; }
-      if(!ctx.partner()){ $("#ftMsg").textContent = "等另一半加入小窩…"; return; }
+      if(!ctx.partner()){ $("#ftMsg").textContent = `等${ctx.pw()}加入小窩…`; return; }
       render();
     })();
   },

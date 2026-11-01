@@ -52,3 +52,7 @@
 ## Voice
 - Chat send button shows 🎤 when the box is empty → records with MediaRecorder (prefers audio/mp4 AAC for iPhone playback), meow before recording, max 60 s. Uploaded to `photos/<couple>/v/…`, message `kind='voice'`, body `🎤 傳了一段語音（N 秒）`. Needs `supabase/update_6_voice.sql` (adds audio MIME types to the bucket).
 - Keyboard 🎤 key = speech-to-text (Web Speech, zh-TW), falls back to the phone keyboard's dictation.
+
+## Room mode (情侶 / 閨蜜)
+- game_state `room` = {mode:"couple"|"bestie"}; chosen on create (onboarding `#mPick`), switchable in settings. `ctx.mode()`, `ctx.pw()` ("另一半"/"閨蜜").
+- Bestie mode: moqi uses `BANK_B` (romance questions filtered by `ROMANCE` regex + `BESTIE_Q`), draw swaps the 「我們」 category for 「閨蜜」, different LV names, quick phrases, love animation says 抱抱.

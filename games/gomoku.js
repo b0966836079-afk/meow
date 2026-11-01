@@ -141,7 +141,7 @@ App.registerGame({
     function ui(){
       const p = ctx.partner();
       const P = el.querySelector("#gmP"), S = el.querySelector("#gmS");
-      if(!p){ P.innerHTML=""; S.textContent="等另一半加入小窩…"; draw(); updCtl(); return; }
+      if(!p){ P.innerHTML=""; S.textContent=`等${ctx.pw()}加入小窩…`; draw(); updCtl(); return; }
       if(!s){ S.textContent="準備棋盤中…"; return; }
       const head = c => { const cnv=document.createElement("canvas"); cnv.width=44; cnv.height=40; const x=cnv.getContext("2d"); x.imageSmoothingEnabled=false; px(x, HEAD, STONE[c], 22, 20, 40); return cnv.toDataURL(); };
       const card = (uid,c)=>`<div class="gmCard ${!s.win&&s.turn===c?"turn":""}"><img src="${head(c)}" alt=""><span class="nm"><b>${esc(ctx.nameOf(uid))}</b><i>${c==="b"?"黑貓・先手":"白貓"}</i></span><span class="sc">${s.sc[uid]||0}</span></div>`;
