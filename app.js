@@ -127,7 +127,7 @@ const App = (function(){
   const bcSubs = [];
   ctx.broadcast = p => { if(B.bcast) B.bcast(Object.assign({ from: me.uid }, p)); };
   ctx.onBroadcast = h => { bcSubs.push(h); return ()=>{ const i = bcSubs.indexOf(h); if(i>=0) bcSubs.splice(i,1); }; };
-  ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], emojis: QK["表情"],
+  ctx.keyboard = (host, o) => IME.mount(host, Object.assign({ dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: [], kaomoji: window.KAOMOJI,
     fx: (k)=>{ if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } }, o));
 
   // ---------- header ----------
@@ -228,11 +228,9 @@ const App = (function(){
   }
 
   const QK = {
-    "兄弟": ["兄弟！","笑死 🤣","出來打球","開黑嗎 🎮","吃宵夜？","讚啦 👍","衝啊！","等我一下","在幹嘛？","到家了","晚安 🌙","請你喝飲料","辛苦了","抱歉啦","好喔 👌","哈哈哈哈"],
-    "閨蜜": ["愛你 ❤️","想你了","抱抱 🫂","姊妹！","笑死 🤣","出來玩！","八卦時間 👀","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","好喔 👌","哈哈哈哈"],
-    "常用語": ["我愛你 ❤️","想你了","抱抱 🫂","親親 😘","晚安 🌙","早安 ☀️","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 🥺","快回我～","我到家了","等等打給你","好喔 👌","哈哈哈哈"],
-    "表情": ["❤️","💕","🥰","😘","😍","🥺","😭","😂","🤣","😳","😴","🤗","👍","👌","🙏","🎉","🌙","☀️","🍰","🐱","🐾","🌸","✨","💤"],
-    "顏文字": ["ฅ^•ﻌ•^ฅ","(=^･ω･^=)","(つ≧▽≦)つ","(*´∀`)~♥","(´；ω；`)","╰(*°▽°*)╯","(｡･ω･｡)ﾉ♡","(*´з`)","(￣▽￣)ノ","( ˘ω˘ )zzZ","(๑•̀ㅂ•́)و✧","(⁄ ⁄•⁄ω⁄•⁄ ⁄)"],
+    "兄弟": ["兄弟！","笑死 (≧▽≦)","出來打球","開黑嗎 (•̀ᴗ•́)و","吃宵夜？","讚啦 (ゝω・)v","衝啊！","等我一下","在幹嘛？","到家了","晚安 ( ˘ω˘ )zzZ","請你喝飲料","辛苦了","抱歉啦","好喔 (｀・ω・´)ゞ","哈哈哈哈"],
+    "閨蜜": ["愛你 (♡˙︶˙♡)","想你了","抱抱 (つ≧▽≦)つ","姊妹！","笑死 (≧▽≦)","出來玩！","八卦時間 (¬‿¬)","晚安 ( ˘ω˘ )zzZ","早安 ヾ(＾∇＾)","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 (｡•́︿•̀｡)","快回我～","我到家了","好喔 (｀・ω・´)ゞ","哈哈哈哈"],
+    "常用語": ["我愛你 (♡˙︶˙♡)","想你了","抱抱 (つ≧▽≦)つ","親親 (づ￣ ³￣)づ","晚安 ( ˘ω˘ )zzZ","早安 ヾ(＾∇＾)","在幹嘛？","吃飯了嗎？","好想見你","你最棒了！","對不起嘛 (｡•́︿•̀｡)","快回我～","我到家了","等等打給你","好喔 (｀・ω・´)ゞ","哈哈哈哈"],
   };
   let lastSeen = +(store.get("mw_seen")||0);
   const imgCache = {};
@@ -310,7 +308,7 @@ const App = (function(){
     const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(chatUpdSend) chatUpdSend(); };
     const showKb = (on) => {
       $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
-      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>txt.value.slice(0, txt.selectionStart==null ? txt.value.length : txt.selectionStart), mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk].concat(QK["顏文字"]), emojis: QK["表情"],
+      if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>txt.value.slice(0, txt.selectionStart==null ? txt.value.length : txt.selectionStart), mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], kaomoji: window.KAOMOJI,
         commit: t => { insertAt(t); autoSize(); },
         backspace: () => { delBefore(); autoSize(); },
         send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
@@ -693,7 +691,7 @@ const App = (function(){
       <div class="ltBtns"><button class="btn sub" id="ltCancel">取消</button><button class="btn" id="ltSend">💌 寄出</button></div><div id="ltKb" class="ltKb"></div>`, "letter");
     const body = o.querySelector("#ltBody");
     const paint = () => { body.innerHTML = text ? esc(text).replace(/\n/g,"<br>") : `<span class="ph">想說的話，寫在這裡…</span>`; body.scrollTop = body.scrollHeight; };
-    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>text, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], emojis: QK["表情"], enterLabel:"換行",
+    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>text, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], kaomoji: window.KAOMOJI, enterLabel:"換行",
       commit: t => { text = (text + t).slice(0, 800); paint(); }, backspace: () => { const a=[...text]; a.pop(); text=a.join(""); paint(); },
       send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } });
     o.querySelector("#ltCancel").addEventListener("click", ()=>o.remove());

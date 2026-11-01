@@ -123,7 +123,7 @@ const IME = (function(){
 
   // ---------- keyboard ----------
   function mount(root, opt){
-    let mode = "zh", shift = false, caps = false, lastText = "zh", pickTab = "recent", assoc = null, lastShiftAt = 0, lastSpaceAt = 0;
+    let mode = "zh", shift = false, caps = false, lastText = "zh", pickTab = "recent", kaoCat = null, assoc = null, lastShiftAt = 0, lastSpaceAt = 0;
     const pref = k => (opt.prefs && opt.prefs()[k]);
     let probs = null, lastXY = null;
     function updateProbs(){
@@ -248,21 +248,26 @@ const IME = (function(){
       } else if(mode==="sym"){
         h += SYM_ROWS.map((r,i)=>`<div class="row r${i}">${r.map(k=>key(k)).join("")}${i===2?key("⌫","fn","back"):""}</div>`).join("");
       } else if(mode==="pick"){
-        const tabs = [["recent","🕘 最近"],["emo","😀 表情"],["fav","💬 常用語"]];
-        const list = pickTab==="recent" ? recentList() : pickTab==="emo" ? opt.emojis : opt.phrases;
+        const kao = opt.kaomoji && typeof opt.kaomoji === "object" ? opt.kaomoji : null;
+        const tabs = [["recent","最近"],["emo", kao ? "(◕ᴗ◕) 顏文字" : "表情"],["fav","常用語"]];
+        let list;
+        if(pickTab==="emo" && kao){ const cats = Object.keys(kao); if(!kaoCat || !kao[kaoCat]) kaoCat = cats[0]; list = kao[kaoCat]; }
+        else list = pickTab==="recent" ? recentList() : pickTab==="emo" ? (opt.emojis||[]) : opt.phrases;
         const short = list.every(x=>[...x].length<=2);
         h += `<div class="ptabs">${tabs.map(([t,n])=>`<button class="pt ${pickTab===t?"on":""}" data-pt="${t}">${n}</button>`).join("")}</div>`;
-        h += list.length ? `<div class="grid ${short?"emo":"fav"}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>` : `<div class="pempty">還沒有最近用過的～</div>`;
+        if(pickTab==="emo" && kao) h += `<div class="kcats">${Object.keys(kao).map(c=>`<button class="kc ${c===kaoCat?"on":""}" data-kc="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;
+        h += list.length ? `<div class="grid ${pickTab==="emo" && kao ? "kao" : short?"emo":"fav"+(list.some(x=>[...x].length>7)?" long":"")}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>` : `<div class="pempty">還沒有最近用過的～</div>`;
       }
       const isText = mode==="zh" || mode==="en";
       const k123 = mode==="sym" ? key(lastText==="en"?"ABC":"注","fn sw","mode:"+lastText) : key("123","fn sw","mode:sym");
       const kLang = key((isText?mode:lastText)==="en"?"注":"ABC","fn sw","mode:"+((isText?mode:lastText)==="en"?"zh":"en"));
-      const kPick = key("☺","fn sw"+(mode==="pick"?" on":""), mode==="pick" ? "mode:"+lastText : "mode:pick");
+      const kPick = key(opt.kaomoji ? "^ω^" : "☺","fn sw"+(mode==="pick"?" on":""), mode==="pick" ? "mode:"+lastText : "mode:pick");
       const en = (isText?mode:lastText)==="en";
       const kPunct = key(en?",":"，","fn punct","punct", en?",":"，", en?PUNCT_EN:PUNCT_ZH);
       h += `<div class="row bottom">${k123}${kLang}${kPick}${kPunct}${key(art("mic")||"🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="pick"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
       body.querySelectorAll("[data-pt]").forEach(b=>b.addEventListener("click", ()=>{ pickTab = b.dataset.pt; opt.fx("key"); draw(); }));
+      body.querySelectorAll("[data-kc]").forEach(b=>b.addEventListener("click", ()=>{ kaoCat = b.dataset.kc; opt.fx("key"); draw(); const gr = body.querySelector(".grid"); if(gr) gr.scrollTop = 0; }));
       const typeChar = ch => {
         if(mode==="zh"){ if(composing()) commitAll(); assoc = null; opt.commit(ch); opt.fx("key"); refresh(); updEnter(); return; }
         opt.commit(ch); opt.fx("key"); if(shift && !caps){ shift=false; draw(); } autoCap();
