@@ -1,5 +1,5 @@
 // 喵喵小窩 service worker：負責跳通知、點通知打開 App
-const CACHE = "meow-v29";
+const CACHE = "meow-v30";
 const SHELL = ["./", "index.html", "style.css", "pixel.js", "data.js", "ime.js", "zhuyin.txt", "app.js", "config.js", "games/moqi.js", "games/gomoku.js", "games/fight.js", "games/draw.js", "games/battleship.js", "games/quickdraw.js", "games/fishing.js", "games/runner.js", "games/pet.js", "icons/icon-192.png"];
 
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {})); });
