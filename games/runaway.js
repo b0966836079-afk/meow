@@ -13,6 +13,9 @@ const FOG = [226,242,240];
 const hex = h => [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const mix = (h, t, a) => { const c = hex(h); return `rgb(${c.map((v,i)=>Math.round(v+(t[i]-v)*a)).join(",")})`; };
 const lighten = (h, a) => mix(h, [255,255,255], a);
+// fog-tinted colour lookup (no string building inside the per-row loop)
+const fogTab = {};
+const fogc = (h, a) => { let t = fogTab[h]; if(!t){ t = fogTab[h] = []; for(let i=0;i<=16;i++) t.push(mix(h, FOG, i/16)); } return t[Math.max(0, Math.min(16, Math.round(a*16)))]; };
 // pre-rendered sprite canvases
 const sprCache = {};
 function spr(name, rows, pal){
@@ -87,7 +90,7 @@ function play(opts){
       R = { t:0, pos:0, v:7, dist:0, fish:0, gold:0, lane:1, lx:1, jump:0, slide:0, seg:null, dead:false, deadT:0, turnT:1, turnDir:0, chase:1, frame:0, msg:"", parts:[], dustT:0, shake:0 };
       R.seg = newSeg(true);
     }
-    function size(){ const r = cv.getBoundingClientRect(); const d = Math.min(2, window.devicePixelRatio||1); cv.width = r.width*d; cv.height = r.height*d; out.imageSmoothingEnabled = false; }
+    function size(){ const r = cv.getBoundingClientRect(); const d = 1; cv.width = r.width*d; cv.height = r.height*d; out.imageSmoothingEnabled = false; }
 
     // ---------- controls ----------
     let sx = 0, sy = 0, swiped = true;
@@ -147,41 +150,42 @@ function play(opts){
     }
 
     // ---------- drawing ----------
+    // static sky + the two parallax strips are drawn once into their own canvases
+    const skyC = document.createElement("canvas"); skyC.width = RW; skyC.height = HOR+1;
+    { const x = skyC.getContext("2d"), sky = x.createLinearGradient(0,0,0,HOR); sky.addColorStop(0,"#7cc6f2"); sky.addColorStop(.65,"#bfe6f7"); sky.addColorStop(1,"#f6e8ee"); x.fillStyle = sky; x.fillRect(0,0,RW,HOR+1);
+      x.fillStyle = "rgba(255,246,200,.35)"; x.fillRect(178,22,36,36); x.fillStyle = "rgba(255,240,170,.6)"; x.fillRect(184,28,24,24); x.fillStyle = "#fff4b8"; x.fillRect(188,32,16,16); x.fillStyle = "#ffffff"; x.fillRect(190,34,5,5); }
+    const strip = (heights, fn) => { const c = document.createElement("canvas"); c.width = RW*2; c.height = 60; const x = c.getContext("2d"); for(let i=0;i<RW*2;i++) fn(x, i, heights[i]); return c; };
+    const mtnC = strip(MTN, (x, i, h) => { x.fillStyle = "#b7c9e8"; x.fillRect(i, 60-h, 1, h); if(h > 34){ x.fillStyle = "#ffffff"; x.fillRect(i, 60-h, 1, Math.min(4, h-34)); } });
+    const hillC = strip(HILL, (x, i, h) => { x.fillStyle = "#9fd6a6"; x.fillRect(i, 60-h, 1, h); if(i % 14 === 3){ const hh = h; x.fillStyle = "#7fc48d"; x.fillRect(i, 60-hh-4, 4, 5); x.fillRect(i+1, 60-hh-6, 2, 2); } });
+    const scrollStrip = (c, off) => { const o = ((off % (RW*2)) + RW*2) % (RW*2); g.drawImage(c, -o, HOR-60); if(o > RW) g.drawImage(c, RW*2 - o, HOR-60); };
     function drawSky(){
-      const sky = g.createLinearGradient(0,0,0,HOR); sky.addColorStop(0,"#7cc6f2"); sky.addColorStop(.65,"#bfe6f7"); sky.addColorStop(1,"#f6e8ee"); g.fillStyle = sky; g.fillRect(0,0,RW,HOR+1);
-      // sun
-      g.fillStyle = "rgba(255,246,200,.35)"; g.fillRect(178,22,36,36); g.fillStyle = "rgba(255,240,170,.6)"; g.fillRect(184,28,24,24); g.fillStyle = "#fff4b8"; g.fillRect(188,32,16,16); g.fillStyle = "#ffffff"; g.fillRect(190,34,5,5);
+      g.drawImage(skyC, 0, 0);
       // clouds
       const scroll = R.dist*.5 + R.turnDir*0;
       for(const [cx,cy,w] of [[20,30,34],[110,18,44],[200,62,28],[300,40,38]]){ const x = Math.round(((cx - scroll) % (RW+60) + RW+60) % (RW+60) - 30);
         g.fillStyle = "#ffffff"; g.fillRect(x, cy, w, 8); g.fillRect(x+5, cy-5, w-14, 5); g.fillRect(x+w*.45, cy-9, w*.3, 4); g.fillStyle = "#dceef8"; g.fillRect(x+2, cy+6, w-4, 2); }
-      // far mountains + near hills (parallax)
-      const off = Math.floor(R.dist*.15) % RW;
-      for(let x=0;x<RW;x++){ const h = MTN[(x+off) % MTN.length]; g.fillStyle = "#b7c9e8"; g.fillRect(x, HOR-h, 1, h); if(h > 34){ g.fillStyle = "#ffffff"; g.fillRect(x, HOR-h, 1, Math.min(4, h-34)); } }
-      const off2 = Math.floor(R.dist*.4) % RW;
-      for(let x=0;x<RW;x++){ const h = HILL[(x+off2) % HILL.length]; g.fillStyle = "#9fd6a6"; g.fillRect(x, HOR-h, 1, h); }
-      g.fillStyle = "#7fc48d"; for(let x=-(off2%14); x<RW; x+=14){ const h = HILL[((x+off2)%HILL.length+HILL.length)%HILL.length]; g.fillRect(x+3, HOR-h-4, 4, 5); g.fillRect(x+4, HOR-h-6, 2, 2); }
+      scrollStrip(mtnC, Math.floor(R.dist*.15)); scrollStrip(hillC, Math.floor(R.dist*.4));
     }
     function drawGround(){
-      const s = R.seg;
+      const s = R.seg, puds = s.obs.filter(o=>o.k==="puddle" && o.p > R.pos && o.p < R.pos + 70);
       for(let y=HOR+1; y<RH; y++){
         const z = CAMH*F/(y-HOR), p = R.pos + z, cx = RW/2, k = F/z, hw = HALF*k;
         const fog = Math.max(0, Math.min(1, (z-5)/50));
         const band = Math.floor((p + 1000)/1.6) % 2;
-        g.fillStyle = mix(band ? "#8fd08c" : "#9cd998", FOG, fog*.8); g.fillRect(0,y,RW,1);
+        g.fillStyle = fogc(band ? "#8fd08c" : "#9cd998", fog*.8); g.fillRect(0,y,RW,1);
         // grass tufts
-        if(z < 14 && ((Math.floor((p+1000)*4) * 7) % 11) === 0){ g.fillStyle = mix("#6dbb75", FOG, fog); for(const sd of [-1,1]){ const tx = cx + sd*(hw + k*(.25 + ((Math.floor(p*4)*13)%7)*.08)); g.fillRect(Math.round(tx), y, Math.max(1, k*.03), 1); } }
+        if(z < 14 && ((Math.floor((p+1000)*4) * 7) % 11) === 0){ g.fillStyle = fogc("#6dbb75", fog); for(const sd of [-1,1]){ const tx = cx + sd*(hw + k*(.25 + ((Math.floor(p*4)*13)%7)*.08)); g.fillRect(Math.round(tx), y, Math.max(1, k*.03), 1); } }
         const brick = (l, r) => {
           const fr = ((p + 1000)/.32), row = Math.floor(fr), jointH = fr - row < .14;
-          g.fillStyle = mix(jointH ? "#cfa97a" : row % 3 === 0 ? "#efd6ac" : row % 3 === 1 ? "#ead0a2" : "#f2dbb4", FOG, fog*.8); g.fillRect(Math.round(l), y, Math.round(r-l), 1);
-          if(!jointH && k > 18){ g.fillStyle = mix("#cfa97a", FOG, fog*.8); const off = (row % 2) * .145, bw = Math.max(1, Math.round(k*.02)); for(let u = -HALF + off; u < HALF; u += .29){ const x = cx + u*k; if(x > l && x < r) g.fillRect(Math.round(x), y, bw, 1); } }
+          g.fillStyle = fogc(jointH ? "#cfa97a" : row % 3 === 0 ? "#efd6ac" : row % 3 === 1 ? "#ead0a2" : "#f2dbb4", fog*.8); g.fillRect(Math.round(l), y, Math.round(r-l), 1);
+          if(!jointH && k > 18){ g.fillStyle = fogc("#cfa97a", fog*.8); const off = (row % 2) * .145, bw = Math.max(1, Math.round(k*.02)); for(let u = -HALF + off; u < HALF; u += .29){ const x = cx + u*k; if(x > l && x < r) g.fillRect(Math.round(x), y, bw, 1); } }
         };
         if(p < s.len){
-          const pud = s.obs.find(o=>o.k==="puddle" && p>=o.p && p<=o.p+.9);
+          const pud = puds.length ? puds.find(o=>p>=o.p && p<=o.p+.9) : null;
           if(pud){ const f = (p - pud.p)/.9, w = Math.sin(f*Math.PI); brick(cx-hw, cx+hw);
-            g.fillStyle = mix(((Math.floor(p*6 + R.frame*4))%4===0) ? "#bfe3fb" : "#78bde9", FOG, fog*.6); g.fillRect(Math.round(cx - hw*.95*w - 1), y, Math.round(hw*1.9*w + 2), 1); }
+            g.fillStyle = fogc(((Math.floor(p*6 + R.frame*4))%4===0) ? "#bfe3fb" : "#78bde9", fog*.6); g.fillRect(Math.round(cx - hw*.95*w - 1), y, Math.round(hw*1.9*w + 2), 1); }
           else brick(cx-hw, cx+hw);
-          const cw = Math.max(1, Math.round(k*.07)); g.fillStyle = mix((Math.floor((p+1000)/.6))%2 ? "#c9b49a" : "#b9a48a", FOG, fog*.8);
+          const cw = Math.max(1, Math.round(k*.07)); g.fillStyle = fogc((Math.floor((p+1000)/.6))%2 ? "#c9b49a" : "#b9a48a", fog*.8);
           g.fillRect(Math.round(cx-hw-cw), y, cw, 1); g.fillRect(Math.round(cx+hw), y, cw, 1);
         } else if(p < s.len + 1.7){
           brick(s.dirs.includes("L") ? 0 : cx-hw, s.dirs.includes("R") ? RW : cx+hw);
@@ -206,7 +210,7 @@ function play(opts){
     function drawDeco(d, z){
       if(d.k==="post"){ bill(g, postI, d.side*(HALF + .14), 0, z, .05);
         // rail to the next post
-        const z2 = z + 1.6; if(z2 < 60){ const k1 = F/z, [x1, y1] = pr(d.side*(HALF+.14), .2, z), [x2, y2] = pr(d.side*(HALF+.14), .2, z2), [, y1b] = pr(0, .14, z), [, y2b] = pr(0, .14, z2);
+        const z2 = z + 1.6; if(z2 < 32){ const k1 = F/z, [x1, y1] = pr(d.side*(HALF+.14), .2, z), [x2, y2] = pr(d.side*(HALF+.14), .2, z2), [, y1b] = pr(0, .14, z), [, y2b] = pr(0, .14, z2);
           g.fillStyle = "#ffffff"; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.lineTo(x2, y2b); g.lineTo(x1, y1b); g.closePath(); g.fill(); }
         return; }
       const x = d.side*(HALF + d.off);
@@ -311,16 +315,19 @@ App.registerGame({
       el.querySelector("#raGo").addEventListener("click", go);
     }
     async function go(){
+      if(document.querySelector(".raGame")) return;   // already running (double tap)
       SFX.tap();
-      const pet = await ctx.getState("pet").catch(()=>null);
-      await play({ color: ctx.me.cat, sfx: SFX, best: (s && s.best && s.best[me()]) || 0, hasPet: !!(pet && pet.state),
+      // don't wait on the network before the run starts
+      const opts = { color: ctx.me.cat, sfx: SFX, best: (s && s.best && s.best[me()]) || 0, hasPet: true };
+      ctx.getState("pet").then(pet=>{ opts.hasPet = !!(pet && pet.state); }).catch(()=>{});
+      await play(Object.assign(opts, {
         onEnd: async r => {
           await ctx.update("runaway", st=>{ st = st || { best:{}, runs:{} }; st.best = st.best||{}; st.runs = st.runs||{};
             st.runs[me()] = (st.runs[me()]||0) + 1; if(r.score > (st.best[me()]||0)) st.best[me()] = r.score; st.last = { by:me(), score:r.score, at:Date.now() }; return st; });
           if(r.rec && r.score > 0) ctx.notifyPartner(`${ctx.me.name} 在「喵喵大逃亡」跑出新紀錄：${r.score} 分！`);
           if(r.coins > 0) await ctx.update("pet", st=>{ if(!st || !window.PetLogic) return undefined; st = window.PetLogic.norm(JSON.parse(JSON.stringify(st)));
             st.coins = (st.coins||0) + r.coins; st.log = (st.log||[]).concat([{ by:me(), a:"run", n:r.coins, at:Date.now() }]).slice(-24); return st; });
-        } });
+        } }));
       lobby();
     }
     this._u = ctx.onState("runaway", st=>{ s = st; if(!document.querySelector(".raGame")) lobby(); });
