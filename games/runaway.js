@@ -273,16 +273,14 @@ function play(opts){
       out.drawImage(lc, Math.round((W-dw)/2 - off + sh), Math.round((H-dh)/2 + sh*.5), Math.round(dw), Math.round(dh));
       $("#raD").textContent = `${Math.floor(R.dist)} m`; $("#raF b").textContent = R.fish;
     }
-    let errShown = false;
     function loop(t){ if(done) return; const dt = Math.min(.05, (t - last)/1000 || 0); last = t;
       try{
         if(cv.width < 4 || cv.height < 4 || Math.abs(cv.width - cv.clientWidth) > 2) size();
         if(R) step(dt); if(R) render();
-      }catch(e){ // keep running, but tell the player what broke so it can be fixed
-        console.error(e); if(!errShown){ errShown = true; const tp = $("#raTip"); if(tp){ tp.classList.remove("hidden"); tp.classList.add("err"); tp.textContent = "畫面出錯了，請截圖給我：" + (e && e.message || e); } } }
+      }catch(e){ console.error(e); }   // keep running even if one frame fails
       raf = requestAnimationFrame(loop); }
 
-    function start(){ reset(); $("#raM").classList.add("hidden"); $("#raTip").classList.remove("hidden"); setTimeout(()=>{ const tp = $("#raTip"); if(tp && !tp.classList.contains("err")) tp.classList.add("hidden"); }, 5000); snd("select"); last = performance.now(); }
+    function start(){ reset(); $("#raM").classList.add("hidden"); $("#raTip").classList.remove("hidden"); setTimeout(()=>{ const tp = $("#raTip"); if(tp) tp.classList.add("hidden"); }, 5000); snd("select"); last = performance.now(); }
     function end(){
       const score = Math.floor(R.dist) + R.fish*10, coins = Math.floor(R.fish/2), best = Math.max(opts.best||0, score), rec = score > (opts.best||0);
       $("#raM").innerHTML = `<div class="raEndDog">${dogSvg()}</div><b>${R.msg}</b><p>狗狗追上來舔你了 🐶💦</p><p class="raSc">${score} 分</p><p>跑了 ${Math.floor(R.dist)} m・撿到 🐟 ${R.fish}${R.gold?`（金魚 ${R.gold}）`:""}</p>
