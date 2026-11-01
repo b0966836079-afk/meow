@@ -7,6 +7,9 @@ const IME = (function(){
   const SYM_ROWS = [["1","2","3","4","5","6","7","8","9","0"],["，","。","？","！","、","：","；","「","」","…"],["～","（","）","@","#","%","&","+","❤"]];
 
   // ---------- dictionary ----------
+  const EXTRA = [["好想你",["ㄏㄠˇ","ㄒㄧㄤˇ","ㄋㄧˇ"]],["想你了",["ㄒㄧㄤˇ","ㄋㄧˇ","ㄌㄜ˙"]],["抱抱",["ㄅㄠˋ","ㄅㄠˋ"]],["親親",["ㄑㄧㄣ","ㄑㄧㄣ"]],["在幹嘛",["ㄗㄞˋ","ㄍㄢˋ","ㄇㄚˊ"]],
+    ["到家了",["ㄉㄠˋ","ㄐㄧㄚ","ㄌㄜ˙"]],["下班了",["ㄒㄧㄚˋ","ㄅㄢ","ㄌㄜ˙"]],["等我",["ㄉㄥˇ","ㄨㄛˇ"]],["睡了嗎",["ㄕㄨㄟˋ","ㄌㄜ˙","ㄇㄚ˙"]],["想我嗎",["ㄒㄧㄤˇ","ㄨㄛˇ","ㄇㄚ˙"]],
+    ["我愛你",["ㄨㄛˇ","ㄞˋ","ㄋㄧˇ"]],["愛你",["ㄞˋ","ㄋㄧˇ"]],["晚安",["ㄨㄢˇ","ㄢ"]],["早安",["ㄗㄠˇ","ㄢ"]],["寶貝",["ㄅㄠˇ","ㄅㄟˋ"]],["吃飯了嗎",["ㄔ","ㄈㄢˋ","ㄌㄜ˙","ㄇㄚ˙"]]];
   let dict = null, sylList = [], sylCode = {}, sylParts = [], loading = null;
   function parseSyl(s){ const o={i:"",m:"",f:"",t:""}; for(const ch of s){ if(INIT.includes(ch)) o.i=ch; else if(MED.includes(ch)) o.m=ch; else if(FIN.includes(ch)) o.f=ch; else if(TONE.includes(ch)) o.t=ch; } return o; }
   function load(url){
@@ -20,6 +23,9 @@ const IME = (function(){
       dict = new Map();
       let p = nl+1;
       while(p < txt.length){ let e = txt.indexOf("\n",p); if(e<0) e = txt.length; const t = txt.indexOf("\t",p); if(t>0 && t<e) dict.set(txt.slice(p,t), txt.slice(t+1,e)); p = e+1; }
+      // couple phrases that should win over more "common" words
+      for(const [w, ss] of EXTRA){ let key = ""; for(const x of ss){ const c = sylCode[x]; if(!c){ key = null; break; } key += c; } if(!key) continue;
+        const cur = dict.get(key) || ""; if(!cur.split(" ").some(e=>e.split(":")[0]===w)) dict.set(key, (w+":9000000 "+cur).trim()); }
     });
     loading.catch(()=>{ loading = null; });
     return loading;
@@ -32,6 +38,18 @@ const IME = (function(){
     const raw = dict && dict.get(key); if(!raw){ parsed.set(key, []); return []; }
     const out = raw.split(" ").map(x=>{ const k = x.lastIndexOf(":"); return k>0 ? { w:x.slice(0,k), f:+x.slice(k+1) } : { w:x, f:0 }; });
     parsed.set(key, out); return out;
+  }
+  // a syllable typed without a tone is stored as "ㄋㄧ*" and matches every tone
+  function expand(s){ if(!s.endsWith("*")) return sylCode[s] ? [s] : []; const b = s.slice(0,-1); return [b, b+"ˊ", b+"ˇ", b+"ˋ", b+"˙"].filter(v=>sylCode[v]); }
+  const anyCache = new Map();
+  function lookupAny(syls){
+    if(!syls.some(x=>x.endsWith("*"))) return lookup(syls);
+    const key = syls.join("|"); if(anyCache.has(key)) return anyCache.get(key);
+    let combos = [[]];
+    for(const x of syls){ const v = expand(x); if(!v.length){ anyCache.set(key, []); return []; } const nx = []; outer: for(const c of combos) for(const y of v){ nx.push(c.concat([y])); if(nx.length >= 400) break outer; } combos = nx; }
+    const best = new Map();
+    for(const c of combos) for(const r of lookup(c)){ const o = best.get(r.w); if(!o || r.f > o.f) best.set(r.w, r); }
+    const out = [...best.values()].sort((a,b)=>b.f-a.f); anyCache.set(key, out); return out;
   }
   function partialSyls(cur){
     // all known syllables matching what has been typed so far (any tone)
@@ -49,12 +67,12 @@ const IME = (function(){
     const best = new Array(n+1).fill(-1e9), back = new Array(n+1); best[0] = 0;
     for(let i=1;i<=n;i++) for(let j=Math.max(0,i-5);j<i;j++){
       if(best[j] < -1e8) continue;
-      const c = lookup(syls.slice(j,i)); if(!c.length) continue;
+      const c = lookupAny(syls.slice(j,i)); if(!c.length) continue;
       const sc = best[j] + (i-j>1 ? 9*(i-j) : 0) + Math.log((c[0].f||0)+2);
       if(sc > best[i]){ best[i] = sc; back[i] = [j, c[0].w]; }
     }
     if(best[n] < -1e8){ // unknown syllable somewhere: fall back per syllable
-      return syls.map(s=>{ const c=lookup([s]); return c.length?c[0].w:s; }).join("");
+      return syls.map(s=>{ const c=lookupAny([s]); return c.length?c[0].w:s.replace("*",""); }).join("");
     }
     let out = "", i = n; while(i>0){ const [j,w] = back[i]; out = w + out; i = j; } return out;
   }
@@ -76,11 +94,13 @@ const IME = (function(){
       const out = [], seen = new Set();
       const add = (w, n, takeCur) => { const k = w+"|"+n+"|"+(takeCur?1:0); if(seen.has(k)) return; seen.add(k); out.push({w, n, takeCur}); };
       const S = st.syl, P = curStr();
+      if(P && S.length && expand(P+"*").length){ const whole = convert([...S, P+"*"]); if(whole) add(whole, S.length, true); }
+      if(S.length>=2){ const whole = convert(S); if(whole) add(whole, S.length, false); }
       if(P && S.length){ // phrases including the syllable being typed
-        for(const ps of partialSyls(st.cur).slice(0,40)) for(const c of lookup([...S, ps])) add(c.w, S.length, true);
+        for(const ps of partialSyls(st.cur).slice(0,40)) for(const c of lookupAny([...S, ps])) add(c.w, S.length, true);
       }
-      for(let k=S.length;k>=2;k--) for(const c of lookup(S.slice(0,k))) add(c.w, k, false);
-      if(S.length){ for(const c of lookup([S[0]]).slice().sort((a,b)=>b.f-a.f)) add(c.w, 1, false); }
+      for(let k=S.length;k>=2;k--) for(const c of lookupAny(S.slice(0,k))) add(c.w, k, false);
+      if(S.length){ for(const c of lookupAny([S[0]]).slice().sort((a,b)=>b.f-a.f)) add(c.w, 1, false); }
       else if(P){
         const all = []; for(const ps of partialSyls(st.cur)) for(const c of lookup([ps])) all.push(c);
         all.sort((a,b)=>b.f-a.f); for(const c of all.slice(0,120)) add(c.w, 0, true);
@@ -88,7 +108,7 @@ const IME = (function(){
       return out.slice(0,150);
     }
     function refresh(){
-      const conv = dictReady ? convert(st.syl) : st.syl.join("");
+      const conv = dictReady ? convert(st.syl) : st.syl.join("").replace(/\*/g,"");
       preEl.innerHTML = composing() ? `<u>${esc(conv)}</u><b>${esc(curStr())}</b>` : "";
       const cs = candidates();
       if(!composing()){ candEl.innerHTML = `<span class="hint">${dictReady ? (mode==="zh"?"用注音打字，空白鍵＝一聲":"") : "字典載入中…"}</span>${opt.toSys?`<button class="sysk">📱 手機鍵盤</button>`:""}${opt.hide?`<button class="sysk hidek">收起 ▾</button>`:""}`; const sk=candEl.querySelector(".sysk:not(.hidek)"); if(sk) sk.addEventListener("click", ()=>opt.toSys()); const hk=candEl.querySelector(".hidek"); if(hk) hk.addEventListener("click", ()=>opt.hide()); return; }
@@ -101,18 +121,18 @@ const IME = (function(){
       st.syl = st.syl.slice(c.n); if(c.takeCur) st.cur = {i:"",m:"",f:""};
       opt.fx("pick", [...c.w].length); refresh();
     }
-    function commitAll(){ if(!composing()) return false; const t = (dictReady?convert(st.syl):st.syl.join("")) + curStr(); st.syl=[]; st.cur={i:"",m:"",f:""}; if(t) opt.commit(t); opt.fx("pick",[...t].length); refresh(); return true; }
+    function commitAll(){ if(!composing()) return false; if(curStr() && dictReady) finishSyl("*"); const t = (dictReady?convert(st.syl):st.syl.join("")) + curStr(); st.syl=[]; st.cur={i:"",m:"",f:""}; if(t) opt.commit(t); opt.fx("pick",[...t].length); refresh(); return true; }
     function finishSyl(tone){
       const s = curStr(); if(!s) return false;
       st.syl.push(s + (tone||"")); st.cur = {i:"",m:"",f:""};
-      if(st.syl.length > 10){ const t = convert(st.syl.slice(0,5)); opt.commit(t); st.syl = st.syl.slice(5); }
+      if(st.syl.length > 12){ const t = convert(st.syl.slice(0,5)); opt.commit(t); st.syl = st.syl.slice(5); }
       return true;
     }
     function zhKey(k){
       if(TONE.includes(k)){ if(!finishSyl(k)){ /* tone with nothing typed: ignore */ } }
-      else if(INIT.includes(k)){ if(st.cur.m||st.cur.f){ finishSyl(""); } st.cur.i = k; }
-      else if(MED.includes(k)){ if(st.cur.f){ finishSyl(""); } st.cur.m = k; }
-      else if(FIN.includes(k)) st.cur.f = k;
+      else if(INIT.includes(k)){ if(st.cur.i||st.cur.m||st.cur.f){ finishSyl("*"); } st.cur.i = k; }
+      else if(MED.includes(k)){ if(st.cur.m||st.cur.f){ finishSyl("*"); } st.cur.m = k; }
+      else if(FIN.includes(k)){ if(st.cur.f){ finishSyl("*"); } st.cur.f = k; }
       opt.fx("key"); refresh();
     }
     function space(){
@@ -128,7 +148,7 @@ const IME = (function(){
     }
     function enter(){ if(commitAll()) return; opt.send(); }
 
-    function key(label, cls, act, bub){ const B = bub!==undefined ? bub : (act ? "" : label); return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}" data-bub="${esc(B)}">${label}</button>`; }
+    function key(label, cls, act, bub){ const B = bub!==undefined ? bub : (act ? "" : label); return `<button class="k ${cls||""}" data-a="${act||""}" data-k="${esc(label)}" data-bub="${esc(B)}"><span class="kv">${label}</span></button>`; }
     function draw(){
       let h = "";
       if(mode==="zh"){
@@ -144,22 +164,42 @@ const IME = (function(){
       const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
       h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
+      const act = b => {
+        const a = b.dataset.a, k = b.dataset.k;
+        if(a==="back"){ back(); updEnter(); }
+        else if(a==="space"){ space(); updEnter(); }
+        else if(a==="enter"){ enter(); draw(); }
+        else if(a==="shift"){ shift=!shift; opt.fx("key"); draw(); }
+        else if(a.startsWith("mode:")){ commitAll(); mode=a.slice(5); shift=false; opt.fx("key"); draw(); refresh(); }
+        else if(a==="ins"){ opt.commit(b.textContent); opt.fx("key", [...b.textContent].length); }
+        else if(mode==="zh") { zhKey(k); updEnter(); }
+        else { opt.commit(k); opt.fx("key"); if(shift){ shift=false; draw(); } }
+      };
       body.querySelectorAll(".k").forEach(b=>{
-        b.addEventListener("pointerdown", ()=>{ pop(b); bubble(b); });
-        b.addEventListener("click", ()=>{
-          const a = b.dataset.a, k = b.dataset.k;
-          if(a==="back"){ back(); updEnter(); }
-          else if(a==="space"){ space(); updEnter(); }
-          else if(a==="enter"){ enter(); draw(); }
-          else if(a==="shift"){ shift=!shift; opt.fx("key"); draw(); }
-          else if(a.startsWith("mode:")){ commitAll(); mode=a.slice(5); shift=false; opt.fx("key"); draw(); refresh(); }
-          else if(a==="ins"){ opt.commit(b.textContent); opt.fx("key", [...b.textContent].length); }
-          else if(mode==="zh") { zhKey(k); updEnter(); }
-          else { opt.commit(k); opt.fx("key"); if(shift){ shift=false; draw(); } }
+        if(b.dataset.a==="ins"){ // list keys: a tap must not fire while scrolling the list
+          b.addEventListener("pointerdown", ()=>pop(b));
+          b.addEventListener("click", ()=>act(b));
+          return;
+        }
+        // act on touch-down: fast, works with two thumbs, and no lost taps from tiny finger slides
+        b.addEventListener("pointerdown", e=>{
+          if(e.pointerType==="mouse" && e.button) return;
+          e.preventDefault();
+          b.classList.add("down"); setTimeout(()=>b.classList.remove("down"), 110);
+          act(b);
+          requestAnimationFrame(()=>{ pop(b); bubble(b); });
+          if(b.dataset.a==="back"){ // hold to keep deleting
+            clearTimeout(rep.t); clearInterval(rep.i);
+            const stop = ()=>{ clearTimeout(rep.t); clearInterval(rep.i); b.removeEventListener("pointerup", stop); b.removeEventListener("pointercancel", stop); b.removeEventListener("pointerleave", stop); };
+            b.addEventListener("pointerup", stop); b.addEventListener("pointercancel", stop); b.addEventListener("pointerleave", stop);
+            rep.t = setTimeout(()=>{ rep.i = setInterval(()=>{ back(); updEnter(); }, 75); }, 420);
+          }
         });
+        b.addEventListener("click", e=>{ if(e.detail===0) act(b); }); // keyboard/assistive "click" without a pointer
       });
     }
-    function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) e.innerHTML = composing() ? "確定" : (opt.enterLabel||"傳送 ฅ"); }
+    const rep = {};
+    function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) (e.querySelector(".kv")||e).innerHTML = composing() ? "確定" : (opt.enterLabel||"傳送 ฅ"); }
     // key press animations (chosen in settings)
     const ANIMS = {
       jelly(b){ b.animate([{transform:"scale(1)"},{transform:"scale(1.32) translateY(-5px)",offset:.3},{transform:"scale(.88)",offset:.62},{transform:"scale(1.06)",offset:.82},{transform:"scale(1)"}],{duration:340,easing:"ease-out"}); },
@@ -185,7 +225,7 @@ const IME = (function(){
       d.animate(frames,{duration:dur,delay:delay||0,easing:"ease-out",fill:"both"});
       setTimeout(()=>d.remove(), dur+(delay||0)+40);
     }
-    function pop(b){ const a = (opt.anim && opt.anim()) || "jelly"; (ANIMS[a]||ANIMS.jelly)(b); }
+    function pop(b){ const a = (opt.anim && opt.anim()) || "jelly"; (ANIMS[a]||ANIMS.jelly)(b.querySelector(".kv") || b); }
     function bubble(b){
       const t = b.dataset.bub; if(!t || (opt.anim && opt.anim()==="peek")) return;
       const r = b.getBoundingClientRect(), R = imeEl.getBoundingClientRect();
