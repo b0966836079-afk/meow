@@ -44,7 +44,8 @@
       if (error) throw error;
     };
     B.members = async () => {
-      const { data, error } = await sb.from("members").select("user_id,name,cat,created_at,last_read").eq("couple_id", B.coupleId).order("created_at");
+      let { data, error } = await sb.from("members").select("user_id,name,cat,created_at,last_read").eq("couple_id", B.coupleId).order("created_at");
+      if (error && /last_read/.test(error.message || "")) ({ data, error } = await sb.from("members").select("user_id,name,cat,created_at").eq("couple_id", B.coupleId).order("created_at"));
       if (error) throw error; return data || [];
     };
     B.messages = async (limit = 80) => {
