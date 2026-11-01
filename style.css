@@ -1148,3 +1148,20 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .nwHd i{font-style:normal;font-size:12px;color:var(--muted)}
 .nwI{width:22px;height:22px;display:inline-flex}.nwI svg{width:100%;height:100%}
 .nwItem ul{margin:6px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6}
+/* 海戰貓貓 */
+.bsGrid button{position:relative}
+.bsGrid button.ship{background:rgba(255,255,255,.5);box-shadow:none}
+.bsGrid button.ship.sel{background:#ffd3dc;box-shadow:0 0 0 2px #fff}
+.bsGrid button.head{z-index:2;overflow:visible}
+.bsCat{position:absolute;left:0;top:0;pointer-events:none;image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(30,60,90,.25))}
+.bsCat.sel{filter:drop-shadow(0 0 3px #fff) drop-shadow(0 0 2px #f0708d)}
+.bsGrid button i{font-style:normal;position:relative;z-index:3;font-size:15px}
+.bsGrid button.hit{z-index:3}
+.bsGrid button.ship.hit{background:#ffcf66}
+.bsGrid.enemy button.sunk{background:#8a8090}
+.bsGrid.enemy button.sunk .bsCat{filter:grayscale(.35) brightness(.95)}
+.bsList{flex-direction:column;align-items:stretch;gap:4px}
+.bsList span{display:flex;align-items:center;gap:6px;background:var(--card);border:2px solid var(--line);border-radius:10px;padding:2px 8px;color:var(--ink);font-size:13px}
+.bsList span img{width:24px;height:24px;image-rendering:pixelated}
+.bsList span i{font-style:normal;font-size:11px;color:var(--muted);margin-left:auto}
+.bsList span.on{border-color:var(--pink);background:var(--pinkL)}

@@ -1,21 +1,126 @@
 // 遊戲：喵喵海戰（擺好貓咪艦隊，輪流猜座標開砲；打中可以再打一次）
 (function(){
 const N = 8;
-const SHIPS = [{ len:4, n:"大貓郵輪" }, { len:3, n:"橘貓快艇" }, { len:3, n:"白貓帆船" }, { len:2, n:"小魚舟" }];
+const SHIPS = [{ len:4 }, { len:3 }, { len:3 }, { len:2 }];
+
+/* ---------- 艦隊貓貓：每艘船是一隻趴著／站著的長長貓，毛色＋配件＋名字每局隨機 ---------- */
+const COATS = {
+  orange: { n:"橘虎斑", M:"#f2b06a", D:"#d98546", W:"#fff1df", O:"#5a3b2e", E:"#2b1d18", pat:"tabby" },
+  white:  { n:"白雪", M:"#fbf8f4", D:"#e3ddd6", W:"#ffffff", O:"#5b5566", E:"#2b2630" },
+  black:  { n:"小黑", M:"#3a3542", D:"#2c2833", W:"#5a5363", O:"#1d1a22", E:"#f5d36b", H:"#fff6c8", N:"#c9707f" },
+  calico: { n:"三花", M:"#fffaf2", D:"#e59a4f", C:"#3e3434", W:"#ffffff", O:"#5a3b2e", E:"#2b1d18", pat:"patch" },
+  gray:   { n:"灰虎斑", M:"#a7aec2", D:"#868da3", W:"#e9ecf3", O:"#4a4f60", E:"#232631", pat:"tabby" },
+  tux:    { n:"賓士", M:"#3a3542", D:"#2c2833", W:"#ffffff", O:"#1d1a22", E:"#9be38f", H:"#ffffff", N:"#e8798a", pat:"tux" },
+  siam:   { n:"暹羅", M:"#f3e3c8", D:"#6b4a3a", W:"#fff7ea", O:"#4a3428", E:"#4a90d6", pat:"points" },
+  cream:  { n:"奶油", M:"#f7e2b8", D:"#e8c690", W:"#fff8e8", O:"#7a5636", E:"#2b1d18", pat:"tabby" },
+  brown:  { n:"咖啡虎斑", M:"#b08560", D:"#7a5636", W:"#f0dcc4", O:"#3e2a1c", E:"#2b1d18", pat:"tabby" },
+  pink:   { n:"草莓", M:"#f7c6d2", D:"#ee9fb3", W:"#fff0f4", O:"#7a3a4a", E:"#5a2a3a", pat:"tabby" },
+  blue:   { n:"藍灰", M:"#8d9bb5", D:"#7685a0", W:"#cfd7e6", O:"#3a4256", E:"#7fd18a" },
+  mint:   { n:"薄荷", M:"#bfe9d2", D:"#93d3b2", W:"#f0fff6", O:"#2f6b50", E:"#2b1d18", pat:"tabby" },
+  cow:    { n:"乳牛", M:"#ffffff", D:"#e3ddd6", C:"#2c2833", W:"#ffffff", O:"#3a3542", E:"#2b1d18", pat:"cow" },
+  ginger: { n:"橘白", M:"#f2b06a", D:"#d98546", W:"#ffffff", O:"#5a3b2e", E:"#2b1d18", pat:"tux" },
+};
+const ACCS = ["none","none","bow","sailor","pirate","scarf","flower","crown","captain","glasses","bandana","bell"];
+const ACC_N = { none:"", bow:"蝴蝶結", sailor:"水手帽", pirate:"海盜眼罩", scarf:"小圍巾", flower:"小花", crown:"皇冠", captain:"船長帽", glasses:"眼鏡", bandana:"頭巾", bell:"鈴鐺" };
+const NAMES = ["麻糬","布丁","湯圓","奶茶","芋圓","豆花","可可","吐司","黑糖","芝麻","奶酪","鬆餅","珍珠","雪球","栗子","南瓜","饅頭","泡芙","年糕","米香","蛋捲","QQ","丸子","肉圓"];
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+function randomCats(n){
+  const coats = shuffle(Object.keys(COATS)), names = shuffle(NAMES);
+  return [...Array(n)].map((_,i)=>({ coat:coats[i], acc:ACCS[(Math.random()*ACCS.length)|0], name:names[i]+"號" }));
+}
+const CELL = 14;
+// head interior (x 0..13, y 0..10); M coat, P inner ear, E eye, H shine, N nose, B blush, W mouth
+const HEADM = [
+  "..............",
+  "..M.......M...",
+  ".MPM.....MPM..",
+  ".MPPMMMMMPPM..",
+  ".MMMMMMMMMMM..",
+  ".MMMMMMMMMMM..",
+  ".MMEHMMMEHMM..",
+  ".MMEEMMMEEMM..",
+  ".MBMMMNMMMBM..",
+  "..MMMWMWMMM...",
+  "...MMMMMMM....",
+];
+function catSVG(cat, len, vert, cry){
+  const C = COATS[cat.coat] || COATS.orange, W = vert ? CELL : CELL*len, H = vert ? CELL*len : CELL;
+  const g = [...Array(H)].map(()=>Array(W).fill("."));
+  const set = (x,y,c) => { if(x>=0&&y>=0&&x<W&&y<H) g[y][x] = c; };
+  const isBody = c => c!=="." && c!=="O";
+  // body + legs + tail (painted first, head goes on top)
+  if(!vert){
+    for(let y=5;y<=10;y++) for(let x=7;x<=W-6;x++) set(x,y,"M");
+    set(W-6,5,"."); set(W-6,10,".");
+    for(const lx of [9, 12, W-10, W-7]) for(let y=11;y<=12;y++){ set(lx,y,"L"); set(lx+1,y,"L"); }
+    for(let x=10;x<=W-9;x++){ set(x,9,"W"); set(x,10,"W"); }
+    [[W-5,7],[W-4,7],[W-4,6],[W-3,5],[W-3,4],[W-3,3],[W-2,2]].forEach(([x,y])=>set(x,y,"T"));
+  } else {
+    for(let y=8;y<=H-4;y++) for(let x=2;x<=10;x++) set(x,y,"M");
+    set(2,H-4,"."); set(10,H-4,".");
+    for(let y=11;y<=H-6;y++) for(let x=5;x<=7;x++) set(x,y,"W");
+    for(const lx of [3, 8]) for(let y=H-3;y<=H-2;y++){ set(lx,y,"L"); set(lx+1,y,"L"); }
+    for(const lx of [3, 8]) { set(lx,11,"L"); set(lx+1,11,"L"); }          // front paws tucked on the chest
+    [[11,H-6],[12,H-7],[12,H-8],[12,H-9],[11,H-10]].forEach(([x,y])=>set(x,y,"T"));
+  }
+  HEADM.forEach((row,y)=>[...row].forEach((c,x)=>{ if(c!==".") set(x,y,c); }));
+  // coat patterns on M/T/L pixels
+  const pat = C.pat;
+  let seed = [...(cat.name||"喵")].reduce((t,ch)=>t*31+ch.charCodeAt(0), 7) >>> 0;
+  const rnd = () => (seed = (seed*1103515245 + 12345) >>> 0) / 4294967296;
+  const blobs = (pat==="patch"||pat==="cow") ? [...Array(3+len)].map((_,i)=>({ x: i===0 ? 3+rnd()*6 : rnd()*W, y: i===0 ? 2+rnd()*3 : (vert ? rnd()*H : 4+rnd()*7), r: 2.4+rnd()*1.8, c: pat==="cow" ? "C" : (i%2 ? "C" : "D") })) : [];
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c = g[y][x]; if(!"MTL".includes(c)) continue;
+    const inHead = y<=10 && x<=12;
+    if(pat==="tabby"){ if(inHead ? (y===4 && (x===4||x===6||x===8)) || (y===5 && x===6) : (vert ? (y%3===0 && (x<=3||x>=9)) : (x%3===0 && y<=7)) || (c==="T" && (x+y)%2===0)) g[y][x] = "D"; }
+    if(blobs.length && !(inHead && y>=6)){ const bl = blobs.find(b=>Math.hypot(x-b.x, (y-b.y)*1.2) < b.r); if(bl) g[y][x] = bl.c; }
+    if(pat==="points"){ if(c==="T"||c==="L"||(inHead && y>=7 && x>=4 && x<=8)) g[y][x] = "D"; }
+    if(pat==="tux"){ if(c==="L"||(inHead && y>=8 && x>=4 && x<=8)) g[y][x] = "W"; }
+  }
+  if(pat==="points"){ set(2,2,"D"); set(10,2,"D"); }
+  // outline pass
+  const out = [];
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(g[y][x]==="." && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{ const r=g[y+dy]; return r && r[x+dx] && isBody(r[x+dx]); })) out.push([x,y]);
+  out.forEach(([x,y])=>g[y][x]="O");
+  // face
+  if(cry){ for(const [x,y] of [[3,6],[4,6],[8,6],[9,6]]) set(x,y, "M"); for(const [x,y] of [[3,7],[4,7],[8,7],[9,7]]) set(x,y,"E"); set(3,8,"U"); set(9,8,"U"); }
+  // accessories (on the head)
+  const A = cat.acc, put = (rows, x0, y0) => rows.forEach((r,dy)=>[...r].forEach((c,dx)=>{ if(c!==".") set(x0+dx, y0+dy, c); }));
+  if(A==="bow") put(["R.R","RRR","R.R"], 9, 0);
+  if(A==="flower") put([".K.","KYK",".K."], 1, 0);
+  if(A==="sailor") put(["..XXXX..",".XXXXXX.","ZZZZZZZZ"], 2, 0);
+  if(A==="captain") put(["..ZZZZ..",".ZZYYZZ.","ZZZZZZZZ","XXXXXXXXX"], 2, 0);
+  if(A==="crown") put(["Y.Y.Y","YYYYY","YRYRY"], 4, 0);
+  if(A==="bandana") put(["..UUUUU..",".UUUUUUUU","UUXUUUXUU"], 1, 2);
+  if(A==="pirate" && !cry){ for(let x=1;x<=11;x++) set(x,5,"Q"); put(["QQ","QQ","QQ"], 3, 5); }
+  if(A==="glasses" && !cry) put(["QQQQ.QQQQ","Q..QQQ..Q","QQQQ.QQQQ"], 2, 5);
+  if(A==="scarf"){ if(vert) put(["RRRRRRRRR",".......RR",".......RR"], 2, 10); else put(["RR","RR","RR","RR","RR","RR"], 12, 4); }
+  if(A==="bell"){ if(vert) put(["RRRRRRRRR","....Y...."], 2, 10); else put(["R","R","R","R","Y"], 12, 5); }
+  const PAL = { M:C.M, T:C.M, L:C.M, D:C.D, C:C.C||C.D, W:C.W, O:C.O, E:C.E, H:C.H||"#ffffff", P:"#f2a1ae", N:C.N||"#e8798a", B:"#f59aa6",
+    U:"#6fb7e8", R:"#e5486a", K:"#f7a7b8", Y:"#ffcf4a", X:"#ffffff", Z:"#2f437d", Q:"#2b1d18" };
+  let r = "";
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ const c = PAL[g[y][x]]; if(c) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${c}"/>`; }
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${r}</svg>`;
+}
+const svgCache = {};
+const catImg = (cat, len, vert, cry) => { const k = [cat.coat,cat.acc,len,vert?1:0,cry?1:0].join("|"); return svgCache[k] || (svgCache[k] = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(catSVG(cat,len,vert,cry))); };
+const headImg = cat => catImg(cat, 1, true, false);
+// older saved fleets had no cats: give them stable ones
+const catOfShip = (sh, i) => sh.cat || { coat:Object.keys(COATS)[i % 14], acc:"none", name:sh.n || "喵喵號" };
 const ROWS = "ABCDEFGH";
 function cellsOf(x, y, len, vert){ const c=[]; for(let k=0;k<len;k++){ const cx=x+(vert?0:k), cy=y+(vert?k:0); if(cx>=N||cy>=N) return null; c.push(cy*N+cx); } return c; }
 function valid(fleet, idx, cells){
   const taken = new Set(); fleet.forEach((s,i)=>{ if(i!==idx) s.cells.forEach(c=>taken.add(c)); });
   return cells && cells.every(c=>!taken.has(c));
 }
-function randomFleet(){
+function randomFleet(cats){
+  cats = cats || randomCats(SHIPS.length);
   for(let tries=0;tries<200;tries++){
     const fleet = []; let ok = true;
-    for(const sh of SHIPS){
+    for(const [k, sh] of SHIPS.entries()){
       let placed = false;
       for(let t=0;t<200 && !placed;t++){
         const vert = Math.random()<.5, x = (Math.random()*N)|0, y = (Math.random()*N)|0, cells = cellsOf(x,y,sh.len,vert);
-        if(cells && valid(fleet, -1, cells)){ fleet.push({ len:sh.len, n:sh.n, cells, vert }); placed = true; }
+        if(cells && valid(fleet, -1, cells)){ fleet.push({ len:sh.len, n:cats[k].name, cat:cats[k], cells, vert }); placed = true; }
       }
       if(!placed){ ok=false; break; }
     }
@@ -50,12 +155,19 @@ App.registerGame({
         for(let x=0;x<N;x++){
           const c = y*N+x, si = shipAt(fleet, c), shot = shots.includes(c);
           let cls = "c", inner = "";
+          const sh = si>=0 ? fleet[si] : null, isSunk = sh && sunk(sh, shots);
+          // the whole cat is drawn once, from its first cell, stretched over the ship's cells
+          const cat = (show, cry) => { if(!sh || sh.cells[0]!==c || !show) return "";
+            const L = sh.len, size = sh.vert ? `width:100%;height:calc(${L*100}% + ${(L-1)*3}px)` : `height:100%;width:calc(${L*100}% + ${(L-1)*3}px)`;
+            cls += " head"; return `<img class="bsCat ${kind==="place"&&si===sel?"sel":""}" src="${catImg(catOfShip(sh,si), L, sh.vert, cry)}" style="${size}" alt="">`; };
           if(kind==="enemy"){
-            if(shot){ if(si>=0){ cls += sunk(fleet[si], shots) ? " sunk" : " hit"; inner = sunk(fleet[si], shots) ? "😿" : "💥"; } else { cls += " miss"; inner = "💧"; } }
+            if(shot){ if(si>=0){ cls += isSunk ? " sunk" : " hit"; inner = isSunk ? "" : "<i>💥</i>"; } else { cls += " miss"; inner = "💧"; } }
+            inner = cat(isSunk, true) + inner;
             if(c===aim) cls += " aim";
           } else {
-            if(si>=0){ cls += " ship"; if(kind==="place" && si===sel) cls += " sel"; const sh = fleet[si]; if(sh.cells[0]===c) cls += sh.vert?" headv":" headh"; }
-            if(shot){ cls += si>=0 ? " hit" : " miss"; inner = si>=0 ? "💥" : "·"; }
+            if(si>=0){ cls += " ship"; if(kind==="place" && si===sel) cls += " sel"; }
+            if(shot){ cls += si>=0 ? " hit" : " miss"; inner = si>=0 ? "<i>💥</i>" : "·"; }
+            inner = cat(true, isSunk) + inner;
           }
           h += `<button class="${cls}" data-c="${c}">${inner}</button>`;
         }
@@ -70,13 +182,14 @@ App.registerGame({
       if(s.phase==="place"){
         const ready = !!s.ready[me()];
         if(!myFleet) myFleet = (s.fleets[me()] && JSON.parse(JSON.stringify(s.fleets[me()]))) || randomFleet();
-        $("#bsMsg").innerHTML = ready ? (s.ready[opp()] ? "開戰！" : `已佈陣！等 ${pn} 擺好艦隊…`) : `擺好你的艦隊 ⚓<br><small>點船選取，再點空格移動；也可以直接隨機</small>`;
-        $("#bsBody").innerHTML = grid("place") + (ready ? "" : `<div class="bsTools"><button class="btn sub" id="bsRand">🎲 隨機擺放</button><button class="btn sub" id="bsRot" ${sel<0?"disabled":""}>↻ 旋轉</button></div>
-          <div class="bsList">${myFleet.map((sh,i)=>`<span class="${i===sel?"on":""}">${"▮".repeat(sh.len)} ${sh.n}</span>`).join("")}</div>
+        $("#bsMsg").innerHTML = ready ? (s.ready[opp()] ? "開戰！" : `已佈陣！等 ${pn} 擺好艦隊…`) : `擺好你的貓貓艦隊 ⚓<br><small>點貓咪選取，再點空格移動；每局的貓貓都是隨機的！</small>`;
+        $("#bsBody").innerHTML = grid("place") + (ready ? "" : `<div class="bsTools"><button class="btn sub" id="bsRand">🎲 隨機擺放</button><button class="btn sub" id="bsCats">🐱 換一批貓</button><button class="btn sub" id="bsRot" ${sel<0?"disabled":""}>↻ 旋轉</button></div>
+          <div class="bsList">${myFleet.map((sh,i)=>{ const ct = catOfShip(sh,i); return `<span class="${i===sel?"on":""}"><img src="${headImg(ct)}" alt="">${esc(ct.name)}<i>${COATS[ct.coat].n}${ACC_N[ct.acc]?"・"+ACC_N[ct.acc]:""}・${sh.len} 格</i></span>`; }).join("")}</div>
           <button class="btn" id="bsReady">確定佈陣！</button>`) + `<div class="bsOpp">${s.ready[opp()]?`✔ ${pn} 已經擺好了`:`${pn} 還在擺…`}</div>`;
         if(!ready){
           $("#bsBody").querySelectorAll(".bsGrid button").forEach(b=>b.addEventListener("click", ()=>tapPlace(+b.dataset.c)));
-          $("#bsRand").addEventListener("click", ()=>{ myFleet = randomFleet(); sel=-1; SFX.splash(); render(); });
+          $("#bsRand").addEventListener("click", ()=>{ myFleet = randomFleet(myFleet.map((sh,i)=>catOfShip(sh,i))); sel=-1; SFX.splash(); render(); });
+          $("#bsCats").addEventListener("click", ()=>{ const cs = randomCats(myFleet.length); myFleet.forEach((sh,i)=>{ sh.cat = cs[i]; sh.n = cs[i].name; }); SFX.meow(1.1); render(); });
           $("#bsRot").addEventListener("click", rotate);
           $("#bsReady").addEventListener("click", ready_);
         }
