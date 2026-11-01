@@ -451,6 +451,13 @@ const App = (function(){
   const KB_THEMES = [["strawberry","草莓牛奶","#fff0f3","#f28ba3"],["milktea","奶茶","#f3e6d8","#b98560"],["mint","薄荷","#e6f5ee","#6cc49d"],["lavender","薰衣草","#f0ecfb","#a58be8"],["night","夜空","#2e3150","#ffc94d"],
     ["peach","蜜桃","#ffeee4","#ff9f7a"],["sky","天空藍","#e8f3fd","#7fb5ee"],["cream","奶油","#fbf6ec","#5a3b2e"],["tuxedo","黑白賓士貓","#ececec","#222222"],["matcha","抹茶","#eef2df","#93ad55"]];
   const KB_ANIMS = [["jelly","果凍彈跳"],["paw","貓掌蓋章"],["hearts","愛心爆炸"],["jump","跳跳落地"],["spin","旋轉星星"],["peek","貓咪探頭"],["ripple","波紋擴散"]];
+  // [id, name, bg, paper, line, accent, shadow]
+  const SITE_THEMES = [["cream","奶茶喵","#f6eee3","#fffaf2","#5a3b2e","#f08aa0","#e3cfba"],["strawberry","草莓牛奶","#ffeef2","#fff8fa","#6b2f3f","#ff7fa3","#f5c3cf"],
+    ["mint","薄荷汽水","#e4f5ee","#f6fffb","#2f5a4b","#4fb894","#bde2d2"],["sky","海鹽藍","#e7f0fb","#f8fbff","#34496a","#5e9de6","#c6d7ee"],
+    ["lavender","薰衣草","#f0eafa","#fbf8ff","#4e3a6e","#a77fe6","#dacdef"],["honey","蜂蜜吐司","#fff1cf","#fffaee","#6b4a1f","#f0973a","#eed29a"],
+    ["gameboy","經典掌機","#b9c78f","#cfdba6","#1f3a1f","#3f6b30","#879a5e"],["night","星空夜貓","#1b1f35","#272c48","#0b0d1a","#ff8fb1","#0b0d1a"],["mono","黑白漫畫","#efefef","#fafafa","#222222","#333333","#bdbdbd"]];
+  function applyTheme(){ const t = store.get("mw_theme") || "cream"; if(t==="cream") delete document.body.dataset.theme; else document.body.dataset.theme = t;
+    const d = SITE_THEMES.find(x=>x[0]===t); const m = document.querySelector('meta[name="theme-color"]'); if(m && d) m.setAttribute("content", d[2]); }
   function applyKbTheme(){ document.body.dataset.kb = store.get("mw_kb") || "strawberry"; }
   const WALLS = [["paws","貓掌"],["night","星空"],["aqua","魚缸"],["sky","雲朵"],["sakura","櫻花"],["picnic","野餐布"],["meadow","小花園"],["dots","點點"],["photo","我的照片"]];
   function applyWall(){
@@ -1066,6 +1073,7 @@ const App = (function(){
   function viewSettings(v){
     const ps=pushState();
     v.innerHTML = `<div class="box set"><h2>我的貓</h2><div class="picks" id="pk"></div><input id="nm" maxlength="10" value="${esc(me.name)}" style="font-size:17px;padding:8px;border:3px solid var(--line);text-align:center;border-radius:0"><button class="btn" id="bSave">儲存</button></div>
+      <div class="box set"><h2>整體風格</h2><div class="sthemes" id="sthm">${SITE_THEMES.map(([id,n,bg,pa,ln,ac,sh])=>`<button data-st="${id}" class="${(store.get("mw_theme")||"cream")===id?"on":""}"><span class="stPrev" style="background-color:${bg};background-image:linear-gradient(${ln}14 1px,transparent 1px),linear-gradient(90deg,${ln}14 1px,transparent 1px)"><b style="background:${pa};border-color:${ln};box-shadow:2px 2px 0 ${sh}"></b><i style="background:${ac};border-color:${ln}"></i><s>${icon("heart",{K:ac,W:pa,O:ln})}</s></span>${n}</button>`).join("")}</div></div>
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>
         <div class="k">點一下可以預覽，只會改變你自己的手機。</div></div>
@@ -1096,6 +1104,7 @@ const App = (function(){
     $("anm").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ store.set("mw_anim",b.dataset.a); $("anm").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.key(); previewAnim(b); }));
     $("bSnd").addEventListener("click", e=>{ SFX.toggle(); e.target.textContent = SFX.on?"♪ 音效 開":"♪ 音效 關"; });
     $("bReload").addEventListener("click", ()=>location.reload());
+    $("sthm").querySelectorAll("[data-st]").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_theme", b.dataset.st); applyTheme(); SFX.select(); $("sthm").querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); }));
   }
   function previewAnim(btn){
     // play the chosen animation on a little demo keyboard key
@@ -1227,7 +1236,7 @@ const App = (function(){
   IME.hooks.listen = () => SFX.meow(1.18);
   // ---------- start ----------
   async function start(){
-    setupHaptic(); applyKbTheme(); applyWall();
+    setupHaptic(); applyTheme(); applyKbTheme(); applyWall();
     document.addEventListener("pointerdown", e=>{ if(e.button>0) return; tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear"); $("niAlb").innerHTML = icon("camera");
