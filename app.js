@@ -90,7 +90,7 @@ const App = (function(){
   }
   let hapLabel=null;
   function setupHaptic(){ try{ const inp=document.createElement("input"); inp.type="checkbox"; inp.setAttribute("switch",""); inp.id="hapSw"; const lab=document.createElement("label"); lab.htmlFor="hapSw"; const w=document.createElement("div"); w.setAttribute("aria-hidden","true"); w.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none"; w.append(inp,lab); document.body.appendChild(w); hapLabel=lab; }catch(e){} }
-  const kbPrefs = () => ({ preview: store.get("mw_kbpop")!=="0", altnum: store.get("mw_kbnum")!=="0" });
+  const kbPrefs = () => ({ preview: store.get("mw_kbpop")!=="0", altnum: store.get("mw_kbnum")!=="0", smart: store.get("mw_kbsmart")!=="0", hint: store.get("mw_kbhint")!=="0" });
   const kbSound = () => store.get("mw_kbsnd")!=="0", kbVib = () => store.get("mw_kbvib")!=="0";
   function applyKbSize(){ document.body.dataset.kbsize = store.get("mw_kbsize") || "m"; }
   function haptic(){ try{ if(typeof navigator.vibrate==="function"){ navigator.vibrate(12); return; } if(hapLabel) hapLabel.click(); }catch(e){} }
@@ -1293,7 +1293,7 @@ const App = (function(){
       <div class="box set"><h2>字體</h2><div class="fontPick" id="fPick"><button data-f="pixel" class="${store.get("mw_font")==="sys"?"":"on"}" style="font-family:Cubic11">像素字 喵喵小窩</button><button data-f="sys" class="${store.get("mw_font")==="sys"?"on":""}" style="font-family:-apple-system,'PingFang TC','Noto Sans TC',sans-serif">一般字 喵喵小窩</button></div></div>
       <div class="box set"><h2>鍵盤設定</h2>
         <div class="kbOpt"><span>按鍵大小</span><div class="seg" id="kbSize">${[["s","小"],["m","中"],["l","大"]].map(([v,n])=>`<button data-v="${v}" class="${(store.get("mw_kbsize")||"m")===v?"on":""}">${n}</button>`).join("")}</div></div>
-        ${[["mw_kbvib","按鍵震動"],["mw_kbsnd","按鍵音效"],["mw_kbpop","按鍵放大預覽"],["mw_kbnum","長按第一排打數字"]].map(([k,n])=>`<div class="kbOpt"><span>${n}</span><button class="tog ${store.get(k)!=="0"?"on":""}" data-tog="${k}"><i></i></button></div>`).join("")}
+        ${[["mw_kbsmart","智慧觸控（猜下一個注音）"],["mw_kbhint","微微提示下一個注音"],["mw_kbvib","按鍵震動"],["mw_kbsnd","按鍵音效"],["mw_kbpop","按鍵放大預覽"],["mw_kbnum","長按第一排打數字"]].map(([k,n])=>`<div class="kbOpt"><span>${n}</span><button class="tog ${store.get(k)!=="0"?"on":""}" data-tog="${k}"><i></i></button></div>`).join("")}
         <div class="k">小技巧：長按「，」有更多標點・點兩下 ⇧ 鎖定大寫・按住 ⌫ 越刪越快・打完字會出現「聯想詞」</div></div>
       <div class="box set"><h2>鍵盤配色</h2><div class="themes" id="thm">${KB_THEMES.map(([id,n,bg,ac])=>`<button data-t="${id}" class="${(store.get("mw_kb")||"strawberry")===id?"on":""}"><span class="sw" style="background:${bg}"><i style="background:${ac}"></i><i></i><i></i></span>${n}</button>`).join("")}</div>
         <h2 style="margin-top:8px">打字動畫</h2><div class="anims" id="anm">${KB_ANIMS.map(([id,n])=>`<button data-a="${id}" class="${(store.get("mw_anim")||"jelly")===id?"on":""}">${n}</button>`).join("")}</div>

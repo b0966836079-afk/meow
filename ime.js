@@ -78,6 +78,34 @@ const IME = (function(){
     let out = "", i = n; while(i>0){ const [j,w] = back[i]; out = w + out; i = j; } return out;
   }
 
+  // ---------- next-key prediction (for smart touch) ----------
+  let sylFreq = null, startDist = null;
+  function buildSylFreq(){
+    sylFreq = {};
+    sylList.forEach((s0,i)=>{ const c = lookup([s0]); let f = 0; for(const x of c) f += (x.f||0); sylFreq[s0] = Math.sqrt(f+1); });
+  }
+  // probability of each key being the next one, given what's being typed right now
+  function nextKeyProbs(cur){
+    if(!sylFreq) buildSylFreq();
+    const P = {}, add = (k,w)=>{ P[k] = (P[k]||0) + w; };
+    let completeW = 0;
+    sylList.forEach((s0,i)=>{ const p = sylParts[i], F = sylFreq[s0]; if(!F || (!p.i && !p.m && !p.f)) return;
+      if(cur.i && p.i!==cur.i) return; if(cur.m && p.m!==cur.m) return; if(cur.f && p.f!==cur.f) return;
+      if(!cur.i && (cur.m||cur.f) && p.i) return; if(!cur.m && cur.f && p.m) return;
+      let next;
+      if(!cur.i && !cur.m && !cur.f) next = p.i || p.m || p.f;
+      else if(cur.f) next = null;
+      else if(cur.m) next = p.f || null;
+      else next = p.m || p.f || null;
+      if(next) add(next, F); else { add(p.t || " ", F); completeW += F; } });
+    if(completeW && (cur.i||cur.m||cur.f)){ // toneless typing: the next syllable may start right away
+      if(!startDist) startDist = nextKeyProbs({i:"",m:"",f:""});
+      for(const k in startDist) add(k, startDist[k] * completeW * 0.35);
+    }
+    let sum = 0; for(const k in P) sum += P[k]; if(sum) for(const k in P) P[k] /= sum;
+    return P;
+  }
+
   // ---------- 聯想詞: words that start with a character ----------
   let assocIdx = null;
   function buildAssoc(){
@@ -97,6 +125,26 @@ const IME = (function(){
   function mount(root, opt){
     let mode = "zh", shift = false, caps = false, lastText = "zh", pickTab = "recent", assoc = null, lastShiftAt = 0, lastSpaceAt = 0;
     const pref = k => (opt.prefs && opt.prefs()[k]);
+    let probs = null, lastXY = null;
+    function updateProbs(){
+      probs = null; body.querySelectorAll(".k.likely").forEach(x=>x.classList.remove("likely"));
+      if(mode!=="zh" || !dict) return;
+      probs = nextKeyProbs(st.cur);
+      if(pref("hint")===false) return;
+      const top = Object.entries(probs).filter(([k,v])=>v>=0.07).sort((a,b)=>b[1]-a[1]).slice(0,4);
+      for(const [k] of top){ const el = k===" " ? body.querySelector('.k[data-a="space"]') : body.querySelector(`.row .k[data-k="${k}"]`); if(el) el.classList.add("likely"); }
+    }
+    // smart touch: a tap near the edge of a key goes to the neighbour if that one is much more likely
+    function resolveKey(b){
+      if(mode!=="zh" || !probs || !lastXY || pref("smart")===false) return b;
+      const [x,y] = lastXY, cands = [];
+      body.querySelectorAll(".row:not(.bottom) .k").forEach(k=>{ const r = k.getBoundingClientRect(); const dx = (x-(r.left+r.width/2))/r.width, dy = (y-(r.top+r.height/2))/r.height; const d = Math.hypot(dx, dy*0.9); if(d < 1.0) cands.push([k, d]); });
+      if(cands.length < 2) return b;
+      const pOf = k => probs[k.dataset.k] || 0, maxP = Math.max(...cands.map(([k])=>pOf(k)), 0.0001);
+      let best = b, bestS = Infinity;
+      for(const [k,d] of cands){ if(k!==b && d > 0.85) continue; const sc = d / (1 + 1.2*Math.sqrt(pOf(k)/maxP)); if(sc < bestS){ bestS = sc; best = k; } }
+      return best;
+    }
     const textBefore = () => (opt.textBefore ? String(opt.textBefore()||"") : null);
     function setAssoc(text){ assoc = null; if(mode!=="zh" || !dict) return; const ch = [...String(text||"")].pop(); if(!ch || !/[\u3400-\u9fff]/.test(ch)) return; if(!assocIdx) buildAssoc(); const l = assocIdx.get(ch); assoc = l && l.length ? l : null; }
     function autoCap(){ if(mode!=="en" || caps) return; const t = textBefore(); if(t===null) return; const want = t==="" || /[.!?]\s$/.test(t) || /\n$/.test(t); if(want!==shift){ shift = want; draw(); } }
@@ -130,6 +178,7 @@ const IME = (function(){
       return out.slice(0,150);
     }
     function refresh(){
+      setTimeout(updateProbs, 0);
       const conv = dictReady ? convert(st.syl) : st.syl.join("").replace(/\*/g,"");
       preEl.innerHTML = composing() ? `<u>${esc(conv)}</u><b>${esc(curStr())}</b>` : "";
       const cs = candidates();
@@ -232,9 +281,11 @@ const IME = (function(){
           lastShiftAt = now; opt.fx("key"); draw(); }
         else if(a.startsWith("mode:")){ commitAll(); const m = a.slice(5); if(m==="zh"||m==="en") lastText = m; mode = m; shift = false; caps = false; opt.fx("key"); draw(); refresh(); autoCap(); }
         else if(a==="ins"){ opt.commit(b.textContent); recentAdd(b.textContent); opt.fx("key", [...b.textContent].length); }
-        else if(mode==="zh") { zhKey(k); updEnter(); }
+        else if(mode==="zh") { const rb = resolveKey(b); if(rb!==b){ rb.classList.add("down"); setTimeout(()=>rb.classList.remove("down"), 110); } zhKey(rb.dataset.k); updEnter(); }
         else { typeChar(k); }
       };
+      if(!body._xy){ body._xy = 1; body.addEventListener("pointerdown", e=>{ lastXY = [e.clientX, e.clientY]; }, true); }
+      setTimeout(updateProbs, 0);
       body.querySelectorAll(".k").forEach(b=>{
         if(b.dataset.a==="ins"){ // list keys: a tap must not fire while scrolling the list
           b.addEventListener("pointerdown", ()=>pop(b));
