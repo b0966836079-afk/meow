@@ -1039,3 +1039,63 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .pxCaret .pcHead{position:absolute;left:50%;top:-17px;width:18px;height:18px;transform:translateX(-50%)}.pxCaret .pcHead svg{width:100%;height:100%;display:block}
 .pxCaret.paw .pcHead{top:auto;bottom:-15px}
 .pxCaret.fish .pcHead{width:22px;height:16px;top:-15px}
+
+/* pet room: furniture & accessories */
+#ptDeco{position:absolute;inset:0;pointer-events:none}
+.pf{position:absolute;display:block}
+.pf svg,.pw svg,.pdArt svg,.pdTi svg{width:100%;height:auto;display:block}
+.pf.floorL{left:4px;bottom:34px;width:54px}
+.pf.floorL.pf-tree{width:84px}
+.pf.floorL.pf-beanbag{width:70px;bottom:30px}
+.pf.floorL.pf-throne{width:60px}
+.pf.floorR{right:4px;bottom:44px;width:56px}
+.pf.floorR.pf-box{width:66px;bottom:40px}
+.pf.floorR.pf-plant{width:46px}
+.pf.floorR.pf-tank{width:66px}
+.pf.floorR.pf-easel{width:56px}
+.pf.wallL{left:110px;top:44px;width:38px}
+.pf.wallL.pf-clock{width:34px}
+.pf.wallR{left:6px;top:0;width:150px}
+.pf.wallR.pf-flags{width:160px}
+.pf.window{left:26px;top:70px;width:44px}
+.pf.window.pf-doll{left:62px;top:22px;width:20px}
+.prRug.rug-heart{background:radial-gradient(circle at 30% 50%,#fff3 0 6px,transparent 7px),radial-gradient(circle at 70% 50%,#fff3 0 6px,transparent 7px),#f0708d}
+.prRug.rug-rainbow{background:linear-gradient(90deg,#f0708d 0 17%,#ffb04a 0 34%,#ffd36b 0 50%,#5cb87a 0 67%,#6fb7e8 0 84%,#9b6fd6 0)}
+.pcWear{position:absolute;inset:0;pointer-events:none}
+.pw{position:absolute;display:block;left:50%;transform:translateX(-50%)}
+.pw.hat{bottom:76%;width:34%}
+.pw.hat.pw-wreath{bottom:78%;width:42%}
+.pw.hat.pw-phones{bottom:62%;width:58%}
+.pw.hat.pw-crown{width:26%}
+.pw.neck{top:54%;width:26%}
+.pw.neck.pw-bell{width:36%;top:57%}
+.pw.neck.pw-scarf{width:44%;top:56%}
+.pw.neck.pw-pearls{width:36%;top:57%}
+.pc.curl .pcWear{display:none}
+.pc .crown{z-index:2}
+.ptMoreRow{display:flex;gap:8px;margin-top:8px}
+.ptMoreRow .btn{flex:1;position:relative}
+.pdNew{position:absolute;top:-8px;right:-6px;font-style:normal;font-size:11px;background:var(--pink);color:var(--onPink,#fff);border:2px solid var(--line);border-radius:9px;padding:0 5px;line-height:16px}
+.pdTi{display:inline-block;width:26px;vertical-align:middle}
+.pdModal{position:fixed;inset:0;z-index:120;background:rgba(40,25,20,.45);display:flex;align-items:flex-end;justify-content:center}
+.pdBox{background:var(--card);color:var(--ink);border:3px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:82vh;overflow:auto;padding:12px 12px 22px;animation:pdUp .22s ease-out}
+@keyframes pdUp{from{transform:translateY(40px);opacity:0}}
+.pdHd{display:flex;align-items:center;justify-content:space-between;font-size:18px;margin-bottom:8px}
+.pdX{font:inherit;background:none;border:2px solid var(--line);border-radius:8px;color:inherit;width:32px;height:32px}
+.pdTabs,.pdWho{display:flex;gap:6px;margin-bottom:8px}
+.pdTabs button,.pdWho button{flex:1;font:inherit;color:inherit;background:var(--bg,#fff);border:2px solid var(--line);border-radius:10px;padding:6px}
+.pdTabs button.on,.pdWho button.on{background:var(--pinkL);border-color:var(--pink);color:var(--pinkT,inherit)}
+.pdWho button{display:flex;align-items:center;justify-content:center;gap:6px}
+.pdWho button svg{width:28px;height:28px}
+.pdSub{font-size:12px;color:var(--muted);margin-bottom:8px}
+.pdGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pdIt{position:relative;font:inherit;color:inherit;background:var(--bg,#fff);border:2px solid var(--line);border-radius:12px;padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:118px}
+.pdIt.on{background:var(--pinkL);border-color:var(--pink);box-shadow:0 0 0 2px var(--pink) inset}
+.pdIt b{font-weight:400;font-size:13px}
+.pdIt small{font-size:10.5px;color:var(--muted);line-height:1.25;text-align:center}
+.pdIt.on small{color:var(--pinkT,var(--ink))}
+.pdArt{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+.pdArt svg{width:100%;height:100%}
+.pdIt.lock .pdArt{filter:grayscale(1) brightness(.35);opacity:.55}
+.pdBar{width:80%;height:6px;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:#0001}
+.pdBar i{display:block;height:100%;background:var(--mint,#7fd4a8)}
