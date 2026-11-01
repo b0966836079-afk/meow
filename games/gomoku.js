@@ -75,16 +75,57 @@ App.registerGame({
       for(const [a,b] of [[3,3],[3,11],[11,3],[11,11],[7,7]]) px(g, PAW, {O:"#a7713f"}, pad+a*cell, pad+b*cell, cell*.6);
       if(!s) return;
       // win glow
-      if(s.win && s.win.line) for(const i of s.win.line){ const [x,y]=xy(i); g.fillStyle="rgba(255,138,163,.55)"; g.fillRect(x-cell*.5, y-cell*.5, cell, cell); }
+      const longCat = s.win && s.win.line && s.win.line.length>=5 ? new Set(s.win.line) : null;
+      if(longCat) for(const i of s.win.line){ const [x,y]=xy(i); g.fillStyle="rgba(255,138,163,.35)"; g.fillRect(x-cell*.5, y-cell*.5, cell, cell); }
       // aim
       if(aim>=0 && s.board[aim]==="."){
         const [x,y]=xy(aim); g.globalAlpha=.5; px(g, HEAD, STONE[myColor()||"b"], x, y, cell*1.02); g.globalAlpha=1;
         g.strokeStyle="#f08aa0"; g.lineWidth=Math.max(2,cell/10); g.setLineDash([cell/5,cell/7]); g.strokeRect(x-cell*.5+1, y-cell*.5+1, cell-2, cell-2); g.setLineDash([]);
       }
       // stones
-      for(let i=0;i<N*N;i++){ const c=s.board[i]; if(c!=="."){ const [x,y]=xy(i); px(g, HEAD, STONE[c], x, y+cell*.03, cell*1.02); } }
-      if(s.last>=0){ const [x,y]=xy(s.last); px(g, HEART, {O:"#7a3a4a",K:"#ff6f8e"}, x+cell*.36, y-cell*.38, cell*.46); }
+      for(let i=0;i<N*N;i++){ const c=s.board[i]; if(c!=="." && !(longCat && longCat.has(i))){ const [x,y]=xy(i); px(g, HEAD, STONE[c], x, y+cell*.03, cell*1.02); } }
+      if(longCat) drawLongCat();
+      else if(s.last>=0){ const [x,y]=xy(s.last); px(g, HEART, {O:"#7a3a4a",K:"#ff6f8e"}, x+cell*.36, y-cell*.38, cell*.46); }
     }
+    // ---------- 長條貓：連成一線的五顆貓頭變成一隻長長的貓 ----------
+    let catT0 = -1e9, catRaf = 0, catTimer = 0, alive = true;
+    const BELLY = { b:"#5a5363", w:"#fff1df" };
+    function drawLongCat(){
+      const c = s.win.c, pal = STONE[c], now = performance.now();
+      const pts = s.win.line.map(i=>({ i, x:i%N, y:(i/N)|0 })).sort((a,b)=>a.y-b.y || a.x-b.x);
+      const [hx,hy] = xy(pts[0].i), [ex,ey] = xy(pts[pts.length-1].i);
+      const full = Math.hypot(ex-hx, ey-hy), ang = Math.atan2(ey-hy, ex-hx);
+      const t = Math.min(1, (now - catT0)/1100), p = 1 - Math.pow(1-t, 3);           // stretch out
+      const L = full * p, h = cell*.74, u = Math.max(1.5, cell/12);
+      g.save(); g.translate(hx, hy); g.rotate(ang);
+      // tail (wagging) beyond the end of the body
+      const tx0 = L + cell*.28;
+      for(let k=0;k<7;k++){ const sz = cell*(.2 - k*.014), tx = tx0 + k*cell*.13, ty = Math.sin(k*.8 + now/170)*cell*.09*(k/3) - k*cell*.035;
+        g.fillStyle = pal.O; g.fillRect(tx-sz/2-u, ty-sz/2-u, sz+2*u, sz+2*u); g.fillStyle = pal.K; g.fillRect(tx-sz/2, ty-sz/2, sz, sz); }
+      // body
+      const bx = -cell*.1, bw = L + cell*.45;
+      g.fillStyle = pal.O; g.fillRect(bx-u, -h/2-u, bw+2*u, h+2*u);
+      g.fillStyle = pal.K; g.fillRect(bx, -h/2, bw, h);
+      g.fillStyle = BELLY[c]; g.fillRect(bx+cell*.3, h*.12, Math.max(0, bw-cell*.6), h*.3);
+      // little back stripes every cell
+      g.fillStyle = c==="b" ? "#2c2833" : "#e9ded2";
+      for(let x = cell*.9; x < bw - cell*.4; x += cell*.75) g.fillRect(x, -h/2, cell*.12, h*.32);
+      // paws: front pair near the head, back pair near the tail
+      const paw = x => { const pw = cell*.2; for(const dx of [-pw*.7, pw*.7]){ g.fillStyle = pal.O; g.fillRect(x+dx-pw/2-u, h/2-u, pw+2*u, pw*.9+2*u); g.fillStyle = pal.K; g.fillRect(x+dx-pw/2, h/2, pw, pw*.9); } };
+      paw(cell*.55); if(L > cell*.8) paw(L - cell*.05);
+      g.restore();
+      // head stays upright at the top end, a bit bigger
+      px(g, HEAD, pal, hx, hy - cell*.12, cell*1.4);
+      if(t >= 1){ g.font = `${Math.round(cell*.55)}px Cubic11, sans-serif`; g.textAlign = "center"; g.fillStyle = "#e5486a";
+        const bob = Math.sin(now/300)*cell*.06; g.fillText("喵～", hx + cell*.15, hy - cell*.85 + bob); }
+    }
+    function animateCat(){
+      cancelAnimationFrame(catRaf); clearTimeout(catTimer);
+      const step = () => { if(!alive || !s || !s.win || !s.win.line || s.win.line.length<5) return; draw();
+        if(performance.now() - catT0 < 1200) catRaf = requestAnimationFrame(step); else catTimer = setTimeout(step, 110); };
+      step();
+    }
+    this._stopCat = () => { alive = false; cancelAnimationFrame(catRaf); clearTimeout(catTimer); };
     function drawLoupe(clientX, clientY){
       const r=cv.getBoundingClientRect(), B=el.querySelector(".gmBoard").getBoundingClientRect();
       const d=window.devicePixelRatio||1, span=cell*5;   // show 5x5 cells
@@ -149,7 +190,8 @@ App.registerGame({
       const mc = myColor();
       if(s.win){ const wid = s.win.c==="b"?s.b:s.w;
         S.innerHTML = s.win.c==="draw" ? "平手！" : wid===ctx.me.uid ? `你贏了！🎉` : `${esc(ctx.nameOf(wid))} 贏了～`;
-        if(shownWin!==s.n){ shownWin=s.n; if(wid===ctx.me.uid){ SFX.match(); ctx.burst(); } else SFX.miss(); } }
+        if(shownWin!==s.n){ shownWin=s.n; catT0 = performance.now(); if(wid===ctx.me.uid){ SFX.match(); ctx.burst(); } else SFX.miss(); setTimeout(()=>SFX.meow(.85), 500); }
+        animateCat(); }
       else if(mc===s.turn){ S.innerHTML = `<span style="color:var(--pinkT)">輪到你了！</span>`; }
       else S.textContent = `等 ${ctx.nameOf(s.turn==="b"?s.b:s.w)} 下棋…`;
       draw(); updCtl();
@@ -174,6 +216,6 @@ App.registerGame({
       ui(); resize();
     })();
   },
-  unmount(){ if(this._ro) this._ro.disconnect(); if(this._unsub) this._unsub(); if(this._unp) this._unp(); },
+  unmount(){ if(this._stopCat) this._stopCat(); if(this._ro) this._ro.disconnect(); if(this._unsub) this._unsub(); if(this._unp) this._unp(); },
 });
 })();
