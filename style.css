@@ -1041,24 +1041,24 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .pxCaret.fish .pcHead{width:22px;height:16px;top:-15px}
 
 /* pet room: furniture & accessories */
-#ptDeco{position:absolute;inset:0;pointer-events:none}
+#ptDeco{position:absolute;inset:0;pointer-events:none;z-index:0}
 .pf{position:absolute;display:block}
 .pf svg,.pw svg,.pdArt svg,.pdTi svg{width:100%;height:auto;display:block}
-.pf.floorL{left:4px;bottom:34px;width:54px}
-.pf.floorL.pf-tree{width:84px}
-.pf.floorL.pf-beanbag{width:70px;bottom:30px}
-.pf.floorL.pf-throne{width:60px}
-.pf.floorR{right:4px;bottom:44px;width:56px}
-.pf.floorR.pf-box{width:66px;bottom:40px}
-.pf.floorR.pf-plant{width:46px}
-.pf.floorR.pf-tank{width:66px}
-.pf.floorR.pf-easel{width:56px}
-.pf.wallL{left:110px;top:44px;width:38px}
-.pf.wallL.pf-clock{width:34px}
-.pf.wallR{left:6px;top:0;width:150px}
-.pf.wallR.pf-flags{width:160px}
-.pf.window{left:26px;top:70px;width:44px}
-.pf.window.pf-doll{left:62px;top:22px;width:20px}
+.pf{width:54px}
+.pf-tree{width:84px}.pf-beanbag{width:70px}.pf-throne{width:60px}.pf-scratch{width:40px}
+.pf-box{width:66px}.pf-plant{width:46px}.pf-tank{width:66px}.pf-easel{width:56px}
+.pf-frame{width:38px}.pf-clock{width:34px}.pf-lights{width:150px}.pf-flags{width:160px}
+.pf-flower{width:44px}.pf-doll{width:20px}
+.pdEditing #ptDeco{pointer-events:auto}
+.pdEditing .pf{cursor:grab;touch-action:none;outline:2px dashed var(--pink);outline-offset:2px;animation:pfWig 1.2s ease-in-out infinite}
+.pdEditing .pf.drag{animation:none;cursor:grabbing;filter:drop-shadow(0 6px 0 rgba(0,0,0,.18));transform:scale(1.08)}
+@keyframes pfWig{50%{transform:rotate(-2deg)}}
+.pdEditing #ptCats{opacity:.35;pointer-events:none}
+.pdEditing .prSay{display:none}
+.pdEditBar{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:13px}
+.pdEditBar span{flex:1;min-width:0}
+.pdEditBar .btn{width:auto;flex:0 0 auto;padding:6px 14px;font-size:14px;white-space:nowrap}
+.pdMove{width:100%;margin-bottom:8px}
 .prRug.rug-heart{background:radial-gradient(circle at 30% 50%,#fff3 0 6px,transparent 7px),radial-gradient(circle at 70% 50%,#fff3 0 6px,transparent 7px),#f0708d}
 .prRug.rug-rainbow{background:linear-gradient(90deg,#f0708d 0 17%,#ffb04a 0 34%,#ffd36b 0 50%,#5cb87a 0 67%,#6fb7e8 0 84%,#9b6fd6 0)}
 .pcWear{position:absolute;inset:0;pointer-events:none}

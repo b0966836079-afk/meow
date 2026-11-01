@@ -133,8 +133,17 @@ App.registerGame({
 
     // ---------- furniture & accessories ----------
     const D = window.PetDeco;
-    const DEF = { room:{ floorL:"scratch", floorR:"box" }, wear:{} };
-    const deco = () => { const d = (s && s.deco) || DEF; return { room: d.room || {}, wear: d.wear || {} }; };
+    // deco = { items:[furniture ids], rug:id|null, pos:{id:[left%, bottom%]}, wear:{catIdx:{hat,neck}} }  (old saves used room:{slot:id})
+    const SLOTPOS = { floorL:[1,14], floorR:[80,18], wallL:[32,67], wallR:[2,82], window:[8,60] };
+    const SLOTPOS2 = { "wallR:flags":[2,89], "window:doll":[18,82] };
+    const defPos = x => SLOTPOS2[x.slot+":"+x.id] || SLOTPOS[x.slot] || [40,20];
+    const normDeco = d => {
+      d = d ? clone(d) : { items:["scratch","box"], wear:{} };
+      if(!d.items){ const r = d.room || {}; d.items = Object.entries(r).filter(([k])=>k!=="rug").map(([,v])=>v); d.rug = r.rug || null; }
+      delete d.room; d.pos = d.pos || {}; d.wear = d.wear || {}; d.items = d.items.filter(id=>D.BY[id]); return d; };
+    const deco = () => normDeco(s && s.deco);
+    const posOf = (d, id) => d.pos[id] || defPos(D.BY[id]);
+    let editing = false, dragging = false;
     function metrics(){
       const cs = cats(), now = Date.now();
       const dex = new Set(); const fd = (src.fishing && src.fishing.dex) || {}; for(const u in fd) for(const id in fd[u]) if(fd[u][id]) dex.add(id);
@@ -165,18 +174,56 @@ App.registerGame({
       return ["hat","neck"].map(sl=>{ const id = w[sl]; return id && D.BY[id] ? `<i class="pw ${sl} pw-${id}">${D.art(id)}</i>` : ""; }).join("");
     }
     function drawDeco(){
-      const r = deco().room;
+      const d = deco();
       const layer = $("#ptDeco"); if(!layer) return;
-      layer.innerHTML = ["wallL","wallR","window","floorL","floorR"].map(sl=>{ const id = r[sl]; return id && D.BY[id] ? `<i class="pf ${sl} pf-${id}">${D.art(id)}</i>` : ""; }).join("");
-      const rug = r.rug && D.BY[r.rug]; $("#ptRug").className = "prRug" + (rug ? " rug-"+rug.rug : "");
+      if(!dragging) layer.innerHTML = d.items.map(id=>{ const [x,b] = posOf(d, id); return `<i class="pf pf-${id}" data-pf="${id}" style="left:${x}%;bottom:${b}%;z-index:${200-Math.round(b)}">${D.art(id)}</i>`; }).join("");
+      const rug = d.rug && D.BY[d.rug]; $("#ptRug").className = "prRug" + (rug ? " rug-"+rug.rug : "");
       cats().forEach((x,i)=>{ const w = catEl(i); const h = w && w.querySelector(".pcWear"); if(h) h.innerHTML = wearHtml(i); });
     }
     async function setDeco(fn){
       const ns = await ctx.update("pet", st=>{ st = P.norm(st ? clone(st) : null); if(!st) return undefined;
-        const d = st.deco ? clone(st.deco) : clone(DEF); d.room = d.room||{}; d.wear = d.wear||{};
+        const d = normDeco(st.deco);
         if(fn(d)===false) return undefined; st.deco = d; return st; });
       if(ns){ s = P.norm(clone(ns)); render(); }
       return ns;
+    }
+    function startEdit(){
+      editing = true; stopIdle(); render();
+      const box = $(".petBox"), room = $("#ptRoom"); if(!box || !room) return;
+      box.classList.add("pdEditing");
+      const bar = document.createElement("div"); bar.className = "pdEditBar";
+      bar.innerHTML = `<span>✋ 按住家具拖到喜歡的位置</span><button class="btn sub" data-reset>還原</button><button class="btn" data-done>完成</button>`;
+      room.parentNode.insertBefore(bar, room);
+      bar.querySelector("[data-done]").addEventListener("click", ()=>{ SFX.select(); endEdit(); });
+      bar.querySelector("[data-reset]").addEventListener("click", async ()=>{ SFX.tap(); await setDeco(dd=>{ dd.pos = {}; }); });
+      room.addEventListener("pointerdown", onDragStart);
+    }
+    function endEdit(){
+      editing = false; const box = $(".petBox"); if(box) box.classList.remove("pdEditing");
+      const bar = el.querySelector(".pdEditBar"); if(bar) bar.remove();
+      const room = $("#ptRoom"); if(room) room.removeEventListener("pointerdown", onDragStart);
+      render();
+    }
+    function onDragStart(e){
+      const it = e.target.closest(".pf"); if(!editing || !it) return;
+      e.preventDefault(); const room = $("#ptRoom"), R = room.getBoundingClientRect(), I = it.getBoundingClientRect();
+      const id = it.dataset.pf, ox = e.clientX - I.left, oy = I.bottom - e.clientY;
+      dragging = true; it.classList.add("drag"); SFX.tap();
+      try{ it.setPointerCapture(e.pointerId); }catch(_){}
+      let x = 0, b = 0;
+      const move = ev => {
+        const nx = ev.clientX - ox - R.left, nb = R.bottom - (ev.clientY + oy);
+        x = Math.max(-I.width*.2, Math.min(R.width - I.width*.8, nx)); b = Math.max(0, Math.min(R.height - I.height*.5, nb));
+        it.style.left = x/R.width*100+"%"; it.style.bottom = b/R.height*100+"%"; it.style.zIndex = 300;
+      };
+      const up = async () => {
+        it.removeEventListener("pointermove", move); it.removeEventListener("pointerup", up); it.removeEventListener("pointercancel", up);
+        it.classList.remove("drag"); dragging = false;
+        const nx = Math.round(parseFloat(it.style.left)*10)/10, nb = Math.round(parseFloat(it.style.bottom)*10)/10;
+        SFX.select(); await setDeco(dd=>{ if(!dd.items.includes(id)) return false; dd.pos[id] = [nx, nb]; });
+      };
+      move(e);
+      it.addEventListener("pointermove", move); it.addEventListener("pointerup", up); it.addEventListener("pointercancel", up);
     }
     function openDeco(){
       let tab = "f", who = sel;
@@ -184,35 +231,45 @@ App.registerGame({
       setSeen([...u]); toasted = new Set(u);
       const ov = document.createElement("div"); ov.className = "pdModal";
       document.body.appendChild(ov);
-      const SLN = { floorL:"左邊地板", floorR:"右邊地板", wallL:"牆上", wallR:"天花板", window:"窗戶", rug:"地毯", hat:"頭上", neck:"脖子" };
+      const SLN = { rug:"地毯", hat:"頭上", neck:"脖子" };
       const close = () => { ov.remove(); render(); };
       function draw(){
         const d = deco(), list = D.ITEMS.filter(x=>x.k===tab);
-        const on = x => tab==="f" ? d.room[x.slot]===x.id : ((d.wear[who]||{})[x.slot]===x.id);
+        const on = x => tab==="f" ? (x.slot==="rug" ? d.rug===x.id : d.items.includes(x.id)) : ((d.wear[who]||{})[x.slot]===x.id);
         const nOk = list.filter(x=>u.has(x.id)).length;
         ov.innerHTML = `<div class="pdBox">
           <div class="pdHd"><b>🛋️ 佈置・裝扮</b><button class="pdX" data-x>✕</button></div>
           <div class="pdTabs"><button data-tab="f" class="${tab==="f"?"on":""}">家具</button><button data-tab="a" class="${tab==="a"?"on":""}">貓咪飾品</button></div>
           ${tab==="a" ? `<div class="pdWho">${cats().map((c,i)=>`<button data-who="${i}" class="${i===who?"on":""}">${sprite(c.color,"normal")}${esc(c.name)}</button>`).join("")}</div>` : ""}
-          <div class="pdSub">已解鎖 ${nOk}/${list.length}・兩個人一起達成就會解鎖，點一下${tab==="f"?"擺上去":"戴上去"}、再點一下拿掉</div>
+          ${tab==="f" ? `<button class="btn mint pdMove" data-move>✋ 到房間裡自己擺位置</button>` : ""}
+          <div class="pdSub">已解鎖 ${nOk}/${list.length}・兩個人一起達成就會解鎖，點一下${tab==="f"?"放進房間":"戴上去"}、再點一下拿掉${tab==="f"?"（地毯只能鋪一張，其他想放幾個都可以）":""}</div>
           <div class="pdGrid">${list.map(x=>{ const ok = u.has(x.id), pc = x.p ? Math.max(0, Math.min(1, x.p(m))) : 0;
             return `<button class="pdIt ${ok?"":"lock"} ${ok&&on(x)?"on":""}" data-it="${x.id}">
               ${ok && !sn.has(x.id) && seen() ? `<em class="pdNew">NEW</em>` : ""}
               <span class="pdArt">${D.art(x.id)}</span><b>${esc(x.n)}</b>
-              <small>${ok ? (on(x) ? "✔ 使用中" : SLN[x.slot]) : "🔒 "+esc(x.need)}</small>
+              <small>${ok ? (on(x) ? (tab==="f" ? "✔ 在房間裡" : "✔ 使用中") : (SLN[x.slot] || "放進房間")) : "🔒 "+esc(x.need)}</small>
               ${ok ? "" : `<span class="pdBar"><i style="width:${Math.round(pc*100)}%"></i></span>`}</button>`; }).join("")}</div></div>`;
       }
       draw();
       ov.addEventListener("click", async e=>{
         if(e.target===ov || e.target.closest("[data-x]")){ SFX.tap(); close(); return; }
         const t = e.target.closest("[data-tab]"); if(t){ tab = t.dataset.tab; SFX.tap(); draw(); return; }
+        if(e.target.closest("[data-move]")){ SFX.tap(); ov.remove(); startEdit(); return; }
         const wb = e.target.closest("[data-who]"); if(wb){ who = +wb.dataset.who; SFX.tap(); draw(); return; }
         const it = e.target.closest("[data-it]"); if(!it) return;
         const x = D.BY[it.dataset.it];
         if(!u.has(x.id)){ SFX.tap(); ctx.toast(`🔒 ${esc(x.n)}：${esc(x.need)}`); return; }
         SFX.select();
         await setDeco(dd=>{
-          if(x.k==="f"){ if(dd.room[x.slot]===x.id) delete dd.room[x.slot]; else dd.room[x.slot] = x.id; }
+          if(x.k==="f" && x.slot==="rug"){ dd.rug = dd.rug===x.id ? null : x.id; }
+          else if(x.k==="f"){
+            if(dd.items.includes(x.id)){ dd.items = dd.items.filter(i=>i!==x.id); delete dd.pos[x.id]; }
+            else { // drop it at its usual spot, nudged over if something is already sitting there
+              let [px, pb] = defPos(x);
+              const busy = (cx, cb) => dd.items.some(i=>{ const q = posOf(dd, i); return Math.abs(q[0]-cx)<14 && Math.abs(q[1]-cb)<14; });
+              if(busy(px, pb)){ const alt = [px, 62, 22, 48, 36, 72, 8].map(cx=>[cx, pb]).find(([cx,cb])=>!busy(cx,cb)); if(alt) [px, pb] = alt; }
+              dd.items.push(x.id); dd.pos[x.id] = [px, pb]; }
+          }
           else { const w = dd.wear[who] = dd.wear[who] || {}; if(w[x.slot]===x.id) delete w[x.slot]; else w[x.slot] = x.id; }
         });
         draw();
@@ -257,7 +314,7 @@ App.registerGame({
       if($("#ptTogether")) $("#ptTogether").addEventListener("click", ()=>interact());
       $("#ptLog").innerHTML = (s.log||[]).slice(-6).reverse().map(l=>{ const cn = esc((cats()[l.c||0]||{}).name||"");
         return `<li><b>${esc(l.by===me()?"你":ctx.nameOf(l.by))}</b> ${l.a==="grow"?`看到 ${cn} 長大成「${esc(l.t||"")}」🎉`:(LOGT[l.a]||"")+" "+cn+(LOGE[l.a]||"")}<i>${ago(l.at)}</i></li>`; }).join("");
-      if(cats().length>1) startIdle(); else stopIdle();
+      if(cats().length>1 && !editing) startIdle(); else stopIdle();
     }
 
     // ---------- little effects ----------
@@ -340,7 +397,7 @@ App.registerGame({
       look(a,1); look(b,-1);
       playing = false; render();
     }
-    function startIdle(){ if(idle || !alive) return; idle = setTimeout(()=>{ idle = null; if(alive && view==="room" && !document.hidden) interact(); else startIdle(); }, 7000 + Math.random()*6000); }
+    function startIdle(){ if(idle || !alive) return; idle = setTimeout(()=>{ idle = null; if(alive && view==="room" && !document.hidden && !editing) interact(); else startIdle(); }, 7000 + Math.random()*6000); }
     function stopIdle(){ clearTimeout(idle); idle = null; }
 
     // ---------- caring ----------
