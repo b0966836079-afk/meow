@@ -1,5 +1,5 @@
 // 喵喵小窩 service worker：負責跳通知、點通知打開 App
-const CACHE = "meow-v46";
+const CACHE = "meow-v47";
 const SHELL = ["./", "index.html", "style.css", "pixel.js", "data.js", "ime.js", "zhuyin.txt", "app.js", "config.js", "games/moqi.js", "games/gomoku.js", "games/fight.js", "games/draw.js", "games/battleship.js", "games/quickdraw.js", "games/fishing.js", "games/runner.js", "games/pet.js", "icons/icon-192.png"];
 
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {})); });
@@ -18,13 +18,22 @@ self.addEventListener("push", e => {
   e.waitUntil((async () => {
     // always show it: iPhone/Chrome may cancel the subscription if a push shows nothing.
     // (the app closes these by itself when it's open)
-    await self.registration.showNotification(d.title || "喵喵小窩", {
-      body: d.body || "",
-      icon: "icons/icon-192.png",
+    const kind = String(d.tag || "").replace(/^meow-/, "") || "text";
+    const body = String(d.body || "");
+    const love = /我愛你|愛你|愛妳|想你|❤|💗|💕/.test(body) && (kind === "text" || kind === "sticker");
+    const ICON = { text:1, sticker:1, image:1, voice:1, letter:1, poke:1, game:1, status:1, greet:1, album:1, truce:1, makeup:1 };
+    const DECO = { text:"💬", sticker:"🐾", image:"📷", voice:"🎤", letter:"💌", poke:"👉", status:"📋", greet:/🌙/.test(body)?"🌙":"☀️", album:"📷", truce:"🏳️", makeup:"🤝", game:"" };
+    let title = d.title || "喵喵小窩";
+    if (kind !== "game") { const who = title.replace(/\s*🐾$/, ""); title = `${who} ${love ? "💗" : (DECO[kind] || "🐾")}`; }
+    const VIB = { poke:[90,60,90,60,160], voice:[120,60,120], letter:[60,40,60,40,200] };
+    await self.registration.showNotification(title, {
+      body,
+      icon: `icons/n/${love ? "love" : (ICON[kind] ? kind : "text")}.png`,
       badge: "icons/badge-96.png",
       tag: d.tag || "meow",
       renotify: true,
-      vibrate: [60, 40, 60],
+      timestamp: Date.now(),
+      vibrate: VIB[kind] || [60, 40, 60],
       data: { url: d.url || "./#chat" },
     });
   })());
