@@ -974,3 +974,9 @@ body[data-theme="night"] .msg .tm{color:var(--muted)}
 .btn.sub{text-shadow:none}
 body[data-theme="gameboy"] .btn.mint{color:var(--onPink)}
 .chat .list *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* game card art */
+.gcard .gi .ga{position:relative;display:block;width:96px;height:76px}
+.ga .gaL{position:absolute;display:block}.ga .gaL svg{width:100%;height:auto;display:block}
+.ga .gaLine{position:absolute;left:82%;top:10%;width:2px;height:52%;background:#8a6a50}
+.ga .gaGround{position:absolute;left:0;right:0;bottom:4%;height:3px;background:var(--line)}
