@@ -615,6 +615,29 @@ const App = (function(){
     o.firstChild.animate([{transform:"translateY(40px) scale(.95)",opacity:0},{transform:"none",opacity:1}],{duration:220,easing:"ease-out"});
     return o;
   }
+  // ---- 更新通知 (changelog.js) ----
+  const NEWS_K = "mw_newsSeen";
+  const newsSeen = () => { try{ return JSON.parse(localStorage.getItem(NEWS_K)||"null"); }catch(e){ return null; } };
+  const markNews = () => { try{ localStorage.setItem(NEWS_K, JSON.stringify((window.CHANGELOG||[]).map(n=>n.id))); }catch(e){} };
+  function newsHtml(n){ return `<div class="nwItem"><div class="nwHd"><span class="nwI">${icon(n.icon||"star")}</span><b>${esc(n.title)}</b><i>${esc(n.date||"")}</i></div><ul>${n.items.map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`; }
+  function showNews(all){
+    const log = window.CHANGELOG || []; if(!log.length) return;
+    const seen = new Set(newsSeen()||[]);
+    const fresh = all ? log : log.filter(n=>!seen.has(n.id));
+    if(!fresh.length) return;
+    const shown = all ? fresh : fresh.slice(0, 3), more = fresh.length - shown.length;
+    const o = modal(`<div class="nwTop">${sprite(me.cat||"orange","wave")}<div><h3>${all ? "📢 更新紀錄" : "🆕 喵喵小窩更新了！"}</h3><div class="k" style="margin:0">${all ? "最新的在最上面" : "這次多了這些新東西～"}</div></div></div>
+      <div class="nwList">${shown.map(newsHtml).join("")}</div>
+      ${more>0 ? `<button class="btn sub" id="nwAll" style="width:100%;margin-bottom:8px">還有 ${more} 則，看全部</button>` : ""}
+      <button class="btn" id="nwOk" style="width:100%">${all ? "關閉" : "知道了 💗"}</button>`, "newsModal");
+    markNews(); SFX.select();
+    o.querySelector("#nwOk").addEventListener("click", ()=>o.remove());
+    const a = o.querySelector("#nwAll"); if(a) a.addEventListener("click", ()=>{ o.remove(); showNews(true); });
+  }
+  function maybeNews(justCreated){
+    if(newsSeen()===null && justCreated){ markNews(); return; }   // brand-new member: nothing is "new" to them
+    showNews(false);
+  }
   // ---- mood ----
   function moodPicker(){
     const cur = moodOf(me.uid);
@@ -1349,7 +1372,7 @@ const App = (function(){
       <div class="box set"><h2>通知</h2><div class="k">${ps==="on"?"✅ 已開啟：ta 傳訊息時你的手機會跳通知":ps==="denied"?"❌ 通知被封鎖了，請到手機的瀏覽器設定裡允許通知":ps==="ios-home"?"📱 iPhone 要先把這個網頁「加入主畫面」，從主畫面圖示打開後才能開通知":ps==="unsupported"?"這個瀏覽器不支援通知，請用 Chrome（Android）或 Safari 加入主畫面（iPhone）":"還沒開啟"}</div>
         ${ps!=="on"&&ps!=="unsupported"&&ps!=="ios-home"?`<button class="btn mint" id="bPush2">開啟通知</button>`:""}${ps==="on"?`<button class="btn sub" id="bTest">傳一則測試訊息給 ta</button>`:""}</div>
       <div class="box set"><h2>邀請碼</h2><div class="code" style="text-align:center">${esc(B.code||"")}</div><div class="k">${pw()}打開網址後輸入這組碼就能加入。換手機時，用同一個名字再輸入一次即可。</div><button class="btn sub" id="bInv2">傳邀請連結</button></div>
-      <div class="box set"><h2>其他</h2><div class="row" style="justify-content:flex-start"><button class="btn sub" id="bSnd">${SFX.on?"♪ 音效 開":"♪ 音效 關"}</button><button class="btn sub" id="bReload">重新整理</button><a class="btn sub" href="about.html" style="text-decoration:none;color:inherit">📜 網站聲明</a></div>
+      <div class="box set"><h2>其他</h2><div class="row" style="justify-content:flex-start"><button class="btn sub" id="bSnd">${SFX.on?"♪ 音效 開":"♪ 音效 關"}</button><button class="btn sub" id="bNews">📢 更新紀錄</button><button class="btn sub" id="bReload">重新整理</button><a class="btn sub" href="about.html" style="text-decoration:none;color:inherit">📜 網站聲明</a></div>
         <div class="help">📱 <b style="font-weight:400">加入主畫面</b><br>Android（Chrome）：右上角「⋮」→「加到主畫面」<br>iPhone（Safari）：下方分享按鈕 →「加入主畫面」</div></div>`;
     let pick = me.cat||"orange";
     const drawPk=()=>{ $("pk").innerHTML=COLORS.map(c=>`<button class="${c===pick?"on":""}" data-c="${c}">${sprite(c,"normal")}</button>`).join(""); $("pk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{pick=b.dataset.c;drawPk();})); };
@@ -1371,6 +1394,7 @@ const App = (function(){
     $("anm").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ store.set("mw_anim",b.dataset.a); $("anm").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); SFX.key(); previewAnim(b); }));
     $("bSnd").addEventListener("click", e=>{ SFX.toggle(); e.target.textContent = SFX.on?"♪ 音效 開":"♪ 音效 關"; });
     $("bReload").addEventListener("click", ()=>location.reload());
+    $("bNews").addEventListener("click", ()=>{ SFX.tap(); showNews(true); });
     setTimeout(()=>collapseSettings(v), 0);
     $("mSet").querySelectorAll("[data-m]").forEach(b=>b.addEventListener("click", async ()=>{ const m=b.dataset.m; if(m===roomMode) return; SFX.select();
       await update("room", st=>Object.assign(st||{}, { mode:m })); roomMode = m; $("mSet").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); toast(`換成${MODES[m].name}了`); }));
@@ -1530,6 +1554,7 @@ const App = (function(){
     onState("voice", ()=>{ if(chatVisible()) drawList(false); });
     await getState("pins").catch(()=>{});
     onState("pins", ()=>drawPinBar());
+    setTimeout(()=>maybeNews(justCreated), 1600);
     setInterval(refreshTiles, 60000);
     setTimeout(cleanupVoices, 8000); setInterval(cleanupVoices, 3*3600e3);
     setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);
