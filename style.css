@@ -1099,3 +1099,40 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .pdIt.lock .pdArt{filter:grayscale(1) brightness(.35);opacity:.55}
 .pdBar{width:80%;height:6px;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:#0001}
 .pdBar i{display:block;height:100%;background:var(--mint,#7fd4a8)}
+/* coins, shop, mini game */
+.pdCoin{display:inline-block;width:1em;height:1em;vertical-align:-.12em;margin-right:2px}
+.pdCoin svg{width:100%;height:100%;display:block}
+.ptCoins{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+.ptCoins b{color:var(--ink);font-weight:400;font-size:14px}
+.ptMoreRow .btn{padding-left:4px;padding-right:4px;font-size:15px;white-space:nowrap}
+.pdBal{margin-left:auto;margin-right:10px;font-size:16px;display:flex;align-items:center;gap:2px}
+.pdBal b{font-weight:400}
+.pdGame{width:100%;margin-bottom:8px}
+.pdTabs button{font-size:14px;padding:6px 2px}
+.pdFil{display:flex;gap:6px;margin-bottom:6px}
+.pdFil button{font:inherit;font-size:12px;color:inherit;background:transparent;border:2px solid var(--line);border-radius:20px;padding:2px 10px}
+.pdFil button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.pdGrid{grid-template-columns:repeat(4,1fr);gap:6px}
+.pdIt{min-height:104px;padding:6px 2px 5px}
+.pdIt b{font-size:12px;line-height:1.2;text-align:center}
+.pdArt{width:42px;height:42px}
+.pdArt.bg{border:2px solid var(--line);border-radius:8px;width:38px;height:38px}
+.pdIt.shop small{color:var(--ink);font-size:12px}
+.pdIt.shop:not(.afford){opacity:.6}
+.pdIt.afford{border-style:dashed}
+.pdIt.pend{background:#fff3c4;border-color:#e8a920;border-style:solid;animation:pdPend .7s ease-in-out infinite}
+@keyframes pdPend{50%{background:#ffe08a}}
+.pdIt.pend small{color:#8a5a00}
+.pdEmpty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px}
+.pcGame{position:fixed;inset:0;z-index:130;background:rgba(40,25,20,.6);display:flex;align-items:center;justify-content:center;padding:10px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pcgBox{position:relative;width:100%;max-width:440px;height:min(86vh,720px);background:var(--card);border:3px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pcgHud{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:3px solid var(--line);font-size:16px;color:var(--ink)}
+.pcgHud #pcgL{flex:1;text-align:center;letter-spacing:2px}
+.pcgHud button{font:inherit;background:none;border:2px solid var(--line);border-radius:8px;color:inherit;width:30px;height:30px}
+#pcgC{flex:1;width:100%;display:block;touch-action:none}
+.pcgMsg{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:var(--card);color:var(--ink);border:3px solid var(--line);border-radius:14px;padding:16px;text-align:center}
+.pcgMsg b{font-size:20px;font-weight:400}
+.pcgMsg p{font-size:14px;line-height:1.6;margin:10px 0}
+.pcgMsg .pcgSm{font-size:12px;color:var(--muted)}
+.pcgMsg .pcgBig{font-size:34px;margin:6px 0}
+.pcgMsg .btn{width:100%;margin-top:6px}

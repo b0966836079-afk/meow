@@ -131,18 +131,20 @@ App.registerGame({
     const LOGT = { adopt:"領養了", feed:"餵了", pet:"摸摸", play:"陪玩逗貓棒：", rename:"改了名字：" };
     const LOGE = { adopt:" 🏠", feed:" 小魚乾 🐟", pet:" ✋", play:" 🧶", rename:" ✏️" };
 
-    // ---------- furniture & accessories ----------
+    // ---------- furniture & accessories & coins ----------
     const D = window.PetDeco;
-    // deco = { items:[furniture ids], rug:id|null, pos:{id:[left%, bottom%]}, wear:{catIdx:{hat,neck}} }  (old saves used room:{slot:id})
-    const SLOTPOS = { floorL:[1,14], floorR:[80,18], wallL:[32,67], wallR:[2,82], window:[8,60] };
-    const SLOTPOS2 = { "wallR:flags":[2,89], "window:doll":[18,82] };
-    const defPos = x => SLOTPOS2[x.slot+":"+x.id] || SLOTPOS[x.slot] || [40,20];
+    // deco = { items:[furniture ids], wall, floor, rug, pos:{id:[left%, bottom%]}, wear:{catIdx:{hat,neck,face}} }   (old saves used room:{slot:id})
+    // pet.coins = shared 貓幣, pet.owned = bought item ids, pet.catchBest
+    const SLOTPOS = { floorL:[1,14], floorR:[80,18], floorM:[44,10], wallL:[32,67], wallM:[56,64], wallR:[2,82], window:[8,60] };
+    const SLOTPOS2 = { "wallR:flags":[2,89], "window:doll":[18,82], "window:curtain":[3,62] };
+    const defPos = x => SLOTPOS2[x.slot+":"+(x.fam||x.id)] || SLOTPOS[x.slot] || [40,20];
     const normDeco = d => {
       d = d ? clone(d) : { items:["scratch","box"], wear:{} };
       if(!d.items){ const r = d.room || {}; d.items = Object.entries(r).filter(([k])=>k!=="rug").map(([,v])=>v); d.rug = r.rug || null; }
       delete d.room; d.pos = d.pos || {}; d.wear = d.wear || {}; d.items = d.items.filter(id=>D.BY[id]); return d; };
     const deco = () => normDeco(s && s.deco);
     const posOf = (d, id) => d.pos[id] || defPos(D.BY[id]);
+    const coins = () => (s && s.coins) || 0;
     let editing = false, dragging = false;
     function metrics(){
       const cs = cats(), now = Date.now();
@@ -154,7 +156,9 @@ App.registerGame({
         streak: Math.max(0, ...Object.values(best).map(v=>+v||0)), draw: (src.draw && src.draw.solved)||0,
         photos: (src.album && src.album.count)||0, makeup: (src.mood && src.mood.makeup && src.mood.makeup.count)||0 };
     }
-    const unlocked = m => D.ITEMS.filter(x=>x.ok(m)).map(x=>x.id);
+    const isAch = x => !!x.ok;
+    const owns = (x, m) => isAch(x) ? x.ok(m) : (!x.price || ((s && s.owned)||[]).includes(x.id));
+    const unlocked = m => D.ITEMS.filter(x=>isAch(x) && x.ok(m)).map(x=>x.id);   // only achievements pop a toast
     const SEENK = () => "mw_pdSeen";
     const seen = () => { try{ return JSON.parse(localStorage.getItem(SEENK())||"null"); }catch(e){ return null; } };
     const setSeen = a => { try{ localStorage.setItem(SEENK(), JSON.stringify(a)); }catch(e){} };
@@ -167,23 +171,33 @@ App.registerGame({
       const fresh = u.filter(id=>!toasted.has(id)); if(!fresh.length) return;
       fresh.forEach(id=>toasted.add(id));
       const x = D.BY[fresh[0]];
-      ctx.toast(`<span class="pdTi">${D.art(x.id)}</span> 解鎖了新的${x.k==="f"?"家具":"飾品"}「${esc(x.n)}」${fresh.length>1?` 等 ${fresh.length} 個`:""}！快去佈置 🛋️`, 3500); SFX.level();
+      ctx.toast(`<span class="pdTi">${D.art(x.id)}</span> 解鎖了新的${x.k==="a"?"飾品":"家具"}「${esc(x.n)}」${fresh.length>1?` 等 ${fresh.length} 個`:""}！快去佈置 🛋️`, 3500); SFX.level();
     }
     function wearHtml(i){
       const w = deco().wear[i] || {};
-      return ["hat","neck"].map(sl=>{ const id = w[sl]; return id && D.BY[id] ? `<i class="pw ${sl} pw-${id}">${D.art(id)}</i>` : ""; }).join("");
+      return ["face","neck","hat"].map(sl=>{ const id = w[sl], x = D.BY[id]; if(!x) return "";
+        const st = [`width:${D.cols(id)*4}%`];
+        if(sl==="hat"){ if(x.side) st.push("left:70%","bottom:68%"); else st.push(`bottom:${x.hb||75}%`); }
+        if(sl==="neck") st.push(`top:${x.y||54}%`);
+        if(sl==="face") st.push(`top:${x.fy||30}%`);
+        return `<i class="pw ${sl}" style="${st.join(";")}">${D.art(id)}</i>`; }).join("");
     }
     function drawDeco(){
       const d = deco();
       const layer = $("#ptDeco"); if(!layer) return;
-      if(!dragging) layer.innerHTML = d.items.map(id=>{ const [x,b] = posOf(d, id); return `<i class="pf pf-${id}" data-pf="${id}" style="left:${x}%;bottom:${b}%;z-index:${200-Math.round(b)}">${D.art(id)}</i>`; }).join("");
-      const rug = d.rug && D.BY[d.rug]; $("#ptRug").className = "prRug" + (rug ? " rug-"+rug.rug : "");
-      cats().forEach((x,i)=>{ const w = catEl(i); const h = w && w.querySelector(".pcWear"); if(h) h.innerHTML = wearHtml(i); });
+      if(!dragging) layer.innerHTML = d.items.map(id=>{ const [x,b] = posOf(d, id), it = D.BY[id];
+        return `<i class="pf" data-pf="${id}" style="left:${x}%;bottom:${b}%;width:${Math.round(D.cols(id)*(it.u||4.8))}px;z-index:${200-Math.round(b)}">${D.art(id)}</i>`; }).join("");
+      const bg = id => D.BY[id] && D.BY[id].bg || "";
+      $("#ptRoom").style.background = bg(d.wall) || "";
+      el.querySelector(".prFloor").style.background = bg(d.floor) || "";
+      $("#ptRug").style.background = bg(d.rug) || "";
+      cats().forEach((x,i)=>{ const w = catEl(i); const h = w && w.querySelector(".pcWear"); if(h) h.innerHTML = wearHtml(i);
+        const cr = w && w.querySelector(".crown"); if(cr) cr.style.visibility = (d.wear[i]||{}).hat ? "hidden" : ""; });
     }
     async function setDeco(fn){
       const ns = await ctx.update("pet", st=>{ st = P.norm(st ? clone(st) : null); if(!st) return undefined;
         const d = normDeco(st.deco);
-        if(fn(d)===false) return undefined; st.deco = d; return st; });
+        if(fn(d, st)===false) return undefined; st.deco = d; return st; });
       if(ns){ s = P.norm(clone(ns)); render(); }
       return ns;
     }
@@ -210,10 +224,9 @@ App.registerGame({
       const id = it.dataset.pf, ox = e.clientX - I.left, oy = I.bottom - e.clientY;
       dragging = true; it.classList.add("drag"); SFX.tap();
       try{ it.setPointerCapture(e.pointerId); }catch(_){}
-      let x = 0, b = 0;
       const move = ev => {
         const nx = ev.clientX - ox - R.left, nb = R.bottom - (ev.clientY + oy);
-        x = Math.max(-I.width*.2, Math.min(R.width - I.width*.8, nx)); b = Math.max(0, Math.min(R.height - I.height*.5, nb));
+        const x = Math.max(-I.width*.2, Math.min(R.width - I.width*.8, nx)), b = Math.max(0, Math.min(R.height - I.height*.5, nb));
         it.style.left = x/R.width*100+"%"; it.style.bottom = b/R.height*100+"%"; it.style.zIndex = 300;
       };
       const up = async () => {
@@ -225,55 +238,103 @@ App.registerGame({
       move(e);
       it.addEventListener("pointermove", move); it.addEventListener("pointerup", up); it.addEventListener("pointercancel", up);
     }
+    // ---------- mini game: 接小魚乾 ----------
+    async function playCatch(){
+      stopIdle(); playing = true;
+      await window.PetCatch.play({ color: (cats()[sel]||{}).color, sfx: SFX, best: (s && s.catchBest)||0,
+        onScore: async n => { if(n<=0) return;
+          const ns = await ctx.update("pet", st=>{ st = P.norm(st ? clone(st) : null); if(!st) return undefined;
+            st.coins = (st.coins||0) + n; st.catchBest = Math.max(st.catchBest||0, n);
+            st.log = (st.log||[]).concat([{ by:me(), a:"catch", n, at:Date.now() }]).slice(-24); return st; });
+          if(ns){ s = P.norm(clone(ns)); lastLog = logKey(s); } } });
+      playing = false; render();
+    }
+    // ---------- shop / decorate sheet ----------
+    let shopTab = "f", shopFilter = "all";
     function openDeco(){
-      let tab = "f", who = sel;
-      const m = metrics(), u = new Set(unlocked(m)), sn = new Set(seen()||[]);
-      setSeen([...u]); toasted = new Set(u);
+      let tab = shopTab, who = sel, filter = shopFilter, pending = null;
+      const m = metrics(), sn = new Set(seen()||[]), hadSeen = !!seen();
+      const u = new Set(unlocked(m)); setSeen([...u]); toasted = new Set(u);
       const ov = document.createElement("div"); ov.className = "pdModal";
       document.body.appendChild(ov);
-      const SLN = { rug:"地毯", hat:"頭上", neck:"脖子" };
-      const close = () => { ov.remove(); render(); };
+      const SLN = { rug:"地毯", w:"牆壁", fl:"地板", hat:"頭上", neck:"脖子", face:"臉上" };
+      const TABS = [["f","家具"],["a","飾品"],["room","牆壁地板"]];
+      const inTab = x => tab==="room" ? (x.k==="w"||x.k==="fl"||x.k==="r") : x.k===tab;
+      const close = () => { shopTab = tab; shopFilter = filter; ov.remove(); render(); };
+      function on(x, d){
+        if(x.k==="f") return d.items.includes(x.id);
+        if(x.k==="r") return d.rug===x.id;
+        if(x.k==="w") return (d.wall||"wp0")===x.id;
+        if(x.k==="fl") return (d.floor||"fl0")===x.id;
+        return (d.wear[who]||{})[x.slot]===x.id;
+      }
+      function card(x, d){
+        const ok = owns(x, m), using = ok && on(x, d), afford = !ok && x.price && coins() >= x.price, pc = !ok && x.p ? Math.max(0, Math.min(1, x.p(m))) : 0;
+        const pic = x.bg ? `<span class="pdArt bg" style="background:${x.bg}"></span>` : `<span class="pdArt">${D.art(x.id)}</span>`;
+        let sub;
+        if(ok) sub = using ? (x.k==="f" ? "✔ 在房間裡" : "✔ 使用中") : (SLN[x.slot] || "放進房間");
+        else if(isAch(x)) sub = "🔒 " + esc(x.need);
+        else sub = pending===x.id ? "再點一下買！" : `${D.coin}${x.price}`;
+        return `<button class="pdIt ${ok?"":isAch(x)?"lock":"shop"} ${afford?"afford":""} ${using?"on":""} ${pending===x.id?"pend":""}" data-it="${x.id}">
+          ${ok && isAch(x) && hadSeen && !sn.has(x.id) ? `<em class="pdNew">NEW</em>` : ""}
+          ${pic}<b>${esc(x.n)}</b><small>${sub}</small>
+          ${!ok && isAch(x) ? `<span class="pdBar"><i style="width:${Math.round(pc*100)}%"></i></span>` : ""}</button>`;
+      }
       function draw(){
-        const d = deco(), list = D.ITEMS.filter(x=>x.k===tab);
-        const on = x => tab==="f" ? (x.slot==="rug" ? d.rug===x.id : d.items.includes(x.id)) : ((d.wear[who]||{})[x.slot]===x.id);
-        const nOk = list.filter(x=>u.has(x.id)).length;
+        const d = deco(), all = D.ITEMS.filter(inTab);
+        const list = all.filter(x => filter==="own" ? owns(x,m) : filter==="buy" ? (!owns(x,m) && x.price) : filter==="ach" ? isAch(x) : true);
+        const nOwn = all.filter(x=>owns(x,m)).length;
+        const keep = ov.querySelector(".pdBox") ? ov.querySelector(".pdBox").scrollTop : 0;
         ov.innerHTML = `<div class="pdBox">
-          <div class="pdHd"><b>🛋️ 佈置・裝扮</b><button class="pdX" data-x>✕</button></div>
-          <div class="pdTabs"><button data-tab="f" class="${tab==="f"?"on":""}">家具</button><button data-tab="a" class="${tab==="a"?"on":""}">貓咪飾品</button></div>
+          <div class="pdHd"><b>🛋️ 佈置・裝扮</b><span class="pdBal">${D.coin}<b>${coins()}</b></span><button class="pdX" data-x>✕</button></div>
+          <button class="btn pdGame" data-game>🎮 玩「接小魚乾」賺貓幣</button>
+          <div class="pdTabs">${TABS.map(([k,n])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${n}</button>`).join("")}</div>
           ${tab==="a" ? `<div class="pdWho">${cats().map((c,i)=>`<button data-who="${i}" class="${i===who?"on":""}">${sprite(c.color,"normal")}${esc(c.name)}</button>`).join("")}</div>` : ""}
           ${tab==="f" ? `<button class="btn mint pdMove" data-move>✋ 到房間裡自己擺位置</button>` : ""}
-          <div class="pdSub">已解鎖 ${nOk}/${list.length}・兩個人一起達成就會解鎖，點一下${tab==="f"?"放進房間":"戴上去"}、再點一下拿掉${tab==="f"?"（地毯只能鋪一張，其他想放幾個都可以）":""}</div>
-          <div class="pdGrid">${list.map(x=>{ const ok = u.has(x.id), pc = x.p ? Math.max(0, Math.min(1, x.p(m))) : 0;
-            return `<button class="pdIt ${ok?"":"lock"} ${ok&&on(x)?"on":""}" data-it="${x.id}">
-              ${ok && !sn.has(x.id) && seen() ? `<em class="pdNew">NEW</em>` : ""}
-              <span class="pdArt">${D.art(x.id)}</span><b>${esc(x.n)}</b>
-              <small>${ok ? (on(x) ? (tab==="f" ? "✔ 在房間裡" : "✔ 使用中") : (SLN[x.slot] || "放進房間")) : "🔒 "+esc(x.need)}</small>
-              ${ok ? "" : `<span class="pdBar"><i style="width:${Math.round(pc*100)}%"></i></span>`}</button>`; }).join("")}</div></div>`;
+          <div class="pdFil">${[["all","全部"],["own","已擁有"],["buy","商店"],["ach","成就"]].map(([k,n])=>`<button data-fil="${k}" class="${filter===k?"on":""}">${n}</button>`).join("")}</div>
+          <div class="pdSub">擁有 ${nOwn}/${all.length}・${tab==="f"?"點一下放進房間、再點一下收起來":tab==="a"?"點一下戴上、再點一下拿掉（頭上、脖子、臉上各一件）":"點一下換上"}・🔒 是成就，兩個人一起達成就解鎖；標價的用貓幣買</div>
+          <div class="pdGrid">${list.map(x=>card(x,d)).join("") || `<p class="pdEmpty">這裡還沒有東西～</p>`}</div></div>`;
+        ov.querySelector(".pdBox").scrollTop = keep;
       }
       draw();
       ov.addEventListener("click", async e=>{
         if(e.target===ov || e.target.closest("[data-x]")){ SFX.tap(); close(); return; }
-        const t = e.target.closest("[data-tab]"); if(t){ tab = t.dataset.tab; SFX.tap(); draw(); return; }
-        if(e.target.closest("[data-move]")){ SFX.tap(); ov.remove(); startEdit(); return; }
+        const t = e.target.closest("[data-tab]"); if(t){ tab = t.dataset.tab; pending = null; SFX.tap(); draw(); ov.querySelector(".pdBox").scrollTop = 0; return; }
+        const f = e.target.closest("[data-fil]"); if(f){ filter = f.dataset.fil; pending = null; SFX.tap(); draw(); return; }
+        if(e.target.closest("[data-move]")){ SFX.tap(); close(); startEdit(); return; }
+        if(e.target.closest("[data-game]")){ SFX.tap(); close(); playCatch(); return; }
         const wb = e.target.closest("[data-who]"); if(wb){ who = +wb.dataset.who; SFX.tap(); draw(); return; }
         const it = e.target.closest("[data-it]"); if(!it) return;
         const x = D.BY[it.dataset.it];
-        if(!u.has(x.id)){ SFX.tap(); ctx.toast(`🔒 ${esc(x.n)}：${esc(x.need)}`); return; }
-        SFX.select();
-        await setDeco(dd=>{
-          if(x.k==="f" && x.slot==="rug"){ dd.rug = dd.rug===x.id ? null : x.id; }
-          else if(x.k==="f"){
-            if(dd.items.includes(x.id)){ dd.items = dd.items.filter(i=>i!==x.id); delete dd.pos[x.id]; }
-            else { // drop it at its usual spot, nudged over if something is already sitting there
-              let [px, pb] = defPos(x);
-              const busy = (cx, cb) => dd.items.some(i=>{ const q = posOf(dd, i); return Math.abs(q[0]-cx)<14 && Math.abs(q[1]-cb)<14; });
-              if(busy(px, pb)){ const alt = [px, 62, 22, 48, 36, 72, 8].map(cx=>[cx, pb]).find(([cx,cb])=>!busy(cx,cb)); if(alt) [px, pb] = alt; }
-              dd.items.push(x.id); dd.pos[x.id] = [px, pb]; }
-          }
-          else { const w = dd.wear[who] = dd.wear[who] || {}; if(w[x.slot]===x.id) delete w[x.slot]; else w[x.slot] = x.id; }
-        });
+        if(!owns(x, m)){
+          if(isAch(x)){ SFX.tap(); ctx.toast(`🔒 ${esc(x.n)}：${esc(x.need)}`); return; }
+          if(coins() < x.price){ SFX.tap(); ctx.toast(`${D.coin} 還差 ${x.price - coins()} 個貓幣～去玩接小魚乾賺吧！`); return; }
+          if(pending !== x.id){ pending = x.id; SFX.tap(); draw(); return; }
+          pending = null;
+          const ns = await setDeco((dd, st)=>{ st.owned = st.owned || []; if(st.owned.includes(x.id) || (st.coins||0) < x.price) return false;
+            st.coins -= x.price; st.owned.push(x.id); equip(dd, x);
+            st.log = (st.log||[]).concat([{ by:me(), a:"buy", t:x.n, at:Date.now() }]).slice(-24); });
+          if(ns){ lastLog = logKey(s); SFX.level(); ctx.burst(); ctx.toast(`<span class="pdTi">${x.bg?"🎨":D.art(x.id)}</span> 買了「${esc(x.n)}」！`);
+            ctx.notifyPartner(`${ctx.me.name} 用貓幣買了「${x.n}」給我們的貓 🛍️`); }
+          draw(); return;
+        }
+        SFX.select(); pending = null;
+        await setDeco(dd=>{ equip(dd, x, true); });
         draw();
       });
+      function equip(dd, x, toggle){
+        if(x.k==="r"){ dd.rug = toggle && dd.rug===x.id ? null : x.id; }
+        else if(x.k==="w"){ dd.wall = x.id==="wp0" ? null : x.id; }
+        else if(x.k==="fl"){ dd.floor = x.id==="fl0" ? null : x.id; }
+        else if(x.k==="f"){
+          if(dd.items.includes(x.id)){ if(toggle){ dd.items = dd.items.filter(i=>i!==x.id); delete dd.pos[x.id]; } }
+          else { // drop it at its usual spot, nudged over if something is already sitting there
+            let [px, pb] = defPos(x);
+            const busy = (cx, cb) => dd.items.some(i=>{ const q = posOf(dd, i); return Math.abs(q[0]-cx)<14 && Math.abs(q[1]-cb)<14; });
+            if(busy(px, pb)){ const alt = [px, 62, 22, 48, 36, 72, 8].map(cx=>[cx, pb]).find(([cx,cb])=>!busy(cx,cb)); if(alt) [px, pb] = alt; }
+            dd.items.push(x.id); dd.pos[x.id] = [px, pb]; }
+        } else { const w = dd.wear[who] = dd.wear[who] || {}; if(toggle && w[x.slot]===x.id) delete w[x.slot]; else w[x.slot] = x.id; }
+      }
     }
 
     function render(){
@@ -308,12 +369,13 @@ App.registerGame({
       $("#ptPetI").textContent = (s.petDay||{})[k]===dk ? "今天 ⭐ 拿過了" : "今天 +1 ⭐";
       $("#ptPlayI").textContent = (s.playDay||{})[k]===dk ? "今天 ⭐ 拿過了" : "今天 +1 ⭐";
       const nNew = newCount();
-      $("#ptMore").innerHTML = `<div class="ptMoreRow">${cats().length>1 ? `<button class="btn mint" id="ptTogether">🐾 一起玩</button>` : ""}<button class="btn sub" id="ptDecoB">🛋️ 佈置・裝扮${nNew?`<em class="pdNew">${nNew}</em>`:""}</button></div>`;
+      $("#ptMore").innerHTML = `<div class="ptMoreRow">${cats().length>1 ? `<button class="btn mint" id="ptTogether">🐾 一起玩</button>` : ""}<button class="btn" id="ptGameB">🎮 賺貓幣</button><button class="btn sub" id="ptDecoB">🛋️ 佈置${nNew?`<em class="pdNew">${nNew}</em>`:""}</button></div><div class="ptCoins">${D.coin} 貓幣 <b>${coins()}</b>・玩「接小魚乾」賺，兩個人共用，可以買家具和飾品</div>`;
+      $("#ptGameB").addEventListener("click", ()=>{ SFX.tap(); playCatch(); });
       $("#ptDecoB").addEventListener("click", ()=>openDeco());
       drawDeco(); checkUnlocks();
       if($("#ptTogether")) $("#ptTogether").addEventListener("click", ()=>interact());
       $("#ptLog").innerHTML = (s.log||[]).slice(-6).reverse().map(l=>{ const cn = esc((cats()[l.c||0]||{}).name||"");
-        return `<li><b>${esc(l.by===me()?"你":ctx.nameOf(l.by))}</b> ${l.a==="grow"?`看到 ${cn} 長大成「${esc(l.t||"")}」🎉`:(LOGT[l.a]||"")+" "+cn+(LOGE[l.a]||"")}<i>${ago(l.at)}</i></li>`; }).join("");
+        return `<li><b>${esc(l.by===me()?"你":ctx.nameOf(l.by))}</b> ${l.a==="catch"?`玩接小魚乾賺了 ${l.n} 個貓幣 🪙`:l.a==="buy"?`買了「${esc(l.t||"")}」🛍️`:l.a==="grow"?`看到 ${cn} 長大成「${esc(l.t||"")}」🎉`:(LOGT[l.a]||"")+" "+cn+(LOGE[l.a]||"")}<i>${ago(l.at)}</i></li>`; }).join("");
       if(cats().length>1 && !editing) startIdle(); else stopIdle();
     }
 
