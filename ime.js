@@ -6,6 +6,7 @@ const IME = (function(){
   const EN_ROWS = ["qwertyuiop","asdfghjkl","zxcvbnm"];
   const SYM_ROWS = [["1","2","3","4","5","6","7","8","9","0"],["，","。","？","！","、","：","；","「","」","…"],["～","（","）","@","#","%","&","+","❤"]];
 
+  const hooks = {};   // hooks.listen(): played when voice input starts (set by app.js)
   // ---------- dictionary ----------
   const EXTRA = [["好想你",["ㄏㄠˇ","ㄒㄧㄤˇ","ㄋㄧˇ"]],["想你了",["ㄒㄧㄤˇ","ㄋㄧˇ","ㄌㄜ˙"]],["抱抱",["ㄅㄠˋ","ㄅㄠˋ"]],["親親",["ㄑㄧㄣ","ㄑㄧㄣ"]],["在幹嘛",["ㄗㄞˋ","ㄍㄢˋ","ㄇㄚˊ"]],
     ["到家了",["ㄉㄠˋ","ㄐㄧㄚ","ㄌㄜ˙"]],["下班了",["ㄒㄧㄚˋ","ㄅㄢ","ㄌㄜ˙"]],["等我",["ㄉㄥˇ","ㄨㄛˇ"]],["睡了嗎",["ㄕㄨㄟˋ","ㄌㄜ˙","ㄇㄚ˙"]],["想我嗎",["ㄒㄧㄤˇ","ㄨㄛˇ","ㄇㄚ˙"]],
@@ -236,8 +237,12 @@ const IME = (function(){
         const t = finalText.trim();
         if(t && !r._cancel){ opt.commit(t); opt.fx("pick", [...t].length); }
         closeMic(); };
-      micUi("正在聽…說說看 🐾", "on"); opt.fx("key");
-      try{ rec.start(); }catch(e){ rec = null; sysFallback("語音輸入開不起來，改用手機鍵盤的 🎤 試試"); }
+      // a little "meow" first, then start listening once it has finished (so the meow isn't transcribed)
+      micUi("喵～", "on");
+      if(hooks.listen) hooks.listen();
+      const r0 = rec;
+      setTimeout(()=>{ if(rec!==r0 || r0._cancel) return; micUi("正在聽…說說看 🐾", "on");
+        try{ r0.start(); }catch(e){ rec = null; sysFallback("語音輸入開不起來，改用手機鍵盤的 🎤 試試"); } }, hooks.listen ? 480 : 0);
     }
     function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) (e.querySelector(".kv")||e).innerHTML = composing() ? "確定" : (opt.enterLabel||"傳送 ฅ"); }
     // key press animations (chosen in settings)
@@ -279,5 +284,5 @@ const IME = (function(){
     draw(); refresh();
     return { flush: commitAll, composing };
   }
-  return { mount, load, _test: { convert, lookup, parseSyl, ready: ()=>!!dict } };
+  return { mount, load, hooks, _test: { convert, lookup, parseSyl, ready: ()=>!!dict } };
 })();

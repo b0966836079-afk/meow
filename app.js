@@ -1132,6 +1132,7 @@ const App = (function(){
   }
   ctx.onPresence = h => { (ctx._presence = ctx._presence||[]).push(h); return ()=>{ ctx._presence = ctx._presence.filter(x=>x!==h); }; };
 
+  IME.hooks.listen = () => SFX.meow(1.18);
   // ---------- start ----------
   async function start(){
     setupHaptic(); applyKbTheme(); applyWall();
