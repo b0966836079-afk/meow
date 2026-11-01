@@ -48,3 +48,7 @@
 - Route `album` (4th nav button). Lists `kind='image'` messages (`B.images`), thumbnails at `<path>_t.jpg` (uploaded on send; old photos fall back to full image). Signed URLs cached in localStorage `mw_urls`.
 - Usage: `B.photoUsage()` lists the couple folder in storage and sums sizes; stored in game_state `album` = {bytes,count,at,warned,deleted[]}. Limit 1e9 (free plan 1 GB). Crossing 70/85/95% posts a `kind='album'` message (push to partner) + modal for the sender.
 - Deleting needs `supabase/update_5_album.sql` (storage delete policy + rpc `delete_photos` which turns messages into `kind='photo_gone'`).
+
+## Voice
+- Chat send button shows 🎤 when the box is empty → records with MediaRecorder (prefers audio/mp4 AAC for iPhone playback), meow before recording, max 60 s. Uploaded to `photos/<couple>/v/…`, message `kind='voice'`, body `🎤 傳了一段語音（N 秒）`. Needs `supabase/update_6_voice.sql` (adds audio MIME types to the bucket).
+- Keyboard 🎤 key = speech-to-text (Web Speech, zh-TW), falls back to the phone keyboard's dictation.

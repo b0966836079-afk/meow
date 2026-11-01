@@ -799,3 +799,23 @@ body.drkb #fab{display:none}
 .micBtns button{font:inherit;font-size:15px;padding:6px 18px;border:2px solid var(--kb-line);border-radius:999px;background:var(--kb-key);color:var(--kb-text);box-shadow:0 2px 0 var(--kb-shadow)}
 .micBtns .micStop{background:var(--kb-accent);color:var(--kb-accent-text)}
 .micOv.info .micBtns{display:none}
+
+/* voice messages */
+.bar .send.mic{font-size:20px;padding-left:12px;padding-right:12px}
+.voiceBub{display:flex;align-items:center;gap:8px;min-width:120px;max-width:220px;background:#fff;border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:6px 10px;font:inherit;color:inherit;position:relative}
+.msg.me .voiceBub{background:var(--pinkL)}
+.voiceBub.new::after{content:"";position:absolute;right:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#e5486a;border:2px solid #fff}
+.vbI{width:26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none;letter-spacing:-1px}
+.vbW{flex:1;display:flex;align-items:center;gap:2px;height:24px}
+.vbW i{display:block;flex:1;min-width:2px;max-width:4px;background:var(--muted);border-radius:2px;opacity:.6}
+.vbW i.on{background:var(--pink);opacity:1}
+.vbT{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.vrec{position:fixed;left:0;right:0;bottom:0;z-index:60;background:rgba(60,35,30,.35);top:0;display:flex;align-items:flex-end}
+.vrIn{width:100%;background:var(--paper);border-top:3px solid var(--line);padding:16px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:10px}
+.vrCat svg{width:90px;height:90px}
+.vrec.on .vrCat svg{animation:micBob .5s steps(2) infinite}
+.vrBars{display:flex;align-items:center;gap:4px;height:46px;width:80%}
+.vrBars i{flex:1;height:12%;background:var(--pink);border-radius:3px;transition:height .08s}
+.vrTime{font-size:20px;font-variant-numeric:tabular-nums}
+.vrBtns{display:flex;gap:12px;width:100%}.vrBtns .btn{flex:1}
+.vrTip{font-size:12px;color:var(--muted)}

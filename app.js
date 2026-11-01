@@ -242,6 +242,7 @@ const App = (function(){
     const av = `<span class="av">${sprite(m.cat||catOf(m.sender), m.kind==="poke"?"wave":"normal")}</span>`;
     let bub;
     if(m.kind==="sticker") bub = `<span class="stk">${stickerHtml(m.body, m.cat||catOf(m.sender))}</span>`;
+    else if(m.kind==="voice") bub = voiceHtml(m, mine);
     else if(m.kind==="image") bub = `<span class="pic"><img data-media="${esc(m.media||"")}" ${imgCache[m.media]?`src="${esc(imgCache[m.media])}"`:""} alt="照片"></span>`;
     else if(m.kind==="poke") bub = `<div class="bub">戳了${mine?"對方":"你"}一下 🐾</div>`;
     else bub = `<div class="bub">${esc(m.body)}</div>`;
@@ -259,14 +260,14 @@ const App = (function(){
       <input type="file" id="fPic" accept="image/*" class="hidden"></div>`;
     drawList(true);
     const txt=$("txt"); let sysKb = false;
-    const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; };
+    const autoSize = () => { txt.style.height="44px"; txt.style.height=Math.min(110,txt.scrollHeight)+"px"; if(chatUpdSend) chatUpdSend(); };
     const showKb = (on) => {
       $("kbd").classList.toggle("hidden", !on); document.body.classList.toggle("kbd", on);
       if(on){ $("stk").classList.add("hidden"); if(!kb) kb = IME.mount($("kbd"), { dictUrl:"zhuyin.txt", mascot: sprite(me.cat||"orange","loaf"), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK["常用語"].concat(QK["顏文字"]), emojis: QK["表情"],
         commit: t => { txt.value = (txt.value + t).slice(0,1000); autoSize(); },
         backspace: () => { const arr=[...txt.value]; arr.pop(); txt.value = arr.join(""); autoSize(); },
         send: () => sendText(), toSys: () => toSys(), hide: () => showKb(false),
-        fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); } });
+        fx: (k,n) => { if(k==="del") typeFx("del"); else if(k==="pick"){ SFX.select(); typeFx("key", n||1); } else typeFx("key", n||1); setTimeout(()=>chatUpdSend && chatUpdSend(), 0); } });
         const L=$("list"); setTimeout(()=>{ L.scrollTop=L.scrollHeight; }, 50); }
     };
     function toSys(){ return toSys_(); }
@@ -275,7 +276,9 @@ const App = (function(){
     txt.insertAdjacentHTML("beforebegin", `<button id="bKb" class="hidden" title="喵喵鍵盤">${icon("keys")}</button>`);
     $("bKb").addEventListener("click", toMeow);
     txt.addEventListener("click", ()=>{ if(!sysKb) showKb(true); });
-    $("bSend").addEventListener("click", ()=>{ if(kb && kb.composing()) kb.flush(); sendText(); });
+    $("bSend").addEventListener("click", ()=>{ if(!txt.value.trim() && !(kb && kb.composing())){ startVoice(); return; } if(kb && kb.composing()) kb.flush(); sendText(); });
+    const updSend = () => { const b=$("bSend"); if(!b) return; const voice = !txt.value.trim() && !(kb && kb.composing()); b.classList.toggle("mic", voice); b.innerHTML = voice ? "🎤" : "傳送"; };
+    chatUpdSend = updSend; updSend();
     txt.addEventListener("input", e=>{ if(!sysKb) return; autoSize(); if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
     txt.addEventListener("keydown", e=>{ if(sysKb && e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
     $("bStk").addEventListener("click", ()=>{ showKb(false); $("stk").classList.toggle("hidden"); });
@@ -284,6 +287,7 @@ const App = (function(){
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
     $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
+      const vb=e.target.closest("[data-voice]"); if(vb){ playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
       if(e.target.closest("[data-makeup]")){ askMakeup(); return; }
       showKb(false); });
@@ -324,7 +328,7 @@ const App = (function(){
   }
   async function sendText(){
     const txt=$("txt"); const t=txt.value.trim(); if(!t) return;
-    txt.value=""; txt.style.height="44px"; combo=0; showCombo();
+    txt.value=""; txt.style.height="44px"; combo=0; showCombo(); if(chatUpdSend) chatUpdSend();
     SFX.send(); sendFx();
     await sendMsg(t,"text");
   }
@@ -437,7 +441,7 @@ const App = (function(){
       else if(m.kind==="sticker"){ SFX.heart(); }
       else SFX.msg();
       if(!chatVisible() && m.kind!=="game" && m.kind!=="ping"){
-        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.kind==="letter"?"寫了一封信給你 💌":m.body;
+        const txt = m.kind==="poke"?"戳了你一下 🐾":m.kind==="sticker"?"傳了一張貼圖":m.kind==="image"?"傳了一張照片 📷":m.kind==="voice"?"傳了一段語音 🎤":m.kind==="letter"?"寫了一封信給你 💌":m.body;
         toast(`${sprite(m.cat||"white","happy")}<span><b style="font-weight:400">${esc(m.name||"另一半")}</b>：${esc(txt.slice(0,40))}</span>`);
       }
     }
@@ -814,6 +818,93 @@ const App = (function(){
     if(chatVisible()) drawList(false);
   }
 
+
+  // ---------- voice messages ----------
+  let chatUpdSend = null, voiceRec = null, voiceAudio = null, voicePlaying = 0;
+  const voiceCache = {};
+  const heardVoices = new Set(JSON.parse(store.get("mw_heard")||"[]"));
+  const voiceSecs = m => +((String(m.body||"").match(/(\d+)\s*秒/)||[])[1]) || 0;
+  const fmtSec = n => `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`;
+  function voiceHtml(m, mine){
+    const secs = voiceSecs(m), n = Math.max(8, Math.min(22, 6 + Math.round(secs/2)));
+    let seed = m.id * 9301 + 49297; const bars = Array.from({length:n}, ()=>{ seed = (seed*9301+49297)%233280; return 30 + Math.round(seed/233280*70); });
+    const unheard = !mine && !heardVoices.has(m.id), playing = voicePlaying===m.id;
+    return `<button class="voiceBub ${unheard?"new":""} ${playing?"playing":""}" data-voice="${m.id}"><span class="vbI">${playing?"❚❚":"▶"}</span><span class="vbW">${bars.map(h=>`<i style="height:${h}%"></i>`).join("")}</span><span class="vbT">${fmtSec(secs)}</span></button>`;
+  }
+  function voiceUi(id, playing, frac){
+    document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ b.classList.toggle("playing", playing); b.querySelector(".vbI").textContent = playing ? "❚❚" : "▶";
+      const bars = b.querySelectorAll(".vbW i"); bars.forEach((x,i)=>x.classList.toggle("on", playing && i/bars.length < (frac||0))); });
+  }
+  async function playVoice(id){
+    const m = messages.find(x=>x.id===id); if(!m || !m.media) return;
+    if(voiceAudio && voicePlaying===id){ if(voiceAudio.paused){ voiceAudio.play(); voiceUi(id, true, 0); } else { voiceAudio.pause(); voiceUi(id, false); } return; }
+    if(voiceAudio){ voiceAudio.pause(); voiceUi(voicePlaying, false); }
+    let url = voiceCache[m.media];
+    if(!url){ try{ url = await urlFor(m.media); }catch(e){} }
+    if(!url){ toast("語音載入失敗，請檢查網路"); return; }
+    const a = new Audio(url); voiceAudio = a; voicePlaying = id;
+    a.addEventListener("timeupdate", ()=>{ if(voicePlaying===id) voiceUi(id, !a.paused, a.duration && isFinite(a.duration) ? a.currentTime/a.duration : a.currentTime/Math.max(1,voiceSecs(m))); });
+    a.addEventListener("ended", ()=>{ voiceUi(id, false); voicePlaying = 0; });
+    a.addEventListener("error", ()=>{ voiceUi(id, false); voicePlaying = 0; toast("這段語音在這支手機播不出來 🥺", 3500); });
+    try{ await a.play(); voiceUi(id, true, 0); }catch(e){ voicePlaying = 0; toast("播放失敗，再點一次試試"); return; }
+    if(m.sender!==me.uid && !heardVoices.has(id)){ heardVoices.add(id); store.set("mw_heard", JSON.stringify([...heardVoices].slice(-500))); document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>b.classList.remove("new")); }
+  }
+  async function startVoice(){
+    if(voiceRec) return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder){ toast("這支手機的瀏覽器不支援錄音 🥺", 3500); return; }
+    if(voiceAudio){ voiceAudio.pause(); voiceUi(voicePlaying, false); voicePlaying = 0; }
+    const o = document.createElement("div"); o.className = "vrec"; o.id = "vrec";
+    o.innerHTML = `<div class="vrIn"><div class="vrCat">${sprite(me.cat||"orange","surprised")}</div><div class="vrBars" id="vrBars">${"<i></i>".repeat(16)}</div>
+      <div class="vrTime" id="vrTime">喵～</div><div class="vrBtns"><button class="btn sub" id="vrX">取消</button><button class="btn" id="vrSend" disabled>傳送 ▶</button></div><div class="vrTip">說完按「傳送」，最長 60 秒</div></div>`;
+    document.body.appendChild(o);
+    const st = { o, stream:null, mr:null, chunks:[], t0:0, timer:null, raf:0, cancel:false };
+    voiceRec = st;
+    const done = (send) => { if(voiceRec!==st) return; st.cancel = !send; clearInterval(st.timer); cancelAnimationFrame(st.raf);
+      if(st.mr && st.mr.state!=="inactive") st.mr.stop(); else finish(); };
+    const finish = () => { if(st.stream) st.stream.getTracks().forEach(t=>t.stop()); if(st.ac) st.ac.close().catch(()=>{}); o.remove(); voiceRec = null;
+      if(st.cancel || !st.chunks.length) return;
+      const secs = Math.max(1, Math.round((Date.now()-st.t0)/1000));
+      if(Date.now()-st.t0 < 800){ toast("太短了，按住多說一點吧"); return; }
+      const blob = new Blob(st.chunks, { type: (st.mr && st.mr.mimeType) || "audio/webm" });
+      sendVoice(blob, secs); };
+    o.querySelector("#vrX").addEventListener("click", ()=>done(false));
+    o.querySelector("#vrSend").addEventListener("click", ()=>done(true));
+    try{ st.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } }); }
+    catch(e){ o.remove(); voiceRec = null; toast("沒有麥克風權限，請到手機設定允許麥克風 🎤", 4000); return; }
+    if(voiceRec!==st){ st.stream.getTracks().forEach(t=>t.stop()); return; }
+    SFX.meow(1.18);
+    await new Promise(r=>setTimeout(r, 480));   // let the meow finish before recording
+    if(voiceRec!==st){ st.stream.getTracks().forEach(t=>t.stop()); return; }
+    const types = ["audio/mp4;codecs=mp4a.40.2","audio/mp4","audio/aac","audio/webm;codecs=opus","audio/webm","audio/ogg;codecs=opus"];
+    const type = types.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } }) || "";
+    try{ st.mr = new MediaRecorder(st.stream, type ? { mimeType:type, audioBitsPerSecond:32000 } : {}); }catch(e){ st.mr = new MediaRecorder(st.stream); }
+    st.mr.ondataavailable = e => { if(e.data && e.data.size) st.chunks.push(e.data); };
+    st.mr.onstop = finish;
+    st.mr.start(250); st.t0 = Date.now();
+    o.querySelector("#vrSend").disabled = false; o.classList.add("on");
+    const tm = o.querySelector("#vrTime");
+    st.timer = setInterval(()=>{ const s = Math.floor((Date.now()-st.t0)/1000); tm.textContent = `🔴 ${fmtSec(s)} / 1:00`; if(s >= 60) done(true); }, 200);
+    try{ // live level bars
+      const AC = window.AudioContext || window.webkitAudioContext; st.ac = new AC(); const an = st.ac.createAnalyser(); an.fftSize = 64;
+      st.ac.createMediaStreamSource(st.stream).connect(an); const buf = new Uint8Array(an.frequencyBinCount), bars = o.querySelectorAll("#vrBars i");
+      const loop = () => { an.getByteFrequencyData(buf); bars.forEach((b,i)=>{ const v = buf[Math.min(buf.length-1, 1+i)]/255; b.style.height = (12 + v*88)+"%"; }); st.raf = requestAnimationFrame(loop); }; loop();
+    }catch(e){}
+  }
+  async function sendVoice(blob, secs){
+    toast(`${sprite(me.cat||"orange","happy")} 語音傳送中…`, 20000);
+    try{
+      const path = await B.uploadVoice(blob);
+      voiceCache[path] = URL.createObjectURL(blob);
+      const row = await B.send(`🎤 傳了一段語音（${secs} 秒）`, "voice", me.name, me.cat, path);
+      addMessage(row); SFX.send(); toast(`${sprite(me.cat||"orange","wave")} 語音傳出去了！`);
+      const st = await update("album", s=>{ s = s || { bytes:0, count:0, warned:0 }; s.bytes = (s.bytes||0) + blob.size; return s; });
+      if(st) checkCapacity(st);
+    }catch(e){
+      console.error(e);
+      if(String(e.message||e).includes("NEED_SQL_VOICE")) modal(`<h3>還差一步 🔧</h3><p>傳語音要先在 Supabase 開啟：<br>用電腦到 Supabase → <b>SQL Editor</b>，執行 <b>update_6_voice.sql</b>（只要做一次）。</p>`);
+      else toast("語音傳送失敗："+esc(e.message||e), 5000);
+    }
+  }
   // ---------- album ----------
   const ALBUM_LIMIT = 1e9;   // Supabase free plan: 1 GB of file storage
   const thumbOf = p => p.replace(/\.\w+$/, "_t.jpg");
@@ -1052,7 +1143,7 @@ const App = (function(){
   function go(r){ if(location.hash!=="#"+r) location.hash=r; else render(); }
   function render(){
     const r = (location.hash||"#home").slice(1) || "home";
-    { const ab=$("alBar"); if(ab) ab.remove(); }
+    { const ab=$("alBar"); if(ab) ab.remove(); const vr=$("vrec"); if(vr){ const c=vr.querySelector("#vrX"); if(c) c.click(); else vr.remove(); } }
     if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove();
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");

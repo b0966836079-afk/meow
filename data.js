@@ -73,6 +73,14 @@
       const { data, error } = await sb.storage.from("photos").createSignedUrls(paths, 60 * 60 * 24 * 7);
       if (error) throw error; const out = {}; (data || []).forEach(d => { if (d.signedUrl && !d.error) out[d.path] = d.signedUrl; }); return out;
     };
+    B.uploadVoice = async (blob) => {
+      const type = (blob.type || "audio/webm").split(";")[0];
+      const ext = type === "audio/mp4" ? "m4a" : type === "audio/ogg" ? "ogg" : type === "audio/aac" ? "aac" : "webm";
+      const path = `${B.coupleId}/v/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: type, upsert: false, cacheControl: "604800" });
+      if (error) { if (/mime|type|not supported|invalid/i.test(error.message || "")) throw new Error("NEED_SQL_VOICE"); throw error; }
+      return path;
+    };
     B.uploadThumb = async (path, blob) => {
       const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "604800" });
       if (error) throw error; return path;
@@ -88,6 +96,12 @@
         if (error) throw error;
         for (const f of data || []) { if (f.metadata && f.metadata.size) { bytes += f.metadata.size; if (!/_t\.jpg$/.test(f.name)) count++; } }
         if (!data || data.length < 1000) break; offset += 1000;
+      }
+      for (let off = 0; ; off += 1000) { // voice messages live in <couple>/v/
+        const { data, error } = await sb.storage.from("photos").list(B.coupleId + "/v", { limit: 1000, offset: off });
+        if (error) break;
+        for (const f of data || []) if (f.metadata && f.metadata.size) bytes += f.metadata.size;
+        if (!data || data.length < 1000) break;
       }
       return { bytes, count };
     };
@@ -157,6 +171,7 @@
     B.imageUrls = async (paths) => { const out = {}; for (const p of paths) { const u = await call("url", { path: p }); if (u) out[p] = u; } return out; };
     B.uploadThumb = async (path, blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path }); };
     B.images = async () => call("images", { cid: B.coupleId });
+    B.uploadVoice = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path: B.coupleId + "/v/" + Date.now() + ".webm" }); };
     B.photoUsage = async () => call("usage", { cid: B.coupleId });
     B.deletePhotos = async (rows) => call("delphotos", { cid: B.coupleId, ids: rows.map(r => r.id) });
     B.getState = async (game) => call("get", { cid: B.coupleId, game });
