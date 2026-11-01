@@ -162,13 +162,14 @@ const IME = (function(){
         h += `<div class="grid ${mode}">${list.map(k=>key(esc(k),"wide","ins")).join("")}</div>`;
       }
       const sw = (m, t) => key(t, "fn sw"+(mode===m?" on":""), "mode:"+m);
-      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
+      h += `<div class="row bottom">${sw("zh","注")}${sw("en","ABC")}${sw("sym","123")}${sw("fav","♡")}${sw("emo","☺")}${key("🎤","fn mic","mic","")}${key("ฅ 空白 ฅ","space","space")}${mode==="zh"||mode==="fav"||mode==="emo"?key("⌫","fn","back"):""}${key(composing()?"確定":(opt.enterLabel||"傳送 ฅ"),"send","enter")}</div>`;
       body.innerHTML = h;
       const act = b => {
         const a = b.dataset.a, k = b.dataset.k;
         if(a==="back"){ back(); updEnter(); }
         else if(a==="space"){ space(); updEnter(); }
         else if(a==="enter"){ enter(); draw(); }
+        else if(a==="mic"){ mic(); }
         else if(a==="shift"){ shift=!shift; opt.fx("key"); draw(); }
         else if(a.startsWith("mode:")){ commitAll(); mode=a.slice(5); shift=false; opt.fx("key"); draw(); refresh(); }
         else if(a==="ins"){ opt.commit(b.textContent); opt.fx("key", [...b.textContent].length); }
@@ -199,6 +200,45 @@ const IME = (function(){
       });
     }
     const rep = {};
+    // ---------- voice input ----------
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let rec = null;
+    function micUi(text, cls){
+      let ov = imeEl.querySelector(".micOv");
+      if(!ov){ ov = document.createElement("div"); ov.className = "micOv";
+        ov.innerHTML = `<div class="micCat">${art("cat")||"🐱"}<span class="micWave"><i></i><i></i><i></i></span></div><div class="micTxt"></div><div class="micBtns"><button class="micStop">✔ 好了</button><button class="micX">取消</button></div>`;
+        ov.querySelector(".micStop").addEventListener("click", ()=>{ if(rec) rec.stop(); else closeMic(); });
+        ov.querySelector(".micX").addEventListener("click", ()=>{ if(rec){ rec._cancel = true; rec.abort(); } closeMic(); });
+        imeEl.appendChild(ov); }
+      ov.className = "micOv " + (cls||""); ov.querySelector(".micTxt").textContent = text;
+    }
+    function closeMic(){ const ov = imeEl.querySelector(".micOv"); if(ov) ov.remove(); rec = null; }
+    function sysFallback(msg){
+      micUi(msg, "info");
+      setTimeout(()=>{ closeMic(); if(opt.toSys) opt.toSys(); }, opt.toSys ? 1800 : 2600);
+    }
+    function mic(){
+      commitAll();
+      if(rec){ rec.stop(); return; }
+      if(!SR){ sysFallback(opt.toSys ? "這支手機的 App 不支援直接語音，幫你換成手機鍵盤，按鍵盤上的 🎤 麥克風就能說話" : "這裡不支援語音輸入，可以到聊天室用手機鍵盤的 🎤"); return; }
+      let finalText = "", heard = false;
+      try{ rec = new SR(); }catch(e){ sysFallback("語音輸入開不起來，改用手機鍵盤的 🎤 試試"); return; }
+      rec.lang = "zh-TW"; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+      rec.onresult = e => { let interim = ""; finalText = "";
+        for(let i=0;i<e.results.length;i++){ const r = e.results[i]; if(r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
+        heard = true; micUi((finalText + interim) || "正在聽…", "on"); };
+      rec.onerror = e => { const er = e.error; rec && (rec._err = er);
+        if(er==="not-allowed" || er==="service-not-allowed"){ rec = null; sysFallback(opt.toSys ? "沒辦法使用麥克風，幫你換成手機鍵盤，按鍵盤上的 🎤 也能說話" : "沒有麥克風權限，請到手機設定允許麥克風"); }
+        else if(er==="no-speech"){ micUi("沒聽到聲音，再按一次 🎤 試試", "info"); setTimeout(closeMic, 1500); }
+        else if(er==="network"){ micUi("語音輸入需要網路喔", "info"); setTimeout(closeMic, 1500); }
+        else if(er!=="aborted"){ micUi("沒聽清楚，再試一次", "info"); setTimeout(closeMic, 1500); } };
+      rec.onend = () => { const r = rec; if(!r || r._err) return;
+        const t = finalText.trim();
+        if(t && !r._cancel){ opt.commit(t); opt.fx("pick", [...t].length); }
+        closeMic(); };
+      micUi("正在聽…說說看 🐾", "on"); opt.fx("key");
+      try{ rec.start(); }catch(e){ rec = null; sysFallback("語音輸入開不起來，改用手機鍵盤的 🎤 試試"); }
+    }
     function updEnter(){ const e = body.querySelector('.k[data-a="enter"]'); if(e) (e.querySelector(".kv")||e).innerHTML = composing() ? "確定" : (opt.enterLabel||"傳送 ฅ"); }
     // key press animations (chosen in settings)
     const ANIMS = {

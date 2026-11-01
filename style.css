@@ -174,7 +174,7 @@ body.kbd .chat{height:calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-
 .ime .k.fn{flex:1.25}.ime .k.fn .kv{background:var(--kb-fn);font-size:13px}
 .ime .k.fn.on .kv{background:var(--kb-accent);color:var(--kb-accent-text)}
 .ime .row.bottom .sw{flex:.9}.ime .row.bottom .sw .kv{font-size:13px}
-.ime .k.space{flex:3}.ime .k.space .kv{font-size:13px;color:var(--kb-muted);background:var(--kb-key)}
+.ime .k.space{flex:2.3}.ime .k.space .kv{font-size:13px;color:var(--kb-muted);background:var(--kb-key)}
 .ime .k.send{flex:1.7}.ime .k.send .kv{background:var(--kb-accent);color:var(--kb-accent-text);font-size:14px}
 .ime .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;max-height:192px;overflow-y:auto;margin-bottom:4px;padding:2px}
 .ime .grid.emo{grid-template-columns:repeat(8,1fr)}
@@ -781,3 +781,21 @@ body.rnLock{overflow:hidden}
 .drHist{margin-top:10px;font-size:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.drHist b{font-weight:400;width:100%;text-align:left}
 .drHist span{background:#fff;border:2px solid var(--line);padding:0 6px;color:var(--muted)}.drHist span.ok{color:#3f9c76}
 body.drkb #fab{display:none}
+
+/* voice input */
+.ime .k.mic .kv{font-size:17px}
+.micOv{position:absolute;inset:0;z-index:12;background:var(--kb-bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px;border-radius:4px}
+.micCat{position:relative;width:96px;height:96px}.micCat svg{width:100%;height:100%}
+.micOv.on .micCat svg{animation:micBob .5s steps(2) infinite}
+@keyframes micBob{50%{transform:translateY(-4px)}}
+.micWave{position:absolute;right:-30px;top:30px;display:flex;gap:3px;align-items:center}
+.micWave i{display:block;width:5px;height:10px;background:var(--kb-accent);border-radius:3px}
+.micOv.on .micWave i{animation:micW .6s ease-in-out infinite}.micOv.on .micWave i:nth-child(2){animation-delay:.15s}.micOv.on .micWave i:nth-child(3){animation-delay:.3s}
+.micOv:not(.on) .micWave{display:none}
+@keyframes micW{50%{height:26px}}
+.micTxt{max-width:92%;min-height:26px;font-size:18px;color:var(--kb-text);text-align:center;line-height:1.4}
+.micOv.info .micTxt{font-size:14px}
+.micBtns{display:flex;gap:10px}
+.micBtns button{font:inherit;font-size:15px;padding:6px 18px;border:2px solid var(--kb-line);border-radius:999px;background:var(--kb-key);color:var(--kb-text);box-shadow:0 2px 0 var(--kb-shadow)}
+.micBtns .micStop{background:var(--kb-accent);color:var(--kb-accent-text)}
+.micOv.info .micBtns{display:none}
