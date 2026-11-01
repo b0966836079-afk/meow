@@ -56,3 +56,4 @@
 ## Room mode (情侶 / 閨蜜 / 兄弟)
 - game_state `room` = {mode:"couple"|"bestie"|"bro"} (MODES table in app.js); chosen on create (onboarding `#mPick`), switchable in settings. `ctx.mode()`, `ctx.pw()` ("另一半"/"閨蜜").
 - Bestie mode: moqi uses `BANK_B` (romance questions filtered by `ROMANCE` regex + `BESTIE_Q`), draw swaps the 「我們」 category for 「閨蜜」, different LV names, quick phrases, love animation says 抱抱.
+- Voice messages expire after 24 h unless saved (long-press → 儲存). Saved paths in game_state `voice` = {saved:[paths]}; `cleanupVoices()` deletes unsaved files older than 25 h from `<couple>/v/` (file names start with the upload timestamp).

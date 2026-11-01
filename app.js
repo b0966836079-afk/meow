@@ -301,9 +301,9 @@ const App = (function(){
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
-    $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
+    bindVoiceLongPress($("list")); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
-      const vb=e.target.closest("[data-voice]"); if(vb){ playVoice(+vb.dataset.voice); return; }
+      const vb=e.target.closest("[data-voice]"); if(vb){ if(vb._lp){ vb._lp=false; return; } playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
       if(e.target.closest("[data-makeup]")){ askMakeup(); return; }
       showKb(false); });
@@ -855,7 +855,16 @@ const App = (function(){
   const heardVoices = new Set(JSON.parse(store.get("mw_heard")||"[]"));
   const voiceSecs = m => +((String(m.body||"").match(/(\d+)\s*秒/)||[])[1]) || 0;
   const fmtSec = n => `${Math.floor(n/60)}:${String(n%60).padStart(2,"0")}`;
+  const VOICE_TTL = 24*3600e3;
+  const savedVoices = () => new Set((stateCache.voice && stateCache.voice.state && stateCache.voice.state.saved) || []);
+  const voiceExpired = m => !savedVoices().has(m.media) && Date.now() - new Date(m.created_at).getTime() > VOICE_TTL;
   function voiceHtml(m, mine){
+    if(!m.media || voiceExpired(m)) return `<button class="voiceBub gone" data-voice="${m.id}"><span class="vbGone">⌛ 語音已過期</span></button>`;
+    const saved = savedVoices().has(m.media), left = Math.max(0, VOICE_TTL - (Date.now() - new Date(m.created_at).getTime()));
+    const tag = saved ? `<span class="vbTag saved">${icon("star")}已儲存</span>` : `<span class="vbTag">⌛ ${left>=3600e3?Math.ceil(left/3600e3)+" 小時":Math.max(1,Math.ceil(left/60e3))+" 分鐘"}後消失・長按儲存</span>`;
+    return `<span class="voiceWrap">${voiceBubCore(m, mine)}${tag}</span>`;
+  }
+  function voiceBubCore(m, mine){
     const secs = voiceSecs(m), n = Math.max(8, Math.min(22, 6 + Math.round(secs/2)));
     let seed = m.id * 9301 + 49297; const bars = Array.from({length:n}, ()=>{ seed = (seed*9301+49297)%233280; return 1 + Math.floor(seed/233280*4); });
     const unheard = !mine && !heardVoices.has(m.id), playing = voicePlaying===m.id;
@@ -867,7 +876,8 @@ const App = (function(){
       const bars = b.querySelectorAll(".vbW i"); bars.forEach((x,i)=>x.classList.toggle("on", playing && i/bars.length < (frac||0))); });
   }
   async function playVoice(id){
-    const m = messages.find(x=>x.id===id); if(!m || !m.media) return;
+    const m = messages.find(x=>x.id===id); if(!m) return;
+    if(!m.media || voiceExpired(m)){ toast("這段語音超過 24 小時沒儲存，已經消失了 ⌛"); return; }
     if(voiceAudio && voicePlaying===id){ if(voiceAudio.paused){ voiceAudio.play(); voiceUi(id, true, 0); } else { voiceAudio.pause(); voiceUi(id, false); } return; }
     if(voiceAudio){ voiceAudio.pause(); voiceUi(voicePlaying, false); }
     let url = voiceCache[m.media];
@@ -879,6 +889,37 @@ const App = (function(){
     a.addEventListener("error", ()=>{ voiceUi(id, false); voicePlaying = 0; toast("這段語音在這支手機播不出來 🥺", 3500); });
     try{ await a.play(); voiceUi(id, true, 0); }catch(e){ voicePlaying = 0; toast("播放失敗，再點一次試試"); return; }
     if(m.sender!==me.uid && !heardVoices.has(id)){ heardVoices.add(id); store.set("mw_heard", JSON.stringify([...heardVoices].slice(-500))); document.querySelectorAll(`[data-voice="${id}"]`).forEach(b=>{ b.classList.remove("new"); const nw=b.querySelector(".vbNew"); if(nw) nw.remove(); }); }
+  }
+
+  function bindVoiceLongPress(L){
+    let t = null, el = null;
+    const clear = () => { clearTimeout(t); t = null; };
+    L.addEventListener("pointerdown", e=>{ const b = e.target.closest("[data-voice]"); if(!b || b.classList.contains("gone")) return; el = b; clear();
+      t = setTimeout(()=>{ t = null; b._lp = true; haptic(); voiceMenu(+b.dataset.voice); }, 520); });
+    ["pointerup","pointercancel","pointerleave","scroll"].forEach(ev=>L.addEventListener(ev, clear, {passive:true}));
+    L.addEventListener("pointermove", e=>{ if(t && el && (Math.abs(e.movementX)+Math.abs(e.movementY) > 6)) clear(); });
+    L.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-voice]")) e.preventDefault(); });
+  }
+  function voiceMenu(id){
+    const m = messages.find(x=>x.id===id); if(!m || !m.media || voiceExpired(m)) return;
+    const saved = savedVoices().has(m.media);
+    const o = modal(`<h3><span class="h3i">${icon("star")}</span> 語音訊息</h3><p>${saved ? "這段語音已經儲存，不會消失。" : "沒儲存的語音 24 小時後會自動消失，<br>想留下來就儲存吧！"}</p>
+      ${saved ? `<button class="btn sub" id="vmUn" style="width:100%">取消儲存（24 小時後消失）</button>` : `<button class="btn" id="vmSave" style="width:100%"><span class="h3i">${icon("star")}</span> 儲存這段語音</button>`}
+      <button class="btn sub" id="vmX" style="width:100%;margin-top:8px">關閉</button>`);
+    o.querySelector("#vmX").addEventListener("click", ()=>o.remove());
+    const set = async (keep) => { o.remove(); SFX.select();
+      await update("voice", st=>{ st = st || { saved:[] }; const s2 = new Set(st.saved||[]); keep ? s2.add(m.media) : s2.delete(m.media); st.saved = [...s2].slice(-2000); return st; });
+      toast(keep ? `${sprite(me.cat||"orange","love")} 語音儲存好了，不會消失囉` : "已取消儲存"); if(chatVisible()) drawList(false); };
+    const sv = o.querySelector("#vmSave"); if(sv) sv.addEventListener("click", ()=>set(true));
+    const un = o.querySelector("#vmUn"); if(un) un.addEventListener("click", ()=>set(false));
+  }
+  // delete voice files that are older than 24 h and nobody saved (frees album space)
+  async function cleanupVoices(){
+    try{
+      const files = await B.listVoices(), saved = savedVoices(), now = Date.now();
+      const old = files.filter(f=>{ const ts = parseInt(f.name, 10); return ts && now - ts > VOICE_TTL + 3600e3 && !saved.has(f.path); }).map(f=>f.path);
+      if(old.length){ await B.removeFiles(old); recountAlbum().catch(()=>{}); }
+    }catch(e){}
   }
   async function startVoice(){
     if(voiceRec) return;
@@ -1250,6 +1291,9 @@ const App = (function(){
     onState("room", st=>{ const m = validMode(st && st.mode); if(m!==roomMode){ roomMode = m; render(); } });
     for(const g of ["daily","pet","fishing","album"]) await getState(g).catch(()=>{});
     onState("album", onAlbumState);
+    await getState("voice").catch(()=>{});
+    onState("voice", ()=>{ if(chatVisible()) drawList(false); });
+    setTimeout(cleanupVoices, 8000); setInterval(cleanupVoices, 3*3600e3);
     setTimeout(()=>{ const a = stateCache.album && stateCache.album.state; if(!a || Date.now()-(a.at||0) > 12*3600e3) recountAlbum().catch(()=>{}); }, 4000);
     onState("daily", ()=>refreshHomeBox("dailyBox", dailyCard, bindDaily));
     onState("pet", ()=>refreshHomeBox("petGo", petStrip, v=>{ const pg=$("petGo"); if(pg) pg.addEventListener("click", ()=>go("game-pet")); }));

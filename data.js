@@ -85,6 +85,21 @@
       const { error } = await sb.storage.from("photos").upload(path, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "604800" });
       if (error) throw error; return path;
     };
+    B.listVoices = async () => {
+      const out = [];
+      for (let off = 0; ; off += 1000) {
+        const { data, error } = await sb.storage.from("photos").list(B.coupleId + "/v", { limit: 1000, offset: off });
+        if (error) throw error;
+        for (const f of data || []) if (f.name && f.metadata) out.push({ path: B.coupleId + "/v/" + f.name, name: f.name, size: f.metadata.size || 0 });
+        if (!data || data.length < 1000) break;
+      }
+      return out;
+    };
+    B.removeFiles = async (paths) => {
+      if (!paths.length) return 0;
+      const { data, error } = await sb.storage.from("photos").remove(paths);
+      if (error) throw error; return (data || []).length;
+    };
     B.quotaMB = async () => {
       const { data, error } = await sb.from("couples").select("quota_mb").eq("id", B.coupleId).maybeSingle();
       if (error || !data || data.quota_mb == null) return null;   // column not added yet → old behaviour
@@ -177,6 +192,8 @@
     B.uploadThumb = async (path, blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path }); };
     B.images = async () => call("images", { cid: B.coupleId });
     B.quotaMB = async () => (window.__quotaMB || null);
+    B.listVoices = async () => call("listv", { cid: B.coupleId });
+    B.removeFiles = async (paths) => call("rmfiles", { paths });
     B.uploadVoice = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl, path: B.coupleId + "/v/" + Date.now() + ".webm" }); };
     B.photoUsage = async () => call("usage", { cid: B.coupleId });
     B.deletePhotos = async (rows) => call("delphotos", { cid: B.coupleId, ids: rows.map(r => r.id) });
