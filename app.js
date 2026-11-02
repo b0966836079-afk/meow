@@ -432,16 +432,35 @@ const App = (function(){
       try{ if(!imgCache[pth]) imgCache[pth]=await B.imageUrl(pth); im.src=imgCache[pth]; }catch(e){ im.alt="照片載入失敗"; }
     });
   }
-  function drawList(force){
+  // ---- older history: the chat first loads the latest 80, more are fetched when you scroll to the top ----
+  let olderDone = false, olderLoading = false, olderLoaded = false;
+  async function loadOlder(){
+    if(olderDone || olderLoading || !messages.length || !B.messagesBefore) return false;
+    olderLoading = true; const L = $("list"), btn = $("bOlder"); if(btn) btn.textContent = "載入中…";
+    try{
+      const first = messages.reduce((a,m)=>Math.min(a,m.id), Infinity);
+      const more = await B.messagesBefore(first, 80);
+      if(!more.length){ olderDone = true; }
+      else { olderLoaded = true; const have = new Set(messages.map(m=>m.id)); messages = more.filter(m=>!have.has(m.id)).concat(messages); if(more.length < 80) olderDone = true; }
+      if(L){ const prevH = L.scrollHeight, prevTop = L.scrollTop; drawList(false, true); L.scrollTop = L.scrollHeight - prevH + prevTop; }
+      return more.length > 0;
+    }catch(e){ toast("載入失敗，等一下再試試"); return false; }
+    finally{ olderLoading = false; }
+  }
+  function drawList(force, keep){
     const L=$("list"); if(!L) return;
     const atBottom = force || (L.scrollHeight - L.scrollTop - L.clientHeight < 80);
     let html="", lastDay="";
     if(!messages.length) html = `<div class="day">還沒有訊息，先打個招呼吧 🐾</div>`;
+    else if(!olderDone) html = `<button class="older" id="bOlder">↑ 載入更早的訊息</button>`;
+    else html = `<div class="day older-end">— 這是你們最早的訊息 —</div>`;
     messages.forEach(m=>{ const d=dayStr(m.created_at); if(d!==lastDay){ html+=`<div class="day">${d}</div>`; lastDay=d; } html+=msgHtml(m).replace(/^<div class="msg/, `<div data-mid="${m.id}" class="msg`); });
     L.innerHTML=html;
-    L.querySelectorAll(".pic img").forEach(im=>im.addEventListener("load",()=>{ if(atBottom) L.scrollTop=L.scrollHeight; }));
+    const ob = $("bOlder"); if(ob) ob.addEventListener("click", loadOlder);
+    if(!L._olderBound){ L._olderBound = true; L.addEventListener("scroll", ()=>{ if(L.scrollTop < 40) loadOlder(); }, { passive:true }); }
+    L.querySelectorAll(".pic img").forEach(im=>im.addEventListener("load",()=>{ if(atBottom && !keep) L.scrollTop=L.scrollHeight; }));
     fillImages();
-    if(atBottom) L.scrollTop=L.scrollHeight;
+    if(atBottom && !keep) L.scrollTop=L.scrollHeight;
   }
   async function shrink(file){
     if(file.type==="image/gif" && file.size<6e6) return file;
@@ -512,7 +531,7 @@ const App = (function(){
   }
   function addMessage(m){
     if(!m || messages.some(x=>x.id===m.id)) return;
-    messages.push(m); messages.sort((a,b)=>a.id-b.id); if(messages.length>300) messages=messages.slice(-300);
+    messages.push(m); messages.sort((a,b)=>a.id-b.id); if(messages.length>300 && !olderLoaded) messages=messages.slice(-300);
     if(chatVisible()){ drawList(false); markSeen(); if(isLove(m)) queueLove(m.sender); }
     else renderBadge();
     if(m.sender!==me.uid){
@@ -1114,8 +1133,9 @@ const App = (function(){
   }
   function jumpTo(id){
     pinOpen = false; drawPinBar();
-    const el = document.querySelector(`#list [data-mid="${id}"]`);
-    if(!el){ toast("這則訊息太舊了，看置頂的內容就好囉"); return; }
+    let el = document.querySelector(`#list [data-mid="${id}"]`);
+    if(!el){ (async()=>{ for(let i=0;i<10 && !document.querySelector(`#list [data-mid="${id}"]`); i++){ if(!(await loadOlder())) break; }
+      const e2 = document.querySelector(`#list [data-mid="${id}"]`); if(e2){ e2.scrollIntoView({ block:"center", behavior:"smooth" }); e2.classList.add("flash"); setTimeout(()=>e2.classList.remove("flash"), 1500); } else toast("找不到這則訊息了"); })(); return; }
     el.scrollIntoView({ block:"center", behavior:"smooth" });
     el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   }
@@ -1542,7 +1562,9 @@ const App = (function(){
     B.on("status", s=>{ connected = s==="SUBSCRIBED"; if(s==="SUBSCRIBED") resync(); });
     members = await B.members();
     const mine = members.find(m=>m.user_id===me.uid); if(mine){ if(!me.name) me.name=mine.name; if(!me.cat) me.cat=mine.cat; }
+    olderDone = false; olderLoaded = false;
     try{ messages = await B.messages(); }catch(e){ messages=[]; }
+    if(messages.length < 80) olderDone = true;
     await getState("moqi").catch(()=>{});
     try{ const md = await getState("mood"); moodSt = md ? clone(md.state) : null; shownMakeup = moodSt && moodSt.makeup && moodSt.makeup.last ? moodSt.makeup.last.n : 0; }catch(e){}
     onState("mood", onMood);

@@ -1387,3 +1387,5 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .tdBar .btn{width:100%;padding:8px}.tdBar .tdX{padding:5px}
 .tdWaveB{display:flex;flex-direction:column;align-items:center;height:64px;font-size:17px}.tdWaveB small{font-size:11px;opacity:.85}
 .tdHint,.tdNote{font-size:12px;color:var(--muted);text-align:center;padding:10px 0}
+.list .older{display:block;margin:6px auto 10px;font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:4px 14px}
+.list .older-end{opacity:.7}

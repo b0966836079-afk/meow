@@ -52,6 +52,10 @@
       const { data, error } = await sb.from("messages").select("*").eq("couple_id", B.coupleId).order("id", { ascending: false }).limit(limit);
       if (error) throw error; return (data || []).reverse();
     };
+    B.messagesBefore = async (beforeId, limit = 80) => {   // older history, page by page
+      const { data, error } = await sb.from("messages").select("*").eq("couple_id", B.coupleId).lt("id", beforeId).order("id", { ascending: false }).limit(limit);
+      if (error) throw error; return (data || []).reverse();
+    };
     B.send = async (body, kind, name, cat, media) => {
       const row = { couple_id: B.coupleId, sender: B.uid, body, kind: kind || "text", name, cat };
       if (media) row.media = media;
@@ -192,7 +196,8 @@
     B.joinCouple = async (code, name, cat) => { const d = await call("join", { uid: B.uid, code, name, cat }); if (d.error) throw new Error(d.error); B.coupleId = d.couple_id; B.code = d.code; return d; };
     B.updateMe = async (patch) => call("update", { uid: B.uid, patch });
     B.members = async () => call("members", { cid: B.coupleId });
-    B.messages = async () => call("messages", { cid: B.coupleId });
+    B.messages = async () => (await call("messages", { cid: B.coupleId })).slice(-80);
+    B.messagesBefore = async (beforeId, limit = 80) => (await call("messages", { cid: B.coupleId })).filter(m => m.id < beforeId).slice(-limit);
     B.send = async (body, kind, name, cat, media) => call("send", { cid: B.coupleId, uid: B.uid, body, kind: kind || "text", name, cat, media: media || null });
     B.uploadImage = async (blob) => { const dataUrl = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(blob); }); return call("upload", { cid: B.coupleId, dataUrl }); };
     B.imageUrl = async (path) => call("url", { path });
