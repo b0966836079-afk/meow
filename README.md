@@ -80,5 +80,5 @@
 ## App lock (密碼鎖)
 Settings → 密碼鎖. A 4-digit PIN stored only on this device (salted SHA-256 in localStorage `mw_lock`). Asks on open and after leaving the app for 30s / 1min / 5min (or only on open). Forgot PIN: type the nest invite code to turn the lock off. It is a privacy lock against people holding the phone, not account security.
 
-## 喵喵合成 (games/merge.js)
-Suika-style merge game. 11 cat tiers (粉粉貓 → 貓貓神), sprites generated as pixel canvases at load. Circle physics at 1/120s fixed step; same-tier contact merges. Over the dashed line for 2.6s ends the run. State key "merge": best/top/plays per uid. Coins = score/80 (max 60) into pet, log kind "merge". Card art is injected into GameArt by merge.js.
+## 喵喵方塊 (games/tetris.js)
+Cat Tetris. 10x20 board, each cell is a 12px square cat head (one colour per piece). 7-bag, simple wall kicks, ghost, hold, next x3, lock delay 0.5s (15 resets). Buttons with auto-repeat plus board gestures (drag = move, tap = rotate, fast swipe down = hard drop). Auto-pauses when the app is hidden. State key "tetris": best/lines/plays per uid. Coins = lines cleared (max 60), pet log kind "tetris".

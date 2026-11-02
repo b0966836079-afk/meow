@@ -1599,33 +1599,47 @@ body.locked #app,body.locked #nav{visibility:hidden}
 .lockPad button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .lockPad button.fn{font-size:15px;background:var(--pinkL)}
 
-/* 喵喵合成 */
-.cmGame{position:fixed;inset:0;z-index:130;background:#f6eee3;background-image:linear-gradient(rgba(90,59,46,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(90,59,46,.045) 2px,transparent 2px);background-size:24px 24px;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 10px calc(env(safe-area-inset-bottom) + 8px);touch-action:none;user-select:none;-webkit-user-select:none;color:var(--ink)}
-.cmHud{width:100%;max-width:420px;display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.cmQuit{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:4px 8px;box-shadow:3px 3px 0 var(--shadow)}
-.cmScore{flex:1;text-align:center;display:flex;flex-direction:column;line-height:1.1}
-.cmScore span,.cmNext span{font-size:11px;color:var(--muted)}
-.cmScore b{font-weight:400;font-size:26px;color:#e5486a;text-shadow:2px 2px 0 #fff}
-.cmNext{display:flex;flex-direction:column;align-items:center;border:3px solid var(--line);background:var(--card);padding:2px 8px 4px;box-shadow:3px 3px 0 var(--shadow);min-width:62px}
-.cmNext i{height:36px;display:flex;align-items:center;justify-content:center}
-.cmNext img{height:34px;width:auto}
-.cmWrap{flex:1;width:100%;display:flex;align-items:flex-start;justify-content:center;min-height:0}
-.cmWrap canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;border:4px solid var(--line);border-top-width:0;border-radius:0 0 18px 18px;box-shadow:5px 5px 0 var(--shadow);background:#fff9ef}
-.cmTip{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
-.cmEnd{position:absolute;inset:0;background:rgba(40,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-.cmCard{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:16px;width:min(300px,100%);text-align:center}
-.cmCard h3{font-weight:400;margin:4px 0}
-.cmCard p{margin:4px 0;font-size:14px}.cmCard b{font-weight:400;color:#e5486a}
-.cmCard .cmBig{font-size:30px;color:#e5486a}
-.cmTop img.big{width:110px;height:auto;image-rendering:pixelated;animation:bob .6s steps(2) infinite}
-.cmBtns{display:flex;gap:8px;margin-top:10px}.cmBtns .btn{flex:1;width:auto}
-.cmLobby{display:flex;flex-direction:column;gap:10px;padding:14px}
-.cmChain{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:2px 1px}
-.cmChain span img{display:block;image-rendering:pixelated}
-.cmChain span img{height:calc(13px + var(--i)*3.3px)}
-.cmIntro{margin:0;text-align:center;font-size:14px;line-height:1.6}.cmIntro b{font-weight:400;color:var(--pinkT)}
-.cmHow{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.cmHow span{font-size:12px;background:var(--pinkL);border:2px solid var(--line);padding:1px 8px}
-.cmBest{display:flex;gap:8px}.cmBest>div{flex:1;border:3px solid var(--line);background:var(--card);padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.cmBest b{font-weight:400}.cmBest span{color:#e5486a;font-size:18px}.cmBest em{font-style:normal;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:4px}
-.cmBest img.mini{height:20px;image-rendering:pixelated}
-.ga img{width:100%;height:auto;display:block;image-rendering:pixelated}
+/* 喵喵方塊 */
+.tsGame{position:fixed;inset:0;z-index:130;background:#f6eee3;background-image:linear-gradient(rgba(90,59,46,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(90,59,46,.045) 2px,transparent 2px);background-size:24px 24px;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px);touch-action:none;user-select:none;-webkit-user-select:none;color:var(--ink)}
+.tsHud{width:100%;max-width:420px;display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.tsQuit,.tsPause{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:4px 8px;box-shadow:3px 3px 0 var(--shadow);color:var(--ink)}
+.tsPause{font-size:14px;padding:3px 9px}
+.tsStat{flex:1;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.tsStat span{font-size:11px;color:var(--muted)}.tsStat b{font-weight:400;font-size:20px;color:#e5486a;text-shadow:2px 2px 0 #fff}
+.tsMid{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px}
+.tsStrip{display:flex;gap:8px;width:100%;max-width:380px;justify-content:space-between}
+.tsBox{border:3px solid var(--line);background:var(--card);box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:row;align-items:center;padding:3px 8px;gap:8px;height:40px}
+.tsBox>span{font-size:11px;color:var(--muted)}
+.tsBox i{display:flex;align-items:center;justify-content:center;width:40px;height:26px}.tsBox .tsP{width:calc(var(--w) * 9px);height:calc(var(--h) * 9px)}
+.tsBox i.sm{transform:scale(.8);height:20px}
+.tsHold{cursor:pointer}.tsHold i{height:34px}
+.tsP{position:relative;display:block;width:calc(var(--w) * 12px);height:calc(var(--h) * 12px)}
+.tsP img{position:absolute;image-rendering:pixelated;display:block}
+.tsP.used{opacity:.4}
+.tsWrap{position:relative;flex:none}
+.tsWrap canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;border:4px solid var(--line);box-shadow:5px 5px 0 var(--shadow);background:#fff9ef}
+.tsPop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--line);padding:4px 12px;font-size:16px;color:#e5486a;white-space:nowrap;opacity:0;pointer-events:none;box-shadow:3px 3px 0 var(--shadow)}
+.tsPop.on{animation:tsPop 1.2s ease-out}
+@keyframes tsPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
+.tsGame.paused .tsWrap::after{content:"暫停中 ⏸\A按 ▶ 繼續";white-space:pre;position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;text-align:center;background:rgba(255,249,239,.92);font-size:18px;color:var(--ink)}
+.tsPad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:400px;margin-top:10px}
+.tsB{font:inherit;font-size:24px;height:58px;border:3px solid var(--line);background:var(--card);color:var(--ink);box-shadow:4px 4px 0 var(--shadow);touch-action:none}
+.tsB.on{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow);background:var(--pinkL)}
+.tsB.rot{background:#e2f5ec}.tsB.drop{background:var(--pinkL)}
+.tsTip{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+.tsEnd{position:absolute;inset:0;background:rgba(40,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px}
+.tsCard{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:16px;width:min(300px,100%);text-align:center}
+.tsCard h3{font-weight:400;margin:6px 0 2px}.tsCard p{margin:4px 0;font-size:14px}.tsCard b{font-weight:400;color:#e5486a}
+.tsCard .tsBig{font-size:30px;color:#e5486a}
+.tsCats{display:flex;justify-content:center;gap:4px}.tsCats img{width:36px;image-rendering:pixelated;animation:bob .6s steps(2) infinite}.tsCats img:nth-child(2n){animation-delay:.3s}
+.tsBtns{display:flex;gap:8px;margin-top:10px}.tsBtns .btn{flex:1;width:auto}
+.tsLobby{display:flex;flex-direction:column;gap:10px;padding:14px}
+.tsParade{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:10px}
+.tsParade .tsP{width:calc(var(--w) * 14px);height:calc(var(--h) * 14px)}
+.tsParade span:nth-child(odd){animation:bob .8s steps(2) infinite}
+.tsIntro{margin:0;text-align:center;font-size:14px;line-height:1.6}.tsIntro b{font-weight:400;color:var(--pinkT)}
+.tsHow{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.tsHow span{font-size:12px;background:var(--pinkL);border:2px solid var(--line);padding:1px 8px}
+.tsBest{display:flex;gap:8px}.tsBest>div{flex:1;border:3px solid var(--line);background:var(--card);padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tsBest b{font-weight:400}.tsBest span{color:#e5486a;font-size:18px}.tsBest em{font-style:normal;font-size:12px;color:var(--muted)}
+.ga img{display:block;image-rendering:pixelated}
+.ga .tsArt{aspect-ratio:6/3}.ga .tsArt img{position:absolute;width:16.66%}
