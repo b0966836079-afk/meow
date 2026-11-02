@@ -1545,3 +1545,20 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .callMsg .bub{background:var(--card);border:2px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px}
 .callMsg .cbk{font:inherit;font-size:12px;border:2px solid var(--line);border-radius:999px;background:#e6f8ee;color:var(--ink);padding:3px 10px}
 body.inCall{overflow:hidden}
+
+/* 通話縮小泡泡 */
+.callOv.mini{inset:auto;left:0;top:0;width:auto;height:auto;padding:6px 8px 6px 6px;flex-direction:row;justify-content:flex-start;align-items:center;gap:6px;z-index:400;background:#ffe1ea;border:3px solid #5a3b2e;border-radius:999px;box-shadow:0 5px 0 rgba(90,59,46,.3);touch-action:none;cursor:grab;overflow:visible}
+.callOv.mini .mFace{width:46px;height:46px;border-radius:50%;background:#fff;border:3px solid #5a3b2e;overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none;transition:box-shadow .15s}
+.callOv.mini .mFace svg{width:40px;height:40px;animation:bob .6s steps(2) infinite}
+.callOv.mini .mFace video{width:100%;height:100%;object-fit:cover}
+.callOv.mini.mvid .mFace{width:58px;height:58px}
+.callOv.mini.talk .mFace{box-shadow:0 0 0 4px #f0708d,0 0 14px 4px #ffb3c6}
+.callOv.mini .mInfo{display:flex;flex-direction:column;line-height:1.1;font-size:13px;min-width:44px}
+.callOv.mini .mInfo b{font-weight:400;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.callOv.mini .mInfo .timer{color:#e5486a;font-size:15px}
+.callOv.mini .mB{width:38px;height:38px;border-radius:50%;border:3px solid #5a3b2e;background:#fff;padding:5px;display:flex;align-items:center;justify-content:center;flex:none}
+.callOv.mini .mB svg{width:100%;height:100%;display:block}
+.callOv.mini .mB.off{background:#e3ddd6}
+.callOv.mini .mB.end{background:#f7a7b8}.callOv.mini .mB.end svg{transform:rotate(135deg)}
+.callOv.mini .mB:active{transform:translateY(2px)}
+.cBtn.mini{background:#fff6d6}

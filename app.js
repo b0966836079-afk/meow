@@ -1195,7 +1195,7 @@ const App = (function(){
   function endCall(msg, why){
     if(!CALL) return; const c = CALL; CALL = null;
     stopRingFor(c); [c.ringBc, c.timer].forEach(t=>clearInterval(t)); [c.timeout, c.lostT, c.connT].forEach(t=>clearTimeout(t));
-    try{ c.pc && c.pc.close(); }catch(e){} [c.local].forEach(st=>st && st.getTracks().forEach(t=>t.stop()));
+    try{ c.pc && c.pc.close(); }catch(e){} try{ c.ac && c.ac.close(); }catch(e){} [c.local].forEach(st=>st && st.getTracks().forEach(t=>t.stop()));
     const ov = document.getElementById("callOv"); if(ov) ov.remove(); document.body.classList.remove("inCall");
     if(msg) toast(msg); SFX.next && SFX.next();
     // the caller writes the call into the chat history
@@ -1230,20 +1230,55 @@ const App = (function(){
       btns = B2("decline", "end", PH, "拒接") + (CALL.video ? B2("acceptA", "ok alt", PH, "用語音接") : "") + B2(CALL.video ? "acceptV" : "acceptA", "ok", PH, "接聽"); }
     else if(CALL.phase==="connecting"){ status = `<span class="bubble">連線中<i class="ell"><b>.</b><b>.</b><b>.</b></i></span>`; btns = B2("hang", "end", PH, "掛斷"); }
     else { status = `<span class="timer" id="callTm">0:00</span>`; const hasCam = CALL.local && CALL.local.getVideoTracks().length;
-      btns = B2("mic", CALL.micOn ? "" : "off", icon("mic"), CALL.micOn ? "靜音" : "已靜音") + (hasCam ? B2("cam", CALL.camOn ? "" : "off", icon("camera"), CALL.camOn ? "關鏡頭" : "開鏡頭") + B2("flip", "", icon("spark"), "翻轉") : "") + B2("hang", "end", PH, "掛斷"); }
+      btns = B2("mic", CALL.micOn ? "" : "off", icon("mic"), CALL.micOn ? "靜音" : "已靜音") + (hasCam ? B2("cam", CALL.camOn ? "" : "off", icon("camera"), CALL.camOn ? "關鏡頭" : "開鏡頭") + B2("flip", "", icon("spark"), "翻轉") : "") + B2("mini", "mini", icon("dots"), "縮小") + B2("hang", "end", PH, "掛斷"); }
+    if(CALL.mini && CALL.phase==="live"){ return miniUI(ov, pcat, pname, PH); }
+    document.body.classList.add("inCall"); ov.style.left = ov.style.top = "";
     ov.className = "callOv" + (showVideo ? " video" : "");
     ov.innerHTML = `${showVideo ? `<video id="cvRemote" autoplay playsinline></video><div class="cvLocalWrap"><video id="cvLocal" class="${CALL.facing==="user" ? "mirror" : ""}" autoplay playsinline muted></video></div>` : `<div class="callBg"></div>`}
       <audio id="caRemote" autoplay playsinline></audio>
       <div class="callTop">${showVideo ? `<b class="callName small">${sprite(pcat,"happy")}${pname}</b>` : head}<div class="callStatus">${status}</div><div class="callSub" id="callSt"></div></div>
       <div class="callBtns">${btns}</div>`;
     ov.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>callBtn(b.dataset.c)));
-    attachMedia();
-    if(CALL.phase==="live" && !CALL.timer){ CALL.timer = setInterval(()=>{ const t = document.getElementById("callTm"); if(t && CALL && CALL.t0) t.textContent = fmtDur((Date.now()-CALL.t0)/1000); }, 500); }
+    attachMedia(); startTimer();
+  }
+  function startTimer(){
+    if(CALL.phase==="live" && !CALL.timer){ CALL.timer = setInterval(()=>{ const t = document.getElementById("callTm"); if(t && CALL && CALL.t0) t.textContent = fmtDur((Date.now()-CALL.t0)/1000); talkCheck(); }, 200); }
+  }
+  // 對方講話時泡泡會閃
+  function talkCheck(){
+    const ov = document.getElementById("callOv"); if(!ov || !CALL || !CALL.remote) return;
+    try{
+      if(!CALL.an && CALL.remote.getAudioTracks().length){ const AC = window.AudioContext || window.webkitAudioContext; const ac = CALL.ac = new AC();
+        const src = ac.createMediaStreamSource(CALL.remote); const an = ac.createAnalyser(); an.fftSize = 256; src.connect(an); CALL.an = an; CALL.abuf = new Uint8Array(an.fftSize); }
+      if(!CALL.an) return; if(CALL.ac.state==="suspended") CALL.ac.resume().catch(()=>{});
+      CALL.an.getByteTimeDomainData(CALL.abuf); let m = 0; for(const v of CALL.abuf) m = Math.max(m, Math.abs(v-128));
+      ov.classList.toggle("talk", m > 10);
+    }catch(e){ CALL.an = CALL.an || 0; }
+  }
+  function miniUI(ov, pcat, pname, PH){
+    document.body.classList.remove("inCall");
+    const rvid = CALL.remote && CALL.remote.getVideoTracks().some(t=>t.readyState==="live");
+    ov.className = "callOv mini" + (rvid ? " mvid" : "");
+    ov.innerHTML = `<audio id="caRemote" autoplay playsinline></audio>
+      <div class="mFace">${rvid ? `<video id="cvRemote" autoplay playsinline muted></video>` : sprite(pcat, "love")}</div>
+      <div class="mInfo"><b>${pname}</b><span class="timer" id="callTm">${CALL.t0 ? fmtDur((Date.now()-CALL.t0)/1000) : "0:00"}</span></div>
+      <button class="mB ${CALL.micOn ? "" : "off"}" data-c="mic" aria-label="靜音">${icon("mic")}</button>
+      <button class="mB end" data-c="hang" aria-label="掛斷">${PH}</button>`;
+    const pos = CALL.mpos || [window.innerWidth - 222, Math.max(70, window.innerHeight*0.14)];
+    const place = (x, y) => { x = Math.max(4, Math.min(window.innerWidth - ov.offsetWidth - 4, x)); y = Math.max(4, Math.min(window.innerHeight - ov.offsetHeight - 4, y)); ov.style.left = x + "px"; ov.style.top = y + "px"; CALL.mpos = [x, y]; };
+    place(pos[0], pos[1]);
+    ov.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", e=>{ e.stopPropagation(); callBtn(b.dataset.c); }));
+    let st = null;
+    ov.onpointerdown = e => { if(e.target.closest("[data-c]")) return; st = { x:e.clientX, y:e.clientY, ox:ov.offsetLeft, oy:ov.offsetTop, moved:false }; try{ ov.setPointerCapture(e.pointerId); }catch(_){} };
+    ov.onpointermove = e => { if(!st) return; const dx = e.clientX-st.x, dy = e.clientY-st.y; if(Math.abs(dx)+Math.abs(dy) > 6) st.moved = true; if(st.moved) place(st.ox+dx, st.oy+dy); };
+    ov.onpointerup = () => { if(st && !st.moved && CALL){ SFX.tap(); CALL.mini = false; ov.onpointerdown = ov.onpointermove = ov.onpointerup = null; callUI(); } st = null; };
+    attachMedia(); startTimer();
   }
   async function callBtn(c){
     if(!CALL) return; SFX.tap();
     if(c==="hang") return hangUp();
     if(c==="decline") return declineCall();
+    if(c==="mini"){ CALL.mini = true; callUI(); return; }
     if(c==="acceptA") return acceptCall(false);
     if(c==="acceptV") return acceptCall(true);
     if(c==="mic"){ CALL.micOn = !CALL.micOn; CALL.local.getAudioTracks().forEach(t=>t.enabled = CALL.micOn); callUI(); }
