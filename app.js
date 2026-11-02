@@ -272,6 +272,7 @@ const App = (function(){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
     if(m.kind==="ping") return "";
+    if(m.kind==="call") return `<div class="msg sys callMsg"><span class="bub">${esc(m.body)}</span><button class="cbk" data-callback="${m.body.includes("視訊")?1:0}">${m.sender===me.uid ? "再打一次" : "回撥"}</button></div>`;
     if(m.kind==="album") return `<div class="msg sys albumMsg"><button class="bub" data-goalbum>${esc(m.body)}<br><small>點我去整理相簿 ▶</small></button></div>`;
     if(m.kind==="photo_gone") return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<div class="bub gone">📷 照片已刪除</div><span class="tm">${hhmm(m.created_at)}</span></div>`;
     if(m.kind==="pin") return `<div class="msg sys pinMsg"><div class="bub">${esc(m.body)}</div></div>`;
@@ -295,7 +296,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="chatTools"><button class="chatSearch" id="bSearch" title="搜尋訊息">🔍 搜尋訊息</button></div><div class="pinBar hidden"></div><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="chatTools"><button class="chatSearch callB" id="bCallA" title="語音通話">📞 語音</button><button class="chatSearch callB" id="bCallV" title="視訊通話">🎥 視訊</button><span style="flex:1"></span><button class="chatSearch" id="bSearch" title="搜尋訊息">🔍 搜尋訊息</button></div><div class="pinBar hidden"></div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="replyBar hidden" id="replyBar"></div>
@@ -337,11 +338,14 @@ const App = (function(){
     txt.addEventListener("keydown", e=>{ if(sysKb && e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
     $("bStk").addEventListener("click", ()=>{ showKb(false); $("stk").classList.toggle("hidden"); });
     $("bSearch").addEventListener("click", ()=>{ SFX.tap(); showKb(false); openSearch(); });
+    $("bCallA").addEventListener("click", ()=>{ showKb(false); startCall(false); });
+    $("bCallV").addEventListener("click", ()=>{ showKb(false); startCall(true); });
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
     bindVoiceLongPress($("list")); bindSwipeReply($("list")); drawPinBar(); drawReplyBar(); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
+      const cb = e.target.closest("[data-callback]"); if(cb){ startCall(cb.dataset.callback==="1"); return; }
       const jq=e.target.closest("[data-jump]"); if(jq){ jumpTo(+jq.dataset.jump); return; }
       const vb=e.target.closest("[data-voice]"); if(vb){ if(vb._lp){ vb._lp=false; return; } playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
@@ -1132,6 +1136,141 @@ const App = (function(){
       bar.querySelectorAll("[data-pun]").forEach(b=>b.addEventListener("click", ()=>{ const p = pinList().find(x=>x.id===+b.dataset.pun); if(p) togglePin({ id:p.id }, false); }));
     });
   }
+  // ---- 通話：語音＋視訊（WebRTC，兩支手機直接連；訊號用即時頻道傳）----
+  let CALL = null; const declined = new Set();
+  const callIce = async () => {
+    const cfg = window.MEOW_CONFIG || {}, base = [{ urls:["stun:stun.l.google.com:19302","stun:stun1.l.google.com:19302","stun:stun.cloudflare.com:3478"] }];
+    if(cfg.TURN_API){ try{ const r = await fetch(cfg.TURN_API); const list = await r.json(); if(Array.isArray(list) && list.length) return base.concat(list); }catch(e){} }
+    if(cfg.TURN) return base.concat([].concat(cfg.TURN));
+    return base;
+  };
+  const csend = (k, extra) => ctx.broadcast(Object.assign({ g:"call", k, id: CALL && CALL.id }, extra||{}));
+  const fmtDur = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,"0")}`;
+  async function getMedia(video, facing){
+    return navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true },
+      video: video ? { facingMode: facing || "user", width:{ ideal:640 }, height:{ ideal:480 } } : false });
+  }
+  function ringTone(kind){
+    stopRing(); let n = 0;
+    const once = () => { if(kind==="in"){ SFX.meow(1.12); setTimeout(()=>SFX.beep && SFX.beep(true), 420); if(navigator.vibrate) navigator.vibrate([350,200,350]); }
+      else { SFX.beep && SFX.beep(false); setTimeout(()=>SFX.beep && SFX.beep(false), 250); } n++; };
+    once(); CALL && (CALL.ringT = setInterval(once, kind==="in" ? 1800 : 2600));
+  }
+  function stopRing(){ if(CALL && CALL.ringT){ clearInterval(CALL.ringT); CALL.ringT = null; } if(navigator.vibrate) navigator.vibrate(0); }
+  async function postCallLog(text){ try{ const row = await B.send(text, "call", me.name, me.cat); addMessage(row); }catch(e){} }
+  async function startCall(video){
+    const p = partner(); if(!p){ toast("要等 ta 加入小窩才能打電話喔"); return; }
+    if(CALL){ toast("已經在通話中了"); return; }
+    if(!navigator.mediaDevices || !window.RTCPeerConnection){ toast("這個瀏覽器不支援通話 (´・ω・`)"); return; }
+    let local; try{ local = await getMedia(video); }catch(e){ toast(video ? "要允許使用相機和麥克風才能視訊喔" : "要允許使用麥克風才能打電話喔"); return; }
+    CALL = { id: Date.now() + "-" + Math.random().toString(36).slice(2,6), role:"caller", video, local, peer:p.user_id, phase:"ringing", ice:[], camOn:true, micOn:true, facing:"user", started: Date.now() };
+    callUI(); ringTone("out");
+    const ring = () => csend("ring", { video, name: me.name, cat: me.cat });
+    ring(); CALL.ringBc = setInterval(ring, 2500);
+    if(!isOnline(p.user_id)) postCallLog(`📞 ${me.name} 打${video ? "視訊" : "語音"}電話給你，快打開喵喵小窩接聽！`);
+    CALL.timeout = setTimeout(()=>{ if(CALL && CALL.phase==="ringing"){ csend("cancel"); endCall("對方沒有接聽", "missed"); } }, 45000);
+  }
+  async function makePc(){
+    const pc = new RTCPeerConnection({ iceServers: await callIce() }); CALL.pc = pc;
+    CALL.local.getTracks().forEach(t=>pc.addTrack(t, CALL.local));
+    pc.onicecandidate = e => { if(e.candidate) csend("ice", { c: e.candidate.toJSON() }); };
+    pc.ontrack = e => { CALL.remote = e.streams[0]; attachMedia(); };
+    pc.onconnectionstatechange = () => { if(!CALL || CALL.pc !== pc) return; const s2 = pc.connectionState;
+      if(s2==="connected"){ if(CALL.phase!=="live"){ CALL.phase = "live"; CALL.t0 = Date.now(); stopRing(); SFX.select(); callUI(); } clearTimeout(CALL.lostT); CALL.lostT = null; setStatus(""); }
+      if(s2==="disconnected"){ setStatus("連線不穩定，努力重新連線中…"); clearTimeout(CALL.lostT); CALL.lostT = setTimeout(()=>{ if(CALL && CALL.pc===pc && pc.connectionState!=="connected"){ csend("hang"); endCall("連線中斷了", "lost"); } }, 12000); }
+      if(s2==="failed"){ csend("hang"); endCall("連不上對方 (´；ω；`) 可能是網路擋住了，換成 Wi-Fi 再試試", "fail"); } };
+    return pc;
+  }
+  async function flushIce(){ if(!CALL || !CALL.pc || !CALL.pc.remoteDescription) return; const q = CALL.ice.splice(0); for(const c of q){ try{ await CALL.pc.addIceCandidate(c); }catch(e){} } }
+  async function acceptCall(asVideo){
+    if(!CALL || CALL.phase!=="incoming") return;
+    stopRing();
+    try{ CALL.local = await getMedia(asVideo); }catch(e){ toast("要允許使用麥克風" + (asVideo ? "和相機" : "") + "才能接聽喔"); return; }
+    CALL.myVideo = asVideo; CALL.phase = "connecting"; callUI();
+    await makePc(); csend("accept", { video: asVideo });
+    CALL.connT = setTimeout(()=>{ if(CALL && CALL.phase==="connecting"){ csend("hang"); endCall("連不上對方 (´；ω；`) 可能是網路擋住了，換成 Wi-Fi 再試試", "fail"); } }, 30000);
+  }
+  function declineCall(){ if(!CALL) return; declined.add(CALL.id); csend("decline"); endCall("", "declined"); }
+  function hangUp(){ if(!CALL) return; if(CALL.phase==="ringing"){ csend("cancel"); endCall("", "cancel"); } else { csend("hang"); endCall("通話結束", "hang"); } }
+  function endCall(msg, why){
+    if(!CALL) return; const c = CALL; CALL = null;
+    stopRingFor(c); [c.ringBc, c.timer].forEach(t=>clearInterval(t)); [c.timeout, c.lostT, c.connT].forEach(t=>clearTimeout(t));
+    try{ c.pc && c.pc.close(); }catch(e){} [c.local].forEach(st=>st && st.getTracks().forEach(t=>t.stop()));
+    const ov = document.getElementById("callOv"); if(ov) ov.remove(); document.body.classList.remove("inCall");
+    if(msg) toast(msg); SFX.next && SFX.next();
+    // the caller writes the call into the chat history
+    if(c.role==="caller"){ const kind = c.video ? "視訊" : "語音";
+      if(c.t0) postCallLog(`📞 ${kind}通話 ${fmtDur((Date.now()-c.t0)/1000)}`);
+      else if(why==="missed" || why==="declined_by_them") postCallLog(`📞 ${kind}通話・對方沒有接`);
+      else if(why==="cancel") postCallLog(`📞 ${kind}通話・已取消`); }
+  }
+  function stopRingFor(c){ if(c.ringT) clearInterval(c.ringT); if(navigator.vibrate) navigator.vibrate(0); }
+  function setStatus(t){ const e = document.getElementById("callSt"); if(e) e.textContent = t; }
+  function attachMedia(){
+    const ov = document.getElementById("callOv"); if(!ov || !CALL) return;
+    const rv = ov.querySelector("#cvRemote"), lv = ov.querySelector("#cvLocal"), ra = ov.querySelector("#caRemote");
+    if(CALL.remote){ if(rv && rv.srcObject !== CALL.remote){ rv.srcObject = CALL.remote; rv.play().catch(()=>{}); } if(ra && ra.srcObject !== CALL.remote){ ra.srcObject = CALL.remote; ra.play().catch(()=>{}); } }
+    if(lv && CALL.local && lv.srcObject !== CALL.local){ lv.srcObject = CALL.local; lv.play().catch(()=>{}); }
+  }
+  function callUI(){
+    if(!CALL) return; let ov = document.getElementById("callOv");
+    if(!ov){ ov = document.createElement("div"); ov.id = "callOv"; ov.className = "callOv"; document.body.appendChild(ov); document.body.classList.add("inCall"); }
+    const p = members.find(m=>m.user_id===CALL.peer) || {}, pname = esc(p.name || pw()), pcat = p.cat || "white";
+    const showVideo = CALL.phase==="live" && (CALL.video || CALL.myVideo || (CALL.remote && CALL.remote.getVideoTracks().length));
+    const head = `<div class="callCat ${CALL.phase==="live" ? "" : "ring"}">${sprite(pcat, CALL.phase==="incoming" ? "wave" : CALL.phase==="live" ? "happy" : "normal")}</div><b class="callName">${pname}</b>`;
+    let status = "", btns = "";
+    if(CALL.phase==="ringing"){ status = `正在打給 ${pname}…`; btns = `<button class="cBtn end" data-c="hang">${Pix.icon ? "" : ""}掛斷</button>`; }
+    else if(CALL.phase==="incoming"){ status = `${pname} 打${CALL.video ? "視訊" : "語音"}電話給你`;
+      btns = `<button class="cBtn end" data-c="decline">拒接</button>${CALL.video ? `<button class="cBtn ok alt" data-c="acceptA">用語音接</button>` : ""}<button class="cBtn ok" data-c="${CALL.video ? "acceptV" : "acceptA"}">接聽</button>`; }
+    else if(CALL.phase==="connecting"){ status = "連線中…"; btns = `<button class="cBtn end" data-c="hang">掛斷</button>`; }
+    else { status = `<span id="callTm">0:00</span>`; const hasCam = CALL.local && CALL.local.getVideoTracks().length;
+      btns = `<button class="cBtn ${CALL.micOn ? "" : "off"}" data-c="mic">${CALL.micOn ? "🎙️ 靜音" : "🔇 已靜音"}</button>${hasCam ? `<button class="cBtn ${CALL.camOn ? "" : "off"}" data-c="cam">${CALL.camOn ? "📷 關鏡頭" : "🚫 開鏡頭"}</button><button class="cBtn" data-c="flip">🔄 翻轉</button>` : ""}<button class="cBtn end" data-c="hang">掛斷</button>`; }
+    ov.className = "callOv" + (showVideo ? " video" : "");
+    ov.innerHTML = `${showVideo ? `<video id="cvRemote" autoplay playsinline></video><video id="cvLocal" class="${CALL.facing==="user" ? "mirror" : ""}" autoplay playsinline muted></video>` : `<div class="callBg"></div>`}
+      <audio id="caRemote" autoplay playsinline></audio>
+      <div class="callTop">${showVideo ? `<b class="callName small">${pname}</b>` : head}<div class="callStatus">${status}</div><div class="callSub" id="callSt"></div></div>
+      <div class="callBtns">${btns}</div>`;
+    ov.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>callBtn(b.dataset.c)));
+    attachMedia();
+    if(CALL.phase==="live" && !CALL.timer){ CALL.timer = setInterval(()=>{ const t = document.getElementById("callTm"); if(t && CALL && CALL.t0) t.textContent = fmtDur((Date.now()-CALL.t0)/1000); }, 500); }
+  }
+  async function callBtn(c){
+    if(!CALL) return; SFX.tap();
+    if(c==="hang") return hangUp();
+    if(c==="decline") return declineCall();
+    if(c==="acceptA") return acceptCall(false);
+    if(c==="acceptV") return acceptCall(true);
+    if(c==="mic"){ CALL.micOn = !CALL.micOn; CALL.local.getAudioTracks().forEach(t=>t.enabled = CALL.micOn); callUI(); }
+    if(c==="cam"){ CALL.camOn = !CALL.camOn; CALL.local.getVideoTracks().forEach(t=>t.enabled = CALL.camOn); callUI(); }
+    if(c==="flip"){ try{ const facing = CALL.facing==="user" ? "environment" : "user"; const ns = await navigator.mediaDevices.getUserMedia({ video:{ facingMode: facing } }); const nt = ns.getVideoTracks()[0];
+      const snd = CALL.pc && CALL.pc.getSenders().find(x=>x.track && x.track.kind==="video"); if(snd) await snd.replaceTrack(nt);
+      CALL.local.getVideoTracks().forEach(t=>{ t.stop(); CALL.local.removeTrack(t); }); CALL.local.addTrack(nt); CALL.facing = facing; callUI(); }catch(e){ toast("沒辦法切換鏡頭"); } }
+  }
+  ctx.onBroadcast(async p=>{
+    if(!p || p.g!=="call") return;
+    if(p.k==="ring"){
+      if(CALL){ if(CALL.id !== p.id && CALL.phase!=="ringing") ctx.broadcast({ g:"call", k:"busy", id:p.id }); return; }
+      if(declined.has(p.id)) return;
+      CALL = { id:p.id, role:"callee", video:!!p.video, peer:p.from, phase:"incoming", ice:[], camOn:true, micOn:true, facing:"user" };
+      callUI(); ringTone("in"); clearNotifs && clearNotifs();
+      CALL.timeout = setTimeout(()=>{ if(CALL && CALL.phase==="incoming") endCall("", "missed"); }, 47000);
+      return; }
+    if(!CALL || p.id !== CALL.id) return;
+    if(p.k==="accept" && CALL.role==="caller" && CALL.phase==="ringing"){
+      clearInterval(CALL.ringBc); clearTimeout(CALL.timeout); stopRing(); CALL.phase = "connecting"; callUI();
+      const pc = await makePc(); const off = await pc.createOffer(); await pc.setLocalDescription(off); csend("offer", { sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : { type:off.type, sdp:off.sdp } });
+      CALL.connT = setTimeout(()=>{ if(CALL && CALL.phase==="connecting"){ csend("hang"); endCall("連不上對方 (´；ω；`) 可能是網路擋住了，換成 Wi-Fi 再試試", "fail"); } }, 30000);
+    }
+    if(p.k==="offer" && CALL.role==="callee" && CALL.pc){ await CALL.pc.setRemoteDescription(p.sdp); const ans = await CALL.pc.createAnswer(); await CALL.pc.setLocalDescription(ans); csend("answer", { sdp: CALL.pc.localDescription.toJSON ? CALL.pc.localDescription.toJSON() : { type:ans.type, sdp:ans.sdp } }); flushIce(); }
+    if(p.k==="answer" && CALL.role==="caller" && CALL.pc){ await CALL.pc.setRemoteDescription(p.sdp); flushIce(); }
+    if(p.k==="ice"){ if(CALL.pc && CALL.pc.remoteDescription){ try{ await CALL.pc.addIceCandidate(p.c); }catch(e){} } else CALL.ice.push(p.c); }
+    if(p.k==="decline"){ endCall("對方現在不方便接 (´・ω・`)", "declined_by_them"); }
+    if(p.k==="busy"){ endCall("對方正在通話中", "busy"); }
+    if(p.k==="cancel"){ endCall(CALL.phase==="incoming" ? `錯過了一通電話` : "", "cancel_by_them"); }
+    if(p.k==="hang"){ endCall("對方掛斷了", "hang_by_them"); }
+  });
+  window.addEventListener("pagehide", ()=>{ if(CALL){ csend(CALL.phase==="ringing" ? "cancel" : "hang"); } });
+
   // ---- search messages ----
   function openSearch(){
     const o = document.createElement("div"); o.className = "srchSheet";
