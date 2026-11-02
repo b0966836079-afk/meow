@@ -82,3 +82,6 @@ Settings → 密碼鎖. A 4-digit PIN stored only on this device (salted SHA-256
 
 ## 喵喵方塊 (games/tetris.js)
 Cat Tetris. 10x20 board, each cell is a 12px square cat head (one colour per piece). 7-bag, simple wall kicks, ghost, hold, next x3, lock delay 0.5s (15 resets). Buttons with auto-repeat plus board gestures (drag = move, tap = rotate, fast swipe down = hard drop). Auto-pauses when the app is hidden. State key "tetris": best/lines/plays per uid. Coins = lines cleared (max 60), pet log kind "tetris".
+
+## 喵喵撞球 (games/pool.js)
+Turn-based 8-ball. Balls are cat heads (1-7 素色貓, 9-15 條紋貓, 8 小黑貓, cue 白貓). The shooter simulates the shot locally (fixed 1/240s steps), judges it (fouls, groups, ball in hand, 8-ball win/loss) and CAS-saves the resulting positions plus `last={a,pw,start}`; the other phone replays the shot from `start` and then snaps to the saved positions. State key "pool". Winner gets 5 coins (pet log "pool"). Also a local 自己練習 mode.
