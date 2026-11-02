@@ -295,7 +295,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="pinBar hidden"></div><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="pinBar hidden"></div><button class="chatSearch" id="bSearch" title="搜尋訊息">🔍</button><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="replyBar hidden" id="replyBar"></div>
@@ -336,6 +336,7 @@ const App = (function(){
     txt.addEventListener("input", e=>{ if(!sysKb) return; autoSize(); if(e.inputType && e.inputType.startsWith("delete")) typeFx("del"); else typeFx("key"); });
     txt.addEventListener("keydown", e=>{ if(sysKb && e.key==="Enter" && !e.shiftKey && !e.isComposing && e.keyCode!==229){ e.preventDefault(); sendText(); } });
     $("bStk").addEventListener("click", ()=>{ showKb(false); $("stk").classList.toggle("hidden"); });
+    $("bSearch").addEventListener("click", ()=>{ SFX.tap(); showKb(false); openSearch(); });
     $("bPic").addEventListener("click", ()=>$("fPic").click());
     $("fPic").addEventListener("change", e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) sendPhoto(f); });
     $("stk").querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.s==="poke"){ sendMsg("poke","poke"); SFX.meow(); } else sendMsg(b.dataset.s,"sticker"); $("stk").classList.add("hidden"); }));
@@ -1131,10 +1132,37 @@ const App = (function(){
       bar.querySelectorAll("[data-pun]").forEach(b=>b.addEventListener("click", ()=>{ const p = pinList().find(x=>x.id===+b.dataset.pun); if(p) togglePin({ id:p.id }, false); }));
     });
   }
+  // ---- search messages ----
+  function openSearch(){
+    const o = document.createElement("div"); o.className = "srchSheet";
+    o.innerHTML = `<div class="srchBox"><div class="srchHd"><input id="srchQ" type="search" placeholder="搜尋訊息裡的字…" autocomplete="off" enterkeyhint="search"><button class="btn sub" id="srchX">關閉</button></div>
+      <div class="srchFil"><button data-f="all" class="on">全部</button><button data-f="me">我說的</button><button data-f="ta">${esc(partner() ? partner().name : "ta")} 說的</button></div>
+      <div class="srchRes" id="srchRes"><div class="srchTip">輸入想找的字，例如「生日」「餐廳」「愛你」</div></div></div>`;
+    document.body.appendChild(o);
+    const q = o.querySelector("#srchQ"), res = o.querySelector("#srchRes"); let filter = "all", last = [], tmr = 0, seq = 0;
+    const close = () => o.remove();
+    o.querySelector("#srchX").addEventListener("click", close);
+    o.addEventListener("click", e=>{ if(e.target===o) close(); });
+    const hl = (text, w) => { const t = String(text||""), i = t.toLowerCase().indexOf(w.toLowerCase()); if(i < 0) return esc(t.slice(0, 60));
+      const a = Math.max(0, i - 18), pre = (a > 0 ? "…" : "") + t.slice(a, i), hit = t.slice(i, i + w.length), post = t.slice(i + w.length, i + w.length + 40) + (i + w.length + 40 < t.length ? "…" : "");
+      return esc(pre) + `<mark>${esc(hit)}</mark>` + esc(post); };
+    const show = () => { const w = q.value.trim(); const list = last.filter(m => filter==="all" || (filter==="me" ? m.sender===me.uid : m.sender!==me.uid));
+      if(!w){ res.innerHTML = `<div class="srchTip">輸入想找的字，例如「生日」「餐廳」「愛你」</div>`; return; }
+      res.innerHTML = list.length ? `<div class="srchN">找到 ${list.length} 則${last.length >= 120 ? "（只顯示最新的 120 則）" : ""}</div>` + list.map(m=>`<button class="srchIt" data-id="${m.id}"><span class="av">${sprite(m.cat||catOf(m.sender)||"orange","normal")}</span><span class="tx"><b>${esc(m.sender===me.uid ? "你" : (m.name||nameOf(m.sender)))}</b><i>${esc(dayStr(m.created_at))} ${hhmm(m.created_at)}</i><span>${hl(m.body, w)}</span></span></button>`).join("") : `<div class="srchTip">找不到「${esc(w)}」 (・_・;)</div>`;
+      res.querySelectorAll("[data-id]").forEach(b=>b.addEventListener("click", ()=>{ close(); jumpTo(+b.dataset.id); })); };
+    const run = async () => { const w = q.value.trim(), my = ++seq; if(!w){ last = []; show(); return; }
+      res.innerHTML = `<div class="srchTip">搜尋中…</div>`;
+      try{ const r = B.search ? await B.search(w) : messages.filter(m=>(m.body||"").includes(w)).reverse(); if(my !== seq) return; last = r; show(); }
+      catch(e){ res.innerHTML = `<div class="srchTip">搜尋失敗，等一下再試試</div>`; } };
+    q.addEventListener("input", ()=>{ clearTimeout(tmr); tmr = setTimeout(run, 350); });
+    q.addEventListener("keydown", e=>{ if(e.key==="Enter"){ clearTimeout(tmr); run(); q.blur(); } });
+    o.querySelectorAll("[data-f]").forEach(b=>b.addEventListener("click", ()=>{ filter = b.dataset.f; o.querySelectorAll("[data-f]").forEach(x=>x.classList.toggle("on", x===b)); show(); }));
+    setTimeout(()=>q.focus(), 50);
+  }
   function jumpTo(id){
     pinOpen = false; drawPinBar();
     let el = document.querySelector(`#list [data-mid="${id}"]`);
-    if(!el){ (async()=>{ for(let i=0;i<10 && !document.querySelector(`#list [data-mid="${id}"]`); i++){ if(!(await loadOlder())) break; }
+    if(!el){ (async()=>{ toast("往前找這則訊息中…"); for(let i=0;i<60 && !document.querySelector(`#list [data-mid="${id}"]`); i++){ if(!(await loadOlder())) break; }
       const e2 = document.querySelector(`#list [data-mid="${id}"]`); if(e2){ e2.scrollIntoView({ block:"center", behavior:"smooth" }); e2.classList.add("flash"); setTimeout(()=>e2.classList.remove("flash"), 1500); } else toast("找不到這則訊息了"); })(); return; }
     el.scrollIntoView({ block:"center", behavior:"smooth" });
     el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");

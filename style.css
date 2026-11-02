@@ -1389,3 +1389,22 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .tdHint,.tdNote{font-size:12px;color:var(--muted);text-align:center;padding:10px 0}
 .list .older{display:block;margin:6px auto 10px;font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:4px 14px}
 .list .older-end{opacity:.7}
+/* 搜尋訊息 */
+.chat{position:relative}
+.chatSearch{position:absolute;top:8px;right:10px;z-index:4;width:36px;height:36px;border-radius:50%;border:2px solid var(--line);background:var(--card);font-size:16px;box-shadow:0 2px 0 var(--shadow);opacity:.92}
+.srchSheet{position:fixed;inset:0;z-index:118;background:rgba(40,25,20,.45);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top) + 12px) 10px 10px}
+.srchBox{width:100%;max-width:520px;max-height:86dvh;background:var(--paper,var(--card));border:3px solid var(--line);border-radius:16px;box-shadow:0 6px 0 var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:pdUp .2s ease-out}
+.srchHd{display:flex;gap:8px;padding:10px}
+.srchHd input{flex:1;font:inherit;font-size:16px;padding:8px 12px;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.srchHd .btn{width:auto;padding:6px 12px;font-size:14px}
+.srchFil{display:flex;gap:6px;padding:0 10px 8px}
+.srchFil button{font:inherit;font-size:12px;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:999px;padding:3px 12px}
+.srchFil button.on{background:var(--pink);color:var(--onPink,#fff);border-color:var(--pink)}
+.srchRes{overflow-y:auto;padding:0 10px 10px;flex:1}
+.srchTip,.srchN{font-size:13px;color:var(--muted);text-align:center;padding:14px 0}.srchN{padding:4px 0 8px;text-align:left}
+.srchIt{display:flex;gap:8px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px;margin-bottom:6px}
+.srchIt .av svg{width:34px;height:34px}
+.srchIt .tx{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
+.srchIt .tx b{font-weight:400;font-size:13px}.srchIt .tx i{font-style:normal;font-size:11px;color:var(--muted)}
+.srchIt .tx span{flex-basis:100%;font-size:14px;line-height:1.5;word-break:break-all}
+.srchIt mark{background:#ffe08a;color:inherit;border-radius:3px;padding:0 1px}
