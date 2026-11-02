@@ -87,4 +87,7 @@ Cat Tetris. 10x20 board, each cell is a 12px square cat head (one colour per pie
 Turn-based 8-ball. Balls are cat heads (1-7 素色貓, 9-15 條紋貓, 8 小黑貓, cue 白貓). The shooter simulates the shot locally (fixed 1/240s steps), judges it (fouls, groups, ball in hand, 8-ball win/loss) and CAS-saves the resulting positions plus `last={a,pw,start}`; the other phone replays the shot from `start` and then snaps to the saved positions. State key "pool". Winner gets 5 coins (pet log "pool"). Also a local 自己練習 mode.
 
 ## Restart needs both players (重新開一局)
-`ctx.restartable(id,{title,done,run})` + `ctx.askRestart(id)`. If the game is finished/empty, restart runs at once; otherwise a request is saved in state key `rq_<id>` and the partner gets a top banner (同意 / 繼續玩) whenever they open that game. Used by gomoku, battleship, fight, mono, pool, escape.
+`ctx.restartable(id,{title,done,run})` + `ctx.askRestart(id)`. If the game is finished/empty, restart runs at once; otherwise a request is saved in state key `rq_<id>` and the partner gets a top banner (同意 / 繼續玩) whenever they open that game. Used by gomoku, battleship, fight, mono, pool, banqi.
+
+## 喵喵暗棋 (games/banqi.js)
+Taiwanese banqi on a 8x4 board (portrait). Teams 橘貓隊 (帥仕相俥傌炮兵) vs 黑貓隊 (將士象車馬包卒). First flip decides colours. Cannon captures by jumping exactly one piece; 兵 eats 帥, 帥 cannot eat 兵. Win when the other team is gone or cannot act; 50 quiet moves = draw. State key "banqi". Replaced 密室逃脫 (removed 11/3).
