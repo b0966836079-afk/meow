@@ -1332,3 +1332,30 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .ktB{font:inherit;font-size:20px;height:90px;border:3px solid var(--line);border-radius:18px;box-shadow:0 4px 0 var(--shadow);touch-action:none;color:var(--ink)}
 .ktB.grab{background:var(--pinkL)}.ktB.chop{background:#e6f8ee}
 .ktB.on{transform:translateY(3px);box-shadow:0 1px 0 var(--shadow);filter:brightness(.95)}
+.ga .gaWater{position:absolute;left:0;right:0;bottom:0;height:22%;background:repeating-linear-gradient(90deg,#8fd0f5 0 10px,#7cc6f2 10px 20px);border-top:2px solid #5aa8d8;z-index:-1}
+/* 喵喵划龍舟 */
+.btLobby{text-align:center}
+.btHero canvas{width:100%;max-width:300px;image-rendering:pixelated;border:3px solid var(--line);border-radius:12px;background:#8fd0f5}
+.btIntro{font-size:14px;line-height:1.7;margin:6px 0 8px}.btIntro b{font-weight:400;color:var(--pinkT)}
+.btHow{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px;margin-bottom:8px}
+.btHow span{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:5px 4px}
+.btCourses{display:flex;flex-direction:column;gap:8px}
+.btCourses button{font:inherit;color:#5a3b2e;border:3px solid var(--line);border-radius:14px;padding:10px;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;text-align:left;gap:2px 8px}
+.btCourses button b{font-weight:400;font-size:17px}.btCourses button span{font-size:12px;grid-column:1}.btCourses button i{font-style:normal;font-size:12px;grid-row:1/3;grid-column:2;align-self:center}
+.btCourses .th-sakura{background:linear-gradient(90deg,#ffe1ea,#d6efff)}.btCourses .th-night{background:linear-gradient(90deg,#3b3f73,#2f4f8a);color:#fff}.btCourses .th-canyon{background:linear-gradient(90deg,#f0d6a8,#bfe6f7)}
+.btCourses button:disabled{opacity:.5}
+.btPlay{padding:8px;user-select:none;-webkit-user-select:none}
+.btTop{display:flex;align-items:center;gap:10px;font-size:15px;margin-bottom:6px}.btTop #btF{flex:1;text-align:right}.btTop .btn{width:auto;padding:4px 12px;font-size:13px}
+.btStage{position:relative;height:min(58vh,520px);border:3px solid var(--line);border-radius:12px;overflow:hidden;background:#7cc6f2}
+#btC{width:100%;height:100%;display:block;image-rendering:pixelated}
+.btSync{position:absolute;left:50%;top:14%;transform:translateX(-50%) scale(.6);opacity:0;background:#ffcf4a;color:#5a3b2e;border:3px solid var(--line);border-radius:12px;padding:4px 12px;font-size:16px;transition:all .15s;pointer-events:none}
+.btSync.on{opacity:1;transform:translateX(-50%) scale(1)}
+.btMsg{position:absolute;left:8%;right:8%;top:50%;transform:translateY(-50%);background:var(--card);border:3px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.btMsg b{font-weight:400;font-size:19px}.btMsg p{margin:6px 0;font-size:14px}.btMsg .btBig{font-size:30px}.btMsg .btn{width:100%;margin-top:6px}
+.btPad{display:flex;gap:10px;margin-top:10px;align-items:stretch}
+.btPad.R{flex-direction:row-reverse}
+.btRow{flex:1.6;font:inherit;font-size:26px;height:96px;border:3px solid var(--line);border-radius:18px;background:var(--pink);color:var(--onPink,#fff);box-shadow:0 5px 0 var(--shadow);touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.btRow small{font-size:12px;opacity:.85}
+.btRow.on{transform:translateY(4px);box-shadow:0 1px 0 var(--shadow)}
+.btPart{flex:1;border:3px dashed var(--line);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);transition:background .1s}
+.btPart.on{background:#e6f8ee;color:var(--ink)}
