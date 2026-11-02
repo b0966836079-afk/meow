@@ -203,5 +203,6 @@ ICON.pin = ["..OOOOO..",".OKKKKKO.",".OKWKKKO.",".OKKKKKO.","OOKKKKKOO","OKKKKKK
 ICON.phone = ["OOOO........","OKKKO.......","OKKKO.......","OOKKO.......",".OKKO.......",".OKKKO......","..OKKKO.....","...OKKKOOOO.","....OOKKKKKO","......OOKKKO","........OOKO","..........OO"];
 ICON.vcam = ["OOOOOOOO....","OKKKKKKO..OO","OKWWKKKOOOKO","OKWKKKKOKKKO","OKKKKKKOKKKO","OKKKKKKOOOKO","OKKKKKKO..OO","OOOOOOOO...."];
 ICON.search = ["..OOOO.....",".OBBBBO....","OBWWBBBO...","OBWBBBBO...","OBBBBBBO...","OBBBBBBO...",".OBBBBO....","..OOOOOO...","......OOO..",".......OOO.","........OO."];
+ICON.lock = ["...OOOO...","..OO..OO..",".OO....OO.",".O......O.","OOOOOOOOOO","OYYYYYYYYO","OYYYOOYYYO","OYYYOOYYYO","OYYYYOYYYO","OYYYYYYYYO","OOOOOOOOOO"];
 ICON.mic = ["...OOO...","..OKKKO..","..OKWKO..","..OKKKO..","..OKWKO..","..OKKKO..","O.OKKKO.O","O..OOO..O",".O.....O.","..OOOOO..","....O....","..OOOOO.."];
 const Pix = { COLORS, CNAME, sprite, icon, palOf };

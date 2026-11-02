@@ -1585,6 +1585,85 @@ const App = (function(){
     });
   }
   // ---------- settings ----------
+
+  // ---- 密碼鎖（只存在這支手機）----
+  const Lock = {
+    on(){ return !!store.get("mw_lock"); },
+    after(){ const v = store.get("mw_lockafter"); return v==null ? 60 : +v; },
+    async hash(pin){ const salt = store.get("mw_locksalt") || ""; try{ const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + ":" + pin)); return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join(""); }catch(e){ let h = 5381; for(const c of salt+":"+pin) h = ((h<<5)+h+c.charCodeAt(0))|0; return "x"+h; } },
+    async set(pin){ store.set("mw_locksalt", Math.random().toString(36).slice(2) + Date.now()); store.set("mw_lock", await Lock.hash(pin)); },
+    async check(pin){ return (await Lock.hash(pin)) === store.get("mw_lock"); },
+    off(){ try{ localStorage.removeItem("mw_lock"); localStorage.removeItem("mw_locksalt"); }catch(e){} },
+    hiddenAt: 0,
+  };
+  // mode: "unlock" | "new" | "verify" — resolves with the pin (new) or true
+  function pinPad(mode, opts){
+    opts = opts || {};
+    return new Promise(resolve=>{
+      const ov = document.createElement("div"); ov.className = "lockOv" + (mode==="unlock" ? " full" : ""); if(mode==="unlock") ov.id = "lockOv";
+      let pin = "", first = null, busy = false;
+      const cat = me.cat || store.get("mw_cat") || "orange";
+      const title = () => mode==="unlock" ? "喵～請輸入密碼" : mode==="verify" ? (opts.title || "輸入目前的密碼") : first==null ? "設定 4 位數密碼" : "再輸入一次確認";
+      ov.innerHTML = `<div class="lockCard"><div class="lockCat">${sprite(cat, mode==="unlock" ? "loaf" : "normal")}</div><b class="lockT"></b><div class="lockDots">${[0,1,2,3].map(()=>`<i>${icon("paw")}</i>`).join("")}</div><div class="lockMsg"></div>
+        <div class="lockPad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join("")}<button data-k="x" class="fn">${mode==="unlock" ? "忘記" : "取消"}</button><button data-k="0">0</button><button data-k="b" class="fn">⌫</button></div></div>`;
+      document.body.appendChild(ov);
+      const T = ov.querySelector(".lockT"), M = ov.querySelector(".lockMsg"), D = [...ov.querySelectorAll(".lockDots i")], C = ov.querySelector(".lockCat");
+      const paint = () => { T.textContent = title(); D.forEach((d,i)=>d.classList.toggle("on", i < pin.length)); };
+      const face = f => { C.innerHTML = sprite(cat, f); };
+      const close = v => { document.removeEventListener("keydown", onKey); ov.classList.add("bye"); setTimeout(()=>ov.remove(), 220); resolve(v); };
+      const wrong = msg => { M.textContent = msg; face("surprised"); ov.querySelector(".lockDots").classList.remove("shake"); void ov.offsetWidth; ov.querySelector(".lockDots").classList.add("shake"); if(navigator.vibrate) navigator.vibrate(120); pin = ""; paint(); setTimeout(()=>face(mode==="unlock" ? "loaf" : "normal"), 900); };
+      const done = async () => {
+        if(mode==="new"){
+          if(first==null){ first = pin; pin = ""; M.textContent = ""; paint(); return; }
+          if(pin !== first){ first = null; wrong("兩次不一樣，重新設定一次喔"); return; }
+          face("love"); setTimeout(()=>close(pin), 300); return;
+        }
+        busy = true; const ok = await Lock.check(pin); busy = false;
+        if(ok){ face("love"); SFX.select && SFX.select(); setTimeout(()=>close(true), 250); } else wrong("密碼不對喔 (｡•́︿•̀｡)");
+      };
+      const press = k => {
+        if(busy) return; SFX.key && SFX.key();
+        if(k==="b"){ pin = pin.slice(0,-1); paint(); return; }
+        if(k==="x"){ if(mode==="unlock") return forgot(); return close(null); }
+        if(pin.length >= 4) return; pin += k; M.textContent = ""; paint(); if(pin.length===4) setTimeout(done, 120);
+      };
+      const forgot = () => {
+        M.innerHTML = `<span class="lockForgot">輸入你們的小窩邀請碼就能重設：<input id="lkCode" maxlength="8" autocomplete="off" autocapitalize="characters"><button id="lkGo">重設</button></span>`;
+        const go2 = () => { const c = (ov.querySelector("#lkCode").value || "").trim().toUpperCase(); const real = (B && B.code) || store.get("mw_code") || "";
+          if(real && c === String(real).toUpperCase()){ Lock.off(); toast("密碼鎖已經關掉了，可以到設定重新設定"); close(true); } else { M.querySelector("input").value = ""; toast("邀請碼不對喔"); } };
+        ov.querySelector("#lkGo").addEventListener("click", go2); ov.querySelector("#lkCode").addEventListener("keydown", e=>{ e.stopPropagation(); if(e.key==="Enter") go2(); });
+      };
+      const onKey = e => { if(e.target && e.target.id==="lkCode") return; if(/^[0-9]$/.test(e.key)) press(e.key); else if(e.key==="Backspace") press("b"); };
+      document.addEventListener("keydown", onKey);
+      ov.querySelectorAll("[data-k]").forEach(b=>b.addEventListener("click", ()=>press(b.dataset.k)));
+      paint();
+    });
+  }
+  async function showLock(){
+    if(!Lock.on() || document.getElementById("lockOv")) return;
+    document.body.classList.add("locked"); await pinPad("unlock"); document.body.classList.remove("locked");
+  }
+  document.addEventListener("visibilitychange", ()=>{
+    if(!Lock.on()) return;
+    if(document.visibilityState==="hidden"){ Lock.hiddenAt = Date.now(); return; }
+    const a = Lock.after(); if(a < 0 || !Lock.hiddenAt) return;
+    if(Date.now() - Lock.hiddenAt >= a*1000) showLock();
+  });
+  function lockBox(){
+    const on = Lock.on(), a = Lock.after();
+    return `<div class="box set"><h2>密碼鎖</h2><div class="k">打開喵喵小窩要先輸入 4 位數密碼，別人拿到你的手機也看不到聊天。只會鎖你自己這支手機。</div>
+      ${on ? `<div class="kbOpt"><span>離開多久要重新輸入</span><div class="seg" id="lkAfter">${[[30,"30秒"],[60,"1分鐘"],[300,"5分鐘"],[-1,"只有打開時"]].map(([v,n])=>`<button data-v="${v}" class="${a===v?"on":""}">${n}</button>`).join("")}</div></div>
+        <div class="row" style="justify-content:flex-start"><button class="btn sub" id="lkChange">🔑 改密碼</button><button class="btn sub" id="lkOff">🔓 關閉密碼鎖</button></div>`
+      : `<button class="btn mint" id="lkOn">🔒 設定密碼</button>`}
+      <div class="k">忘記密碼的話，可以輸入你們的「邀請碼」重設。</div></div>`;
+  }
+  function bindLockBox(){
+    const rr = () => { const sb = document.querySelector(".setHd[data-t='密碼鎖']"); render(); setTimeout(()=>{ const h = document.querySelector(".setHd[data-t='密碼鎖']"); if(h && !h.classList.contains("open")) h.click(); }, 30); };
+    const on = $("lkOn"); if(on) on.addEventListener("click", async ()=>{ const pin = await pinPad("new"); if(!pin) return; await Lock.set(pin); if(B && B.code) store.set("mw_code", B.code); toast(`${sprite(me.cat||"orange","love")} 密碼鎖設定好了！`); rr(); });
+    const ch = $("lkChange"); if(ch) ch.addEventListener("click", async ()=>{ if(!await pinPad("verify")) return; const pin = await pinPad("new"); if(!pin) return; await Lock.set(pin); toast("密碼換好了"); });
+    const off = $("lkOff"); if(off) off.addEventListener("click", async ()=>{ if(!await pinPad("verify", { title:"輸入密碼來關閉" })) return; Lock.off(); toast("密碼鎖已關閉"); rr(); });
+    const af = $("lkAfter"); if(af) af.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{ store.set("mw_lockafter", b.dataset.v); af.querySelectorAll("button").forEach(x=>x.classList.toggle("on", x===b)); SFX.select(); }));
+  }
   function viewSettings(v){
     const ps=pushState();
     v.innerHTML = `<div class="box set"><h2>我的貓</h2><div class="picks" id="pk"></div><input id="nm" maxlength="10" value="${esc(me.name)}" style="font-size:17px;padding:8px;border:3px solid var(--line);text-align:center;border-radius:0"><button class="btn" id="bSave">儲存</button></div>
@@ -1604,6 +1683,7 @@ const App = (function(){
       <div class="box set"><h2>通知</h2><div class="k">${ps==="on"?"✅ 已開啟：ta 傳訊息時你的手機會跳通知":ps==="denied"?"❌ 通知被封鎖了，請到手機的瀏覽器設定裡允許通知":ps==="ios-home"?"📱 iPhone 要先把這個網頁「加入主畫面」，從主畫面圖示打開後才能開通知":ps==="unsupported"?"這個瀏覽器不支援通知，請用 Chrome（Android）或 Safari 加入主畫面（iPhone）":"還沒開啟"}</div>
         ${ps!=="on"&&ps!=="unsupported"&&ps!=="ios-home"?`<button class="btn mint" id="bPush2">開啟通知</button>`:""}${ps==="on"?`<button class="btn sub" id="bTest">傳一則測試訊息給 ta</button>`:""}</div>
       <div class="box set"><h2>邀請碼</h2><div class="code" style="text-align:center">${esc(B.code||"")}</div><div class="k">${pw()}打開網址後輸入這組碼就能加入。換手機時，用同一個名字再輸入一次即可。</div><button class="btn sub" id="bInv2">傳邀請連結</button></div>
+      ${lockBox()}
       <div class="box set"><h2>其他</h2><div class="row" style="justify-content:flex-start"><button class="btn sub" id="bSnd">${SFX.on?"♪ 音效 開":"♪ 音效 關"}</button><button class="btn sub" id="bNews">📢 更新紀錄</button><button class="btn sub" id="bReload">重新整理</button><a class="btn sub" href="about.html" style="text-decoration:none;color:inherit">📜 網站聲明</a></div>
         <div class="help">📱 <b style="font-weight:400">加入主畫面</b><br>Android（Chrome）：右上角「⋮」→「加到主畫面」<br>iPhone（Safari）：下方分享按鈕 →「加入主畫面」</div></div>`;
     let pick = me.cat||"orange";
@@ -1612,7 +1692,7 @@ const App = (function(){
     $("bSave").addEventListener("click", async()=>{ const n=$("nm").value.trim().slice(0,10); if(!n) return; me.name=n; me.cat=pick; store.set("mw_name",n); store.set("mw_cat",pick); try{ await B.updateMe({name:n,cat:pick}); }catch(e){} B.track({name:n,cat:pick}); lastHdr=""; renderHeader(); toast(`${sprite(pick,"wave")} 已儲存！`); });
     const b2=$("bPush2"); if(b2) b2.addEventListener("click", ()=>enablePush().then(()=>render()));
     const bt=$("bTest"); if(bt) bt.addEventListener("click", ()=>{ sendMsg("（測試通知）喵～收到了嗎？","text"); toast("已送出，看看 ta 的手機有沒有跳通知"); });
-    $("bInv2").addEventListener("click", shareInvite);
+    $("bInv2").addEventListener("click", shareInvite); bindLockBox();
     // wallpaper previews reuse the real CSS by scoping data-wall on each swatch
     $("wls").querySelectorAll(".wv").forEach(v=>{ const id=v.dataset.wall; v.querySelector(".list").style.cssText = wallCss(id); });
     $("wls").querySelectorAll("button").forEach(b=>b.addEventListener("click", async ()=>{
@@ -1642,10 +1722,10 @@ const App = (function(){
     const th = SITE_THEMES.find(x=>x[0]===(store.get("mw_theme")||"cream")), kt = KB_THEMES.find(x=>x[0]===(store.get("mw_kb")||"strawberry")),
           an = KB_ANIMS.find(x=>x[0]===(store.get("mw_anim")||"jelly")), wl = WALLS.find(x=>x[0]===(store.get("mw_wall")||"paws"));
     return ({ "我的貓": me.name||"", "小窩模式": MI().name, "整體風格": th?th[1]:"", "字體": store.get("mw_font")==="sys"?"一般字":"像素字",
-      "鍵盤設定": ({s:"小",m:"中",l:"大"})[store.get("mw_kbsize")||"m"]+"鍵", "鍵盤配色": kt?kt[1]:"", "打字動畫": an?an[1]:"", "聊天背景": wl?wl[1]:"", "通知": pushState()==="on"?"已開啟":"未開啟", "邀請碼": B.code||"" })[t] || "";
+      "鍵盤設定": ({s:"小",m:"中",l:"大"})[store.get("mw_kbsize")||"m"]+"鍵", "鍵盤配色": kt?kt[1]:"", "打字動畫": an?an[1]:"", "聊天背景": wl?wl[1]:"", "通知": pushState()==="on"?"已開啟":"未開啟", "邀請碼": B.code||"", "密碼鎖": Lock.on() ? "已開啟" : "未開啟" })[t] || "";
   }
   const SET_ICON = { "我的貓":()=>sprite(me.cat||"orange","happy"), "小窩模式":()=>icon("heart"), "整體風格":()=>icon("star"), "字體":()=>icon("chat"), "鍵盤設定":()=>icon("keys"), "鍵盤配色":()=>icon("star",{Y:"#f0708d"}),
-    "打字動畫":()=>icon("spark"), "聊天背景":()=>icon("paw"), "通知":()=>icon("bell"), "邀請碼":()=>icon("home"), "其他":()=>icon("gear") };
+    "打字動畫":()=>icon("spark"), "聊天背景":()=>icon("paw"), "通知":()=>icon("bell"), "邀請碼":()=>icon("home"), "密碼鎖":()=>icon("lock"), "其他":()=>icon("gear") };
   function collapseSettings(v){
     v.querySelectorAll(".box.set").forEach(box=>{
       if(box.dataset.folded) return; box.dataset.folded = "1";
@@ -1819,6 +1899,7 @@ const App = (function(){
     document.addEventListener("pointerdown", e=>{ if(e.button>0) return;
       if(e.target.closest && e.target.closest(".ime")){ if(kbVib()) haptic(); return; }   // keyboard: own sound + animation
       tapFx(e.clientX,e.clientY); haptic(); SFX.tap(); }, {passive:true});
+    if(Lock.on()) showLock();
     $("midHeart").innerHTML = icon("heart");
     $("niHome").innerHTML = icon("home"); $("niChat").innerHTML = icon("chat"); $("niSet").innerHTML = icon("gear"); $("niAlb").innerHTML = icon("camera");
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");

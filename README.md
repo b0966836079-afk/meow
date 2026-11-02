@@ -76,3 +76,6 @@
 - Long-press any chat message (`[data-mid]`) → `msgMenu`: 置頂 / 取消置頂, copy text, and (voice) save. Pins in game_state `pins` = {list:[{id,kind,text,name,cat,by,at}]} (max 10, text copied so old messages still show). Pin bar `.pinBar` at top of chat; pinning posts a `kind='pin'` system message (pushes to partner).
 - Replies: long-press → 回覆, or swipe a message right. Stored in the `media` column of text/sticker messages as JSON `{"r":id,"n":name,"t":preview}` (no schema change); quote is tappable (jumps to the original).
 - Site limits (`update_8_site.sql`): `app_settings.max_couples` (default 4) enforced by trigger `couples_limit` (raises `site_full`); `couples.is_owner` marks the owner nest, rpc `site_usage()` returns total bucket bytes + nest count only to the owner (shown in the album, warning modal at 70/85/95%).
+
+## App lock (密碼鎖)
+Settings → 密碼鎖. A 4-digit PIN stored only on this device (salted SHA-256 in localStorage `mw_lock`). Asks on open and after leaving the app for 30s / 1min / 5min (or only on open). Forgot PIN: type the nest invite code to turn the lock off. It is a privacy lock against people holding the phone, not account security.

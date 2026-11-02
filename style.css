@@ -1573,3 +1573,28 @@ body.inCall{overflow:hidden}
 #topTools .tl{left:0}#topTools .tr{right:0}
 #topTools .ctB{font-size:12px;padding:3px 8px 3px 5px;gap:4px}
 #topTools .ctB svg{width:18px;height:18px}
+
+/* 密碼鎖 */
+.lockOv{position:fixed;inset:0;z-index:160;display:flex;align-items:center;justify-content:center;background:rgba(40,25,20,.5);padding:20px;animation:lkIn .2s}
+.lockOv.full{z-index:140;background:var(--bg);background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:24px 24px}
+.lockOv.bye{opacity:0;transition:opacity .2s}
+@keyframes lkIn{from{opacity:0}}
+body.locked{overflow:hidden}
+body.locked #app,body.locked #nav{visibility:hidden}
+.lockCard{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:18px 18px 16px;width:min(320px,100%);display:flex;flex-direction:column;align-items:center;gap:8px}
+.lockCat svg{width:96px;height:96px;display:block}
+.lockT{font-weight:400;font-size:18px}
+.lockDots{display:flex;gap:12px;margin:4px 0}
+.lockDots i{width:30px;height:30px;opacity:.22;transition:transform .12s,opacity .12s}
+.lockDots i svg{width:100%;height:100%;display:block}
+.lockDots i.on{opacity:1;transform:scale(1.15)}
+.lockDots.shake{animation:lkShake .4s}
+@keyframes lkShake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.lockMsg{min-height:18px;font-size:13px;color:var(--pinkT);text-align:center}
+.lockForgot{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;color:var(--ink)}
+.lockForgot input{font:inherit;width:110px;padding:4px 6px;border:3px solid var(--line);text-align:center;text-transform:uppercase;user-select:text;-webkit-user-select:text}
+.lockForgot button{font:inherit;border:3px solid var(--line);background:var(--pink);color:#fff;padding:3px 10px}
+.lockPad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;margin-top:4px}
+.lockPad button{font:inherit;font-size:22px;height:54px;border:3px solid var(--line);background:var(--card);color:var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.lockPad button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.lockPad button.fn{font-size:15px;background:var(--pinkL)}
