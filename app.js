@@ -1314,6 +1314,42 @@ const App = (function(){
   });
   window.addEventListener("pagehide", ()=>{ if(CALL){ csend(CALL.phase==="ringing" ? "cancel" : "hang"); } });
 
+  // ---- 遊戲中傳貼圖：對方不管在哪個畫面都會跳出來 ----
+  function stkFab(){
+    if($("stkFab")) return;
+    const b = document.createElement("button"); b.id = "stkFab"; b.className = "stkFab"; b.title = "傳貼圖給 ta";
+    b.innerHTML = `${sprite(me.cat||"orange","love")}<i>${icon("heart")}</i>`;
+    b.addEventListener("click", e=>{ e.stopPropagation(); SFX.tap(); $("stkTray") ? stkClose() : stkTray(); });
+    document.body.appendChild(b);
+  }
+  function stkClose(all){ const t = $("stkTray"); if(t) t.remove(); if(all){ const f = $("stkFab"); if(f) f.remove(); } }
+  function stkTray(){
+    const t = document.createElement("div"); t.id = "stkTray"; t.className = "stkTray";
+    const p = partner(), off = !p || !isOnline(p.user_id);
+    t.innerHTML = `<div class="stkTrayHd"><b>傳貼圖給${esc(p ? p.name : pw())}</b><button id="stkX">✕</button></div>${off ? `<div class="stkOff">${esc(p ? p.name : pw())} 現在不在線上，傳了 ta 也看不到喔 (；ω；)</div>` : ""}
+      <div class="stkGrid">${STICKERS.map(x=>`<button data-s="${x[0]}" title="${esc(x[2])}">${stickerHtml(x[0], me.cat||"orange")}<span>${esc(x[2])}</span></button>`).join("")}</div>`;
+    document.body.appendChild(t);
+    t.addEventListener("pointerdown", e=>e.stopPropagation());
+    t.querySelector("#stkX").addEventListener("click", ()=>stkClose());
+    t.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click", ()=>{
+      const id = b.dataset.s; ctx.broadcast({ g:"stk", s:id, cat: me.cat||"orange", name: me.name, game: curGame ? curGame.id : "" });
+      SFX.heart(); stkClose(); stkShow(id, me.cat||"orange", "", true);
+    }));
+    setTimeout(()=>document.addEventListener("pointerdown", function h(e){ if(!t.isConnected){ document.removeEventListener("pointerdown", h, true); return; } if(!t.contains(e.target) && e.target.id!=="stkFab" && !e.target.closest("#stkFab")){ stkClose(); document.removeEventListener("pointerdown", h, true); } }, true), 0);
+  }
+  let stkN = 0;
+  function stkShow(id, cat, from, mine){
+    const d = document.createElement("div"); d.className = "stkPop" + (mine ? " mine" : ""); d.style.setProperty("--x", mine ? "0px" : ((stkN++ % 3) - 1) * 40 + "px");
+    d.innerHTML = mine ? `<div class="stkBig">${stickerHtml(id, cat)}</div><div class="stkFrom">傳出去了～</div>` : `<div class="stkFrom">${esc(from)} 傳來</div><div class="stkBig">${stickerHtml(id, cat)}</div><div class="stkCap">${esc((STK_BY[id]||[])[2]||"")}</div>`;
+    document.body.appendChild(d); setTimeout(()=>d.remove(), mine ? 1300 : 3200);
+  }
+  ctx.onBroadcast(p=>{
+    if(!p || p.g !== "stk" || !STK_BY[p.s]) return;
+    if(document.body.classList.contains("locked")) return;
+    stkShow(p.s, p.cat || catOf(p.from), p.name || nameOf(p.from), false); SFX.heart();
+    if(navigator.vibrate) try{ navigator.vibrate(60); }catch(e){}
+  });
+
   // ---- search messages ----
   function openSearch(){
     const o = document.createElement("div"); o.className = "srchSheet";
@@ -1794,7 +1830,7 @@ const App = (function(){
     const r = (location.hash||"#home").slice(1) || "home";
     document.querySelectorAll(".hSheet").forEach(x=>x.remove()); { const tt = $("topTools"); if(tt) tt.innerHTML = ""; }
     { const ab=$("alBar"); if(ab) ab.remove(); const vr=$("vrec"); if(vr){ const c=vr.querySelector("#vrX"); if(c) c.click(); else vr.remove(); } }
-    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove();
+    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove(); stkClose(true);
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");
     document.body.classList.toggle("ingame", route==="game");
@@ -1809,7 +1845,7 @@ const App = (function(){
       v.innerHTML = `<div class="gtop"><button class="btn sub" id="bBack">◀ 回小窩</button><span class="gname">${esc(g.name)}</span></div><div id="gArea"></div>`;
       $("bBack").addEventListener("click", ()=>go("home"));
       curGame = g; lastGame = r; g.mount($("gArea"), ctx);
-      const fab=document.createElement("button"); fab.id="fab"; fab.className="fab"; fab.innerHTML=`${icon("chat")}<b id="fabBadge" class="hidden">0</b>`; fab.addEventListener("click", openSheet); document.body.appendChild(fab);
+      const fab=document.createElement("button"); fab.id="fab"; fab.className="fab"; fab.innerHTML=`${icon("chat")}<b id="fabBadge" class="hidden">0</b>`; fab.addEventListener("click", openSheet); document.body.appendChild(fab); stkFab();
     } else { if(r==="home") lastGame = null; viewHome(v); }
     renderHeader(); renderBadge();
     window.scrollTo(0,0);
