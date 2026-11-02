@@ -36,6 +36,9 @@ const POT = ["..W..W....","...W..W...","OOOOOOOOOO","OGGGGGGGGO","OGGGGGGGGOO","
 const BOAT = ["OOO..................","OGWO.................","OGGOOOOOOOOOOOOOOOOOO","OGGRRRRRRRRRRRRRRRRRO",".OGRYRRYRRYRRYRRYRRO.","..ORRRRRRRRRRRRRRRO..","...OOOOOOOOOOOOOOOO.."];
 const CAN = [".OOOOOO.","OWWWWWWO","OOOOOOOO","OKKKKKKO","OKWKKWKO","OKKKKKKO","OKKKKKKO","OOOOOOOO"];
 const MOUSE = [".OO..OO...","OKKO.OKO..","OGGGGGGGO.","OGEGGGEGGO","OGGGKGGGGOOOO",".OGGGGGGO....","..OOOOOO....."];
+const DICE5 = ["OOOOOOO","OWWWWWO","OWOWOWO","OWWOWWO","OWOWOWO","OWWWWWO","OOOOOOO"].map(r=>r.replace(/W/g,"W"));
+const DICE3 = ["OOOOOOO","OWWWWOO","OWWWWWO","OWWOWWO","OWWWWWO","OOWWWWO","OOOOOOO"];
+const HOUSE = ["...OO...","..OGGO..",".OGGGGO.","OOOOOOOO",".OWWWWO.",".OWOOWO.",".OOOOOO."];
 const PAL = { K:"#f0708d", W:"#ffffff", Y:"#ffd36b", E:"#2b1d18", B:"#6fb7e8", G:"#6cc49d", R:"#e5486a" };
 
 window.GameArt = {
@@ -46,6 +49,7 @@ window.GameArt = {
   battleship: () => L(P(SHIP, PAL), "left:10%;top:8%;width:80%") + L(P(WAVES, PAL), "left:6%;bottom:6%;width:88%"),
   quickdraw: () => L(S("calico","surprised"), "left:4%;bottom:0;width:62%") + L(P(HAT, { Y:"#c98a4a", R:"#e5486a" }), "left:14%;top:4%;width:42%") + L(P(EXCL, PAL), "right:10%;top:10%;width:9%"),
   fishing: () => L(S("white","happy"), "left:0;bottom:0;width:56%") + L(P(ROD, { G:"#a0703c" }), "left:40%;top:0;width:44%") + L(Pix.icon("fish"), "right:0;bottom:8%;width:30%") + `<span class="gaLine"></span>`,
+  mono: () => L(P(DICE5, { W:"#ffffff" }), "left:8%;top:12%;width:30%") + L(P(DICE3, { W:"#ffffff" }), "left:40%;top:30%;width:26%") + L(S("orange","love"), "right:0;bottom:0;width:44%") + L(P(HOUSE, { G:"#5cb87a", W:"#fff6e6" }), "left:4%;bottom:4%;width:26%"),
   defense: () => L(S("calico","angry"), "left:0;bottom:0;width:46%") + L(P(CAN, { W:"#d6dbe3", K:"#f0708d" }), "right:30%;bottom:4%;width:20%") + L(P(MOUSE, { G:"#a7aec2", K:"#f7a7b8", E:"#2b1d18" }), "right:0;bottom:4%;width:28%"),
   boat: () => L(P(BOAT, { R:"#e5486a", Y:"#ffcf4a", G:"#5cb87a", W:"#ffffff" }), "left:4%;top:24%;width:92%") + L(S("orange","happy"), "left:22%;top:0;width:30%") + L(S("white","happy",1), "left:50%;top:0;width:30%") + `<span class="gaWater"></span>`,
   kitchen: () => L(S("white","happy"), "left:0;bottom:0;width:48%") + L(P(POT, { G:"#8a8aa0", F:"#ff7a3a", Y:"#ffcf4a", W:"#ffffff" }), "right:4%;bottom:6%;width:40%"),
