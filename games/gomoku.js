@@ -196,11 +196,12 @@ App.registerGame({
       else S.textContent = `等 ${ctx.nameOf(s.turn==="b"?s.b:s.w)} 下棋…`;
       draw(); updCtl();
     }
-    el.querySelector("#gmNew").addEventListener("click", async()=>{
+    this._rs = ctx.restartable("gomoku", { title:"五子棋", done: ()=>!s || !!s.win || !s.n, run: async()=>{
       const ids = ctx.players(); if(ids.length<2) return;
       const ns = await ctx.update("gomoku", st=> st ? fresh(st.w, st.b, st.sc) : fresh(ids[0], ids[1], {}));
       if(ns){ s=ns; aim=-1; ui(); }
-    });
+    } });
+    el.querySelector("#gmNew").addEventListener("click", ()=>ctx.askRestart("gomoku"));
     this._ro = new ResizeObserver(resize); this._ro.observe(cv);
     this._unsub = ctx.onState("gomoku", st=>{ if(!st) return; if(s && st.n>s.n && st.last>=0 && st.board[st.last] !== myColor()){ SFX.place(); } if(aim>=0 && st.board[aim]!==".") aim=-1; s=st; ui(); });
     this._unp = ctx.onPresence(ui);
@@ -216,6 +217,6 @@ App.registerGame({
       ui(); resize();
     })();
   },
-  unmount(){ if(this._stopCat) this._stopCat(); if(this._ro) this._ro.disconnect(); if(this._unsub) this._unsub(); if(this._unp) this._unp(); },
+  unmount(){ if(this._rs) this._rs(); if(this._stopCat) this._stopCat(); if(this._ro) this._ro.disconnect(); if(this._unsub) this._unsub(); if(this._unp) this._unp(); },
 });
 })();

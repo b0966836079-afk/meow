@@ -158,6 +158,7 @@ App.registerGame({
   mount(el, ctx){
     const { sprite, esc, SFX } = ctx;
     let s = null, R = null;
+    this._rs = ctx.restartable("escape", { title:"喵喵密室逃脫", done: ()=>!s || s.room==null || !!s.done, run: ()=>startEscape() });
     const me = () => ctx.me.uid;
     const side = () => ctx.players()[0] === me() ? "a" : "b";
     const other = () => side()==="a" ? "b" : "a";
@@ -173,9 +174,11 @@ App.registerGame({
         ${best ? `<div class="k" style="text-align:center">最快紀錄：${Math.floor(best/60)} 分 ${best%60} 秒</div>` : ""}
         <div class="k" style="text-align:center">每次開始，密碼都會重新隨機・一共 ${ROOMS} 間</div></div>`;
       const go = el.querySelector("#esGo"); if(go) go.addEventListener("click", ()=>{ SFX.select(); room(); });
-      el.querySelector("#esNew").addEventListener("click", async ()=>{ SFX.select();
+      el.querySelector("#esNew").addEventListener("click", ()=>{ SFX.select(); ctx.askRestart("escape"); });
+    }
+    async function startEscape(){
         await ctx.update("escape", st=>{ st = st || {}; st.seed = (Math.random()*1e9)|0; st.room = 0; st.solved = {}; st.t0 = Date.now(); st.done = false; st.hints = 0; return st; });
-        ctx.notifyPartner(`${ctx.me.name} 開始了「喵喵密室逃脫」，快來一起逃出去！`); });
+        ctx.notifyPartner(`${ctx.me.name} 開始了「喵喵密室逃脫」，快來一起逃出去！`);
     }
     function room(){
       if(!s || s.room==null){ lobby(); return; }
@@ -272,6 +275,6 @@ App.registerGame({
     });
     (async()=>{ const cur = await ctx.getState("escape").catch(()=>null); s = cur ? cur.state : null; lobby(); })();
   },
-  unmount(){ if(this._u) this._u(); document.querySelectorAll(".esModal").forEach(m=>m.remove()); },
+  unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); document.querySelectorAll(".esModal").forEach(m=>m.remove()); },
 });
 })();

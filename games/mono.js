@@ -211,6 +211,7 @@ App.registerGame({
   mount(el, ctx){
     const { sprite, esc, SFX } = ctx;
     let s = null, shown = null, anim = null, full = null, alive = true;
+    this._rs = ctx.restartable("mono", { title:"喵喵大富翁", done: ()=>!s || !!s.over, run: async ()=>{ await newGame(); } });
     const me = () => ctx.me.uid;
     const pnm = u => u===me() ? "你" : ctx.nameOf(u);
     const myTurn = () => s && !s.over && s.turn === me();
@@ -232,7 +233,7 @@ App.registerGame({
       el.querySelector("#mnGo").addEventListener("click", async ()=>{
         if(!ctx.partner()){ ctx.toast("要等 ta 加入小窩才能玩喔"); return; }
         SFX.select(); if(!g) await newGame(); openFull(); });
-      const nb = el.querySelector("#mnNew"); if(nb){ nb.addEventListener("click", ()=>{ if(!nb.classList.contains("ask")){ nb.classList.add("ask"); nb.textContent = "確定？目前這局會不見"; setTimeout(()=>{ nb.classList.remove("ask"); nb.textContent = "重新開一局"; }, 3000); return; } newGame(); }); }
+      const nb = el.querySelector("#mnNew"); if(nb) nb.addEventListener("click", ()=>{ SFX.tap(); ctx.askRestart("mono"); });
     }
     async function newGame(){
       const ids = ctx.players(); if(ids.length < 2) return;
@@ -449,6 +450,6 @@ App.registerGame({
     (async()=>{ const cur = await ctx.getState("mono").catch(()=>null); s = cur ? cur.state : null; lobby(); })();
     if(window.__mock) window.__mn = { R, SQ, get s(){ return s; }, doAct };   // tests only
   },
-  unmount(){ if(this._u) this._u(); if(this._p) this._p(); if(this._close) this._close(); },
+  unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); if(this._p) this._p(); if(this._close) this._close(); },
 });
 })();

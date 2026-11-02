@@ -294,7 +294,8 @@ App.registerGame({
       if(prev && prev.phase!=="end" && st.phase==="end"){ if(st.win===me()){ SFX.match(); ctx.burst(); } else SFX.miss(); }
       if(prev && prev.phase==="place" && st.phase==="play") SFX.beep(true);
     }
-    $("#bsNew").addEventListener("click", async ()=>{ const I=ids(); if(I.length<2) return; myFleet=null; sel=-1; aim=-1; await ctx.update("battleship", st=>fresh(I, st?st.sc:{})); });
+    this._rs = ctx.restartable("battleship", { title:"喵喵海戰", done: ()=>!s || s.phase==="end", run: async ()=>{ const I=ids(); if(I.length<2) return; myFleet=null; sel=-1; aim=-1; await ctx.update("battleship", st=>fresh(I, st?st.sc:{})); } });
+    $("#bsNew").addEventListener("click", ()=>ctx.askRestart("battleship"));
     this._u = ctx.onState("battleship", onState);
     this._p = ctx.onPresence(()=>{ if(s) render(); });
     (async()=>{
@@ -306,6 +307,6 @@ App.registerGame({
       render();
     })();
   },
-  unmount(){ if(this._u) this._u(); if(this._p) this._p(); },
+  unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); if(this._p) this._p(); },
 });
 })();

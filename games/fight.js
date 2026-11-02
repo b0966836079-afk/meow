@@ -163,7 +163,8 @@ App.registerGame({
       s = st; render();
       if(newLast && st.win){ if(st.win===me()){ SFX.match(); ctx.burst(); } else SFX.miss(); }
     }
-    $("#ftNew").addEventListener("click", async ()=>{ const I=ids(); if(I.length<2) return; shown = 1; s = null; await ctx.update("fight", st=>fresh(I, st?st.sc:{})); });
+    this._rs = ctx.restartable("fight", { title:"貓咪格鬥", done: ()=>!s || !!s.win, run: async ()=>{ const I=ids(); if(I.length<2) return; shown = 1; s = null; await ctx.update("fight", st=>fresh(I, st?st.sc:{})); } });
+    $("#ftNew").addEventListener("click", ()=>ctx.askRestart("fight"));
     this._u = ctx.onState("fight", st=>{ if(!busy) onState(st); else setTimeout(()=>onState(st), 1800); });
     this._p = ctx.onPresence(()=>{ if(s && !busy) render(); });
     (async()=>{
@@ -176,6 +177,6 @@ App.registerGame({
       render();
     })();
   },
-  unmount(){ if(this._u) this._u(); if(this._p) this._p(); },
+  unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); if(this._p) this._p(); },
 });
 })();

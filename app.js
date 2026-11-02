@@ -1314,6 +1314,58 @@ const App = (function(){
   });
   window.addEventListener("pagehide", ()=>{ if(CALL){ csend(CALL.phase==="ringing" ? "cancel" : "hang"); } });
 
+  // ---- 重新開一局要兩個人都同意 ----
+  // game modules: ctx.restartable(id, { title, done:()=>bool, run:async()=>{} }) on mount, ctx.askRestart(id) from the button.
+  // the request lives in its own state key "rq_<id>", so it works even when the other one opens the game later.
+  const RS = {};
+  ctx.restartable = (id, o) => {
+    const r = RS[id] = Object.assign({ seen: "" }, o);
+    r.un = onState("rq_" + id, st => rqPaint(id, st));
+    getState("rq_" + id).then(c => rqPaint(id, c ? c.state : null)).catch(()=>{});
+    return () => { if(RS[id] === r){ r.un && r.un(); delete RS[id]; rqBar(null); } };
+  };
+  ctx.askRestart = async id => {
+    const o = RS[id]; if(!o) return; const p = partner();
+    if(o.done() || !p){ await o.run(); return; }
+    const cur = await getState("rq_" + id).catch(()=>null), rq = cur && cur.state;
+    if(rq && rq.st === "ask" && Date.now() - rq.at < 864e5){
+      if(rq.by === me.uid){ toast(`還在等 ${esc(p.name)} 同意喔～`); return; }
+      return rqAnswer(id, true);
+    }
+    await update("rq_" + id, () => ({ st:"ask", by: me.uid, at: Date.now() }));
+    toast(`已經問 ${esc(p.name)} 了，ta 同意就會重新開始`);
+    notifyPartner(`${me.name} 想重新開一局「${o.title}」，打開遊戲按「同意」就會重新開始`);
+  };
+  async function rqAnswer(id, yes){
+    const o = RS[id]; if(!o) return;
+    const ns = await update("rq_" + id, st => (!st || st.st !== "ask") ? undefined : { st: yes ? "ok" : "no", by: st.by, at: st.at, ans: me.uid, t: Date.now() });
+    if(!ns) return;
+    if(yes){ SFX.select(); await o.run(); toast("重新開始囉！"); } else toast("好，繼續玩這局～");
+  }
+  function rqPaint(id, rq){
+    const o = RS[id]; if(!o) return;
+    const key = rq ? rq.st + rq.at : "";
+    if(!rq || Date.now() - rq.at > 864e5 || (rq.st === "ask" && o.done() && rq.by !== me.uid)){ rqBar(null); return; }
+    if(rq.st === "ask"){
+      if(rq.by === me.uid) rqBar(id, `等 ${esc(nameOf(rq.by === me.uid ? (partner()||{}).user_id : rq.by))} 同意重新開始…`, [["取消", "cancel"]]);
+      else rqBar(id, `${sprite(catOf(rq.by), "wave")}<span><b>${esc(nameOf(rq.by))}</b> 想重新開一局，同意嗎？</span>`, [["同意 👍", "yes"], ["繼續玩", "no"]]);
+    } else {
+      rqBar(null);
+      if(rq.by === me.uid && o.seen !== key && Date.now() - (rq.t||0) < 6e4){
+        toast(rq.st === "ok" ? `${esc(nameOf(rq.ans))} 同意了，重新開始囉！` : `${esc(nameOf(rq.ans))} 想先把這局玩完喔～`);
+      }
+    }
+    o.seen = key;
+  }
+  function rqBar(id, html, btns){
+    let b = $("rqBar"); if(!id){ if(b) b.remove(); return; }
+    if(!b){ b = document.createElement("div"); b.id = "rqBar"; b.className = "rqBar"; document.body.appendChild(b); }
+    b.innerHTML = `<div class="rqTxt">${html}</div><div class="rqBtns">${btns.map(([t,k])=>`<button data-k="${k}" class="${k}">${t}</button>`).join("")}</div>`;
+    b.querySelectorAll("button").forEach(x => x.addEventListener("click", async () => { SFX.tap(); const k = x.dataset.k;
+      if(k === "cancel"){ await update("rq_" + id, st => st && st.st === "ask" && st.by === me.uid ? { st:"cancel", by: st.by, at: st.at, t: Date.now() } : undefined); rqBar(null); }
+      else rqAnswer(id, k === "yes"); }));
+  }
+
   // ---- 遊戲中傳貼圖：對方不管在哪個畫面都會跳出來 ----
   function stkFab(){
     if($("stkFab")) return;
@@ -1830,7 +1882,7 @@ const App = (function(){
     const r = (location.hash||"#home").slice(1) || "home";
     document.querySelectorAll(".hSheet").forEach(x=>x.remove()); { const tt = $("topTools"); if(tt) tt.innerHTML = ""; }
     { const ab=$("alBar"); if(ab) ab.remove(); const vr=$("vrec"); if(vr){ const c=vr.querySelector("#vrX"); if(c) c.click(); else vr.remove(); } }
-    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove(); stkClose(true);
+    if(curGame && curGame.unmount){ try{ curGame.unmount(); }catch(e){} } curGame=null; closeSheet(); kb=null; document.body.classList.remove("kbd"); const ofab=$("fab"); if(ofab) ofab.remove(); stkClose(true); Object.keys(RS).forEach(k=>{ RS[k].un && RS[k].un(); delete RS[k]; }); rqBar(null);
     route = r.startsWith("game-") ? "game" : r;
     document.body.classList.toggle("compact", route!=="home");
     document.body.classList.toggle("ingame", route==="game");

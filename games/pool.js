@@ -323,10 +323,9 @@ App.registerGame({
         ${p ? `<button class="btn" id="plGo">🎱 ${st && !st.win ? "進入球桌" : "開新的一局"}</button>${st && !st.win ? `<button class="btn sub" id="plNew" style="width:100%">重新開一局</button>` : ""}` : `<div class="k" style="text-align:center">${ctx.pw ? ctx.pw() : "另一半"}加入後就可以一起打了</div>`}
         <button class="btn sub" id="plPr" style="width:100%">🐾 自己練習</button></div>`;
       const go = el.querySelector("#plGo"); if(go) go.addEventListener("click", async () => { SFX.tap(); if(!s || s.win){ await newGame(); } openTable(false); });
-      const nw = el.querySelector("#plNew"); if(nw) nw.addEventListener("click", async () => { if(!confirmNew()) return; await newGame(); openTable(false); });
+      const nw = el.querySelector("#plNew"); if(nw) nw.addEventListener("click", () => { SFX.tap(); ctx.askRestart("pool"); });
       el.querySelector("#plPr").addEventListener("click", () => { SFX.tap(); practice = fresh([me(), me()]); practice.hand = "head"; openTable(true); });
     }
-    let armNew = 0; function confirmNew(){ const t = Date.now(); if(t - armNew < 2500) return true; armNew = t; ctx.toast("再按一次就會重新開一局（這局作廢）"); return false; }
     async function newGame(){
       const ids = ctx.players(); if(ids.length < 2) return;
       const ns = await ctx.update("pool", st => { const sc = st && st.sc; const first = st && st.p ? (st.win ? (st.win === st.p[0] ? st.p[1] : st.p[0]) : st.p[0]) : ids[0]; const pp = [first, ids.find(i => i !== first)]; return fresh(pp, sc); });
@@ -349,9 +348,10 @@ App.registerGame({
         onClose: () => { tbl = null; lobby(); } });
     }
     this._close = () => { if(tbl) tbl.close(); };
+    this._rs = ctx.restartable("pool", { title:"喵喵撞球", done: ()=>!s || !!s.win || !s.seq, run: async ()=>{ await newGame(); if(tbl && !tbl.practice){ tbl.close(); } lobby(); } });
     this._u = ctx.onState("pool", st => { s = st; if(tbl && !tbl.el.isConnected) tbl = null; if(tbl && !tbl.practice) tbl.external(st); else if(!tbl) lobby(); });
     (async()=>{ const cur = await ctx.getState("pool").catch(()=>null); s = cur ? cur.state : null; lobby(); })();
   },
-  unmount(){ if(this._u) this._u(); if(this._close) this._close(); },
+  unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); if(this._close) this._close(); },
 });
 })();
