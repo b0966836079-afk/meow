@@ -1586,7 +1586,8 @@ const App = (function(){
     B.on("bc", p=>{ if(p && p.from !== me.uid) bcSubs.slice().forEach(h=>{ try{ h(p); }catch(e){} }); });
     B.on("members", async()=>{ members = await B.members(); renderHeader(); if(route==="home") render(); else if(chatVisible()) drawList(false); });
     B.on("state", (game, version, state)=>{ if(!stateCache[game] || version > stateCache[game].version){ stateCache[game]={version,state}; emitState(game); } });
-    B.on("presence", list=>{ online = new Set(list.map(x=>x.uid)); renderHeader(); (ctx._presence||[]).forEach(h=>h()); });
+    // someone whose app is in the background counts as offline, so they still get notifications
+    B.on("presence", list=>{ online = new Set(list.filter(x=>!x.away).map(x=>x.uid)); renderHeader(); (ctx._presence||[]).forEach(h=>h()); });
     B.on("status", s=>{ connected = s==="SUBSCRIBED"; if(s==="SUBSCRIBED") resync(); });
     members = await B.members();
     const mine = members.find(m=>m.user_id===me.uid); if(mine){ if(!me.name) me.name=mine.name; if(!me.cat) me.cat=mine.cat; }
@@ -1641,7 +1642,12 @@ const App = (function(){
     $("decos").innerHTML = [["orange","loaf","left:-8px;top:140px"],["gray","curl","right:-6px;top:340px"],["calico","normal","left:-10px;bottom:150px"],["black","happy","right:-8px;bottom:90px"]].map(([c,k,p])=>`<div class="deco" style="${p}">${sprite(c,k,{soft:true})}</div>`).join("");
     document.querySelectorAll("#nav button").forEach(b=>b.addEventListener("click",()=>{ const t=b.dataset.go; if(t==="home" && route!=="game" && lastGame) go(lastGame); else go(t); }));
     window.addEventListener("hashchange", ()=>{ if(B && B.coupleId) render(); });
-    document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible" && B && B.coupleId){ B.reconnect(); clearNotifs(); if(chatVisible()) markSeen(); } });
+    document.addEventListener("visibilitychange", ()=>{
+      if(!B || !B.coupleId) return;
+      if(document.visibilityState==="visible"){ B.track({ name: me.name, cat: me.cat }); B.reconnect(); clearNotifs(); if(chatVisible()) markSeen(); }
+      else B.track({ name: me.name, cat: me.cat, away: Date.now() });
+    });
+    window.addEventListener("pagehide", ()=>{ try{ B.track({ name: me.name, cat: me.cat, away: Date.now() }); }catch(e){} });
     if("serviceWorker" in navigator && !window.__mock){ navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r=>r.update()).catch(()=>{}); navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) go(e.data.go); }); }
     if(!cfg.SUPABASE_URL && !window.__mock){ $("view").innerHTML = `<div class="box form"><h2>還沒設定好</h2><div class="help">config.js 裡還沒有填 Supabase 的網址和金鑰。</div></div>`; $("top").classList.add("hidden"); return; }
     $("view").innerHTML = `<div class="box form"><div class="preview">${sprite("orange","loaf")}</div>喵～載入中…</div>`;
