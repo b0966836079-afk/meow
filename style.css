@@ -1752,3 +1752,61 @@ body.locked .stkFab,body.locked .stkTray,body.inCall .stkFab{display:none}
 .bqHelp p{margin:4px 0;line-height:1.6}.bqHelp b{font-weight:400;color:var(--pinkT)}
 .ga .bqArt{display:grid;grid-template-columns:repeat(3,1fr);gap:4%;align-content:center}.ga .bqArt .bqP b{font-size:11px;border-width:1px}
 .bqC,.bqRank>div,.ga .bqArt{isolation:isolate}
+
+/* 等你的星星罐 */
+.srBox{display:flex;flex-direction:column;gap:10px;padding:14px}
+.srTop{display:flex;align-items:center;gap:10px}.srCat svg{width:64px;height:64px;display:block}
+.srIntro{margin:0;font-size:14px;line-height:1.6}
+.srJars{display:flex;gap:12px;justify-content:center}
+.srJar{flex:1;max-width:170px;display:flex;flex-direction:column;align-items:center}
+.srLid{width:62%;height:16px;background:#e9c08c;border:3px solid var(--line);border-radius:6px 6px 2px 2px;position:relative;z-index:1;box-shadow:inset 0 -4px 0 #c99a68}
+.srGlass{position:relative;width:100%;aspect-ratio:4/5;margin-top:-3px;border:3px solid var(--line);border-radius:14px 14px 26px 26px;background:linear-gradient(100deg,rgba(255,255,255,.75) 0 12%,rgba(220,240,255,.45) 12% 100%);overflow:hidden;box-shadow:4px 4px 0 var(--shadow)}
+.srGlass::after{content:"";position:absolute;left:10%;top:8%;width:7%;height:50%;background:rgba(255,255,255,.8);border-radius:8px}
+.srGlass i{position:absolute;width:20%;display:block}
+.srGlass i.new{animation:srTw 1.2s steps(2) infinite}
+.srStar{display:inline-block;line-height:0}.srStar svg{width:100%;height:auto;display:block}
+.srLabel{margin-top:6px;font-size:13px;text-align:center}.srLabel b{font-weight:400;color:var(--pinkT);font-size:18px;margin:0 3px}
+.srJar.got .srGlass{animation:srGot .6s ease-out}
+@keyframes srGot{30%{transform:scale(1.06) rotate(-2deg)}60%{transform:scale(.98) rotate(1deg)}}
+@keyframes srTw{50%{filter:brightness(1.25) drop-shadow(0 0 3px #fff6a0)}}
+.srOpen{background:#ffd36b!important;color:var(--ink)!important}
+.srFold .srSteps{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.srSteps span{font-size:11px;border:2px solid var(--line);padding:1px 6px;background:var(--card);opacity:.45}
+.srSteps span.on{background:var(--pinkL);opacity:1}.srSteps span.ok{opacity:.8;background:#e2f5ec}
+.srStage{min-height:190px;display:flex;align-items:center;justify-content:center;position:relative}
+.srHint{text-align:center;font-size:15px;color:var(--pinkT)}
+.srPapers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;width:100%}
+.srPapers button{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.srStrip{display:block;width:80%;height:12px;border:2px solid var(--line);background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px)!important}
+.srTap{border:0;background:none;width:100%;height:190px;display:flex;align-items:center;justify-content:center;gap:0;position:relative}
+.srStrip.long{width:80%;height:22px;animation:srWig 1.4s ease-in-out infinite}
+.srStrip.tail{height:22px;transition:width .2s}
+.srKnot{display:block;width:calc(64px * var(--w));transition:width .2s;flex:none}.srKnot svg{width:100%;height:auto;display:block}
+@keyframes srWig{50%{transform:rotate(-2deg) translateY(-3px)}}
+.srPuff{position:relative;width:180px;height:160px;display:flex;align-items:center;justify-content:center}
+.srPuff .srKnot{width:110px}
+.srCorner{position:absolute;width:40px;height:40px;border-radius:50%;border:3px dashed #e5486a;background:rgba(255,255,255,.4);animation:beat 1s steps(2) infinite}
+.srCorner.done{display:none}
+.srCorner.c0{left:70px;top:-6px}.srCorner.c1{right:-2px;top:40px}.srCorner.c2{right:20px;bottom:-6px}.srCorner.c3{left:20px;bottom:-6px}.srCorner.c4{left:-2px;top:40px}
+.srDone .srStar,.srDoneWrap .srStar{width:130px;animation:srPop .6s ease-out}
+.srDoneWrap{display:flex;justify-content:center}.srDoneWrap.fly{animation:srFly .55s ease-in forwards}
+@keyframes srPop{0%{transform:scale(.4) rotate(-40deg)}60%{transform:scale(1.15) rotate(8deg)}100%{transform:none}}
+@keyframes srFly{to{transform:translateY(-160px) scale(.2) rotate(200deg);opacity:0}}
+.srFold input{font:inherit;font-size:16px;padding:8px;border:3px solid var(--line);text-align:center;user-select:text;-webkit-user-select:text;width:100%}
+.srIdeas{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.srIdeas button{font:inherit;font-size:12px;border:2px solid var(--line);background:var(--pinkL);padding:2px 8px;color:var(--ink)}
+.srBtns{display:flex;gap:8px}.srBtns .btn{flex:1;width:auto}
+.srBack{align-self:center;width:auto!important}
+.srModal{position:fixed;inset:0;z-index:125;background:rgba(40,25,20,.5);display:flex;align-items:center;justify-content:center;padding:20px}
+.srCard{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:18px;width:min(320px,100%);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.srCard .srBig .srStar{width:90px}
+.srCard.unfold .srBig{animation:srPop .7s ease-out}
+.srPaper{width:100%;padding:14px 12px;background:var(--pc);border:3px solid var(--line);font-size:18px;line-height:1.5;background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);animation:srOpenP .6s .3s ease-out both}
+@keyframes srOpenP{from{transform:scaleX(.1);opacity:0}}
+.srNo{font-size:14px;color:var(--muted)}
+.srWhen{font-size:12px;color:var(--muted)}
+.srCard.list{max-height:80vh}.srCard h3{font-weight:400;margin:0}
+.srList{overflow-y:auto;width:100%;display:flex;flex-direction:column;gap:6px;text-align:left}
+.srList>div{display:flex;align-items:center;gap:8px;border-bottom:2px dashed var(--shadow);padding:4px 0}.srList .srStar{width:22px;flex:none}.srList span{flex:1;font-size:14px}.srList i{font-style:normal;font-size:11px;color:var(--muted)}
+.stStars{width:100%;margin-top:8px;background:#fff6d6!important}
+.ga .srArt{border:3px solid #5a3b2e;border-radius:10px 10px 18px 18px;background:rgba(220,240,255,.7)}.ga .srArt i{position:absolute;width:26%}.ga .srArt i svg{width:100%;height:auto}
+.ga .srLidA{position:absolute;left:14%;right:14%;top:-14%;height:12%;background:#e9c08c;border:3px solid #5a3b2e;border-radius:4px}

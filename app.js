@@ -122,7 +122,7 @@ const App = (function(){
 
   const ctx = { get me(){return me}, partner, isOnline, nameOf, catOf, players, sprite, icon, SFX, burst, toast, floatSvg, esc,
     getState, update, onState, notifyPartner, back: ()=>go("home") };
-  ctx.mode = () => roomMode; ctx.pw = pw;
+  ctx.mode = () => roomMode; ctx.pw = pw; ctx.isBusy = uid => isBusy(uid);
   // fast, unsaved messages between the two phones (real-time co-op games)
   const bcSubs = [];
   ctx.broadcast = p => { if(B.bcast) B.bcast(Object.assign({ from: me.uid }, p)); };
@@ -816,6 +816,7 @@ const App = (function(){
     return `<div class="box statBox" id="statBox">
       <div class="careHd">📋 狀態牌</div>
       <div class="stTiles"><button class="stT" id="stMe">${tile(mine, me.name||"我", "me")}</button><div class="stT them ${theirs&&theirs.def[0]!=="free"?"busy":""}">${tile(theirs, p.name, "them")}</div></div>
+      ${theirs && theirs.def[0]!=="free" ? `<button class="btn sub stStars" id="stStars">⭐ ${esc(p.name)} 在忙，去摺星星等 ta</button>` : ""}
       ${busy ? `<div class="stAct">${mine.over?`<span>已經過了你說的時間，忙完了嗎？</span>`:""}<button class="btn mint" id="stDone">🟢 我忙完了</button>${mine.over?`<button class="btn sub" id="stMore">還在忙 +1 小時</button>`:""}</div>` : ""}
     </div>`;
   }
@@ -823,6 +824,7 @@ const App = (function(){
     const q = id => root.querySelector("#"+id);
     if(q("stMe")) q("stMe").addEventListener("click", statusPicker);
     if(q("stDone")) q("stDone").addEventListener("click", ()=>setStatus("free", null));
+    if(q("stStars")) q("stStars").addEventListener("click", ()=>{ SFX.tap(); go("game-stars"); });
     if(q("stMore")) q("stMore").addEventListener("click", ()=>{ const cur = moodSt.status[me.uid]; setStatus(cur.s, Date.now()+3600e3, true); });
   }
   function busyBar(){

@@ -91,3 +91,6 @@ Turn-based 8-ball. Balls are cat heads (1-7 素色貓, 9-15 條紋貓, 8 小黑�
 
 ## 喵喵暗棋 (games/banqi.js)
 Taiwanese banqi on a 8x4 board (portrait). Teams 橘貓隊 (帥仕相俥傌炮兵) vs 黑貓隊 (將士象車馬包卒). First flip decides colours. Cannon captures by jumping exactly one piece; 兵 eats 帥, 帥 cannot eat 兵. Win when the other team is gone or cannot act; 50 quiet moves = draw. State key "banqi". Replaced 密室逃脫 (removed 11/3).
+
+## 等你的星星罐 (games/stars.js)
+Solo game for when the partner is busy: fold a paper star step by step (paper → knot → 6 wraps → tuck → pinch 5 corners), optionally hide a ≤40-char message, and drop it into the jar for the partner. State key "stars": s[uid] = [{c,m,at,seen}]. The partner opens unread stars one by one. First 10 stars a day give 1 coin each. Partner is notified at most once per 3h. The status board shows a "去摺星星等 ta" button when the partner is busy.
