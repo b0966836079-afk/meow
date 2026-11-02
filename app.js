@@ -1178,8 +1178,8 @@ const App = (function(){
     pc.onicecandidate = e => { if(e.candidate) csend("ice", { c: e.candidate.toJSON() }); };
     pc.ontrack = e => { CALL.remote = e.streams[0]; attachMedia(); };
     pc.onconnectionstatechange = () => { if(!CALL || CALL.pc !== pc) return; const s2 = pc.connectionState;
-      if(s2==="connected"){ if(CALL.phase!=="live"){ CALL.phase = "live"; CALL.t0 = Date.now(); stopRing(); SFX.select(); callUI(); } clearTimeout(CALL.lostT); CALL.lostT = null; setStatus(""); }
-      if(s2==="disconnected"){ setStatus("連線不穩定，努力重新連線中…"); clearTimeout(CALL.lostT); CALL.lostT = setTimeout(()=>{ if(CALL && CALL.pc===pc && pc.connectionState!=="connected"){ csend("hang"); endCall("連線中斷了", "lost"); } }, 12000); }
+      if(s2==="connected"){ if(CALL.phase!=="live"){ CALL.phase = "live"; CALL.t0 = Date.now(); stopRing(); SFX.select(); callUI(); } clearTimeout(CALL.lostT); CALL.lostT = null; setCallSt(""); }
+      if(s2==="disconnected"){ setCallSt("連線不穩定，努力重新連線中…"); clearTimeout(CALL.lostT); CALL.lostT = setTimeout(()=>{ if(CALL && CALL.pc===pc && pc.connectionState!=="connected"){ csend("hang"); endCall("連線中斷了", "lost"); } }, 12000); }
       if(s2==="failed"){ csend("hang"); endCall("連不上對方 (´；ω；`) 可能是網路擋住了，換成 Wi-Fi 再試試", "fail"); } };
     return pc;
   }
@@ -1207,7 +1207,7 @@ const App = (function(){
       else if(why==="cancel") postCallLog(`📞 ${kind}通話・已取消`); }
   }
   function stopRingFor(c){ if(c.ringT) clearInterval(c.ringT); if(navigator.vibrate) navigator.vibrate(0); }
-  function setStatus(t){ const e = document.getElementById("callSt"); if(e) e.textContent = t; }
+  function setCallSt(t){ const e = document.getElementById("callSt"); if(e) e.textContent = t; }
   function attachMedia(){
     const ov = document.getElementById("callOv"); if(!ov || !CALL) return;
     const rv = ov.querySelector("#cvRemote"), lv = ov.querySelector("#cvLocal"), ra = ov.querySelector("#caRemote");
