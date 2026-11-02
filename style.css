@@ -1568,3 +1568,8 @@ body.inCall{overflow:hidden}
 .ctB svg{width:20px;height:20px;display:block}
 .ctB:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
 .ctB.voice{background:var(--mintL)}.ctB.video{background:var(--pinkL)}.ctB.find{background:var(--sky)}
+#top{position:relative}
+#topTools .tl,#topTools .tr{position:absolute;bottom:8px;display:flex;flex-direction:column;gap:7px}
+#topTools .tl{left:0}#topTools .tr{right:0}
+#topTools .ctB{font-size:12px;padding:3px 8px 3px 5px;gap:4px}
+#topTools .ctB svg{width:18px;height:18px}
