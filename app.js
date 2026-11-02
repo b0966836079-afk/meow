@@ -1217,18 +1217,24 @@ const App = (function(){
     if(!ov){ ov = document.createElement("div"); ov.id = "callOv"; ov.className = "callOv"; document.body.appendChild(ov); document.body.classList.add("inCall"); }
     const p = members.find(m=>m.user_id===CALL.peer) || {}, pname = esc(p.name || pw()), pcat = p.cat || "white";
     const showVideo = CALL.phase==="live" && (CALL.video || CALL.myVideo || (CALL.remote && CALL.remote.getVideoTracks().length));
-    const head = `<div class="callCat ${CALL.phase==="live" ? "" : "ring"}">${sprite(pcat, CALL.phase==="incoming" ? "wave" : CALL.phase==="live" ? "happy" : "normal")}</div><b class="callName">${pname}</b>`;
+    const live = CALL.phase==="live", hearts = `<div class="callHearts">${[0,1,2,3,4].map(i=>`<i style="left:${12+i*18}%;animation-delay:${i*.45}s">${icon("heart")}</i>`).join("")}</div>`;
+    const duo = `<div class="callDuo ${live ? "live" : ""}"><div class="cMe">${sprite(me.cat||"orange", live ? "love" : "normal")}<span>你</span></div>
+      <div class="cLink">${live ? `<span class="wave">${[0,1,2,3,4].map(i=>`<i style="animation-delay:${i*.12}s"></i>`).join("")}</span>` : `<span class="dots"><i></i><i></i><i></i></span>`}</div>
+      <div class="cThem ${live ? "" : "ring"}">${sprite(pcat, CALL.phase==="incoming" ? "wave" : live ? "love" : "surprised")}<span>${pname}</span></div></div>`;
+    const head = `${hearts}<b class="callName">${CALL.phase==="incoming" ? `${pname} 打來了！` : pname}</b>${duo}`;
     let status = "", btns = "";
-    if(CALL.phase==="ringing"){ status = `正在打給 ${pname}…`; btns = `<button class="cBtn end" data-c="hang">${Pix.icon ? "" : ""}掛斷</button>`; }
-    else if(CALL.phase==="incoming"){ status = `${pname} 打${CALL.video ? "視訊" : "語音"}電話給你`;
-      btns = `<button class="cBtn end" data-c="decline">拒接</button>${CALL.video ? `<button class="cBtn ok alt" data-c="acceptA">用語音接</button>` : ""}<button class="cBtn ok" data-c="${CALL.video ? "acceptV" : "acceptA"}">接聽</button>`; }
-    else if(CALL.phase==="connecting"){ status = "連線中…"; btns = `<button class="cBtn end" data-c="hang">掛斷</button>`; }
-    else { status = `<span id="callTm">0:00</span>`; const hasCam = CALL.local && CALL.local.getVideoTracks().length;
-      btns = `<button class="cBtn ${CALL.micOn ? "" : "off"}" data-c="mic">${CALL.micOn ? "🎙️ 靜音" : "🔇 已靜音"}</button>${hasCam ? `<button class="cBtn ${CALL.camOn ? "" : "off"}" data-c="cam">${CALL.camOn ? "📷 關鏡頭" : "🚫 開鏡頭"}</button><button class="cBtn" data-c="flip">🔄 翻轉</button>` : ""}<button class="cBtn end" data-c="hang">掛斷</button>`; }
+    const PH = `<svg viewBox="0 0 12 12" shape-rendering="crispEdges"><path fill="#5a3b2e" d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM0 1h1v1h-1zM4 1h1v1h-1zM0 2h1v1h-1zM4 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM4 3h1v1h-1zM1 4h1v1h-1zM4 4h1v1h-1zM1 5h1v1h-1zM5 5h1v1h-1zM2 6h1v1h-1zM6 6h1v1h-1zM3 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM10 7h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM11 8h1v1h-1zM6 9h1v1h-1zM7 9h1v1h-1zM11 9h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM11 10h1v1h-1zM10 11h1v1h-1zM11 11h1v1h-1z"/><path fill="#fff" d="M1 1h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM4 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM10 9h1v1h-1zM10 10h1v1h-1z"/></svg>`;
+    const B2 = (c, cls, ic, label) => `<button class="cBtn ${cls}" data-c="${c}"><span class="ci">${ic}</span><span class="cl">${label}</span></button>`;
+    if(CALL.phase==="ringing"){ status = `<span class="bubble">正在打給 ${pname}<i class="ell"><b>.</b><b>.</b><b>.</b></i></span>`; btns = B2("hang", "end", PH, "掛斷"); }
+    else if(CALL.phase==="incoming"){ status = `<span class="bubble">${CALL.video ? "🎥 視訊" : "📞 語音"}電話，要接嗎？</span>`;
+      btns = B2("decline", "end", PH, "拒接") + (CALL.video ? B2("acceptA", "ok alt", PH, "用語音接") : "") + B2(CALL.video ? "acceptV" : "acceptA", "ok", PH, "接聽"); }
+    else if(CALL.phase==="connecting"){ status = `<span class="bubble">連線中<i class="ell"><b>.</b><b>.</b><b>.</b></i></span>`; btns = B2("hang", "end", PH, "掛斷"); }
+    else { status = `<span class="timer" id="callTm">0:00</span>`; const hasCam = CALL.local && CALL.local.getVideoTracks().length;
+      btns = B2("mic", CALL.micOn ? "" : "off", icon("mic"), CALL.micOn ? "靜音" : "已靜音") + (hasCam ? B2("cam", CALL.camOn ? "" : "off", icon("camera"), CALL.camOn ? "關鏡頭" : "開鏡頭") + B2("flip", "", icon("spark"), "翻轉") : "") + B2("hang", "end", PH, "掛斷"); }
     ov.className = "callOv" + (showVideo ? " video" : "");
-    ov.innerHTML = `${showVideo ? `<video id="cvRemote" autoplay playsinline></video><video id="cvLocal" class="${CALL.facing==="user" ? "mirror" : ""}" autoplay playsinline muted></video>` : `<div class="callBg"></div>`}
+    ov.innerHTML = `${showVideo ? `<video id="cvRemote" autoplay playsinline></video><div class="cvLocalWrap"><video id="cvLocal" class="${CALL.facing==="user" ? "mirror" : ""}" autoplay playsinline muted></video></div>` : `<div class="callBg"></div>`}
       <audio id="caRemote" autoplay playsinline></audio>
-      <div class="callTop">${showVideo ? `<b class="callName small">${pname}</b>` : head}<div class="callStatus">${status}</div><div class="callSub" id="callSt"></div></div>
+      <div class="callTop">${showVideo ? `<b class="callName small">${sprite(pcat,"happy")}${pname}</b>` : head}<div class="callStatus">${status}</div><div class="callSub" id="callSt"></div></div>
       <div class="callBtns">${btns}</div>`;
     ov.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>callBtn(b.dataset.c)));
     attachMedia();
