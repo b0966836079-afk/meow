@@ -34,6 +34,37 @@ function moves(st, i){
   }
   return out;
 }
+// hidden piece: a cat hiding in a cardboard box, only ears + eyes peeking out
+let boxSvg = null;
+function hiddenArt(){
+  if(boxSvg) return boxSvg;
+  const W = 18, H = 18, g = Array.from({length:H}, () => Array(W).fill("."));
+  const P = { O:"#5a3b2e", B:"#dba36b", D:"#b97f48", T:"#f3d7a6", G:"#c9bdb5", K:"#f7a7b8", E:"#2b1d18", L:"#e9b77f" };
+  // head peeking (rows 1-8)
+  for(let y=2;y<=8;y++) for(let x=3;x<=14;x++){ const dx = (x+.5-9)/6.2, dy = (y+.5-8)/6; if(dx*dx+dy*dy <= 1) g[y][x] = "G"; }
+  [[4,1],[5,1],[4,2],[5,2],[6,2],[3,2]].forEach(([x,y])=>{ g[y][x] = "G"; g[y][17-x] = "G"; });
+  g[2][4] = g[2][13] = "K"; g[3][5] = g[3][12] = "K";
+  g[6][6] = g[6][11] = g[7][6] = g[7][11] = "E";
+  // box (rows 8-17)
+  for(let y=8;y<H;y++) for(let x=1;x<W-1;x++) g[y][x] = y < 10 ? "L" : "B";
+  for(let x=1;x<W-1;x++) g[10][x] = "D";
+  for(let y=10;y<H;y++){ g[y][8] = "T"; g[y][9] = "T"; }
+  for(let x=2;x<W-2;x+=3) g[14][x] = "D";
+  // outline
+  const o = g.map(r=>r.slice());
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(g[y][x] !== ".") continue; if((x>0&&g[y][x-1]!==".")||(x<W-1&&g[y][x+1]!==".")||(y>0&&g[y-1][x]!==".")||(y<H-1&&g[y+1][x]!==".")) o[y][x] = "O"; }
+  for(let x=1;x<W-1;x++) o[8][x] = o[8][x] === "." ? "." : (o[8][x] === "G" ? "O" : o[8][x]);
+  let r = ""; o.forEach((row,y)=>row.forEach((c,x)=>{ if(P[c]) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${P[c]}"/>`; }));
+  return boxSvg = `<svg viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges">${r}</svg>`;
+}
+const POSE = ["", "happy", "angry", "normal", "surprised", "wave", "angry", "happy"];
+function pieceArt(pc, extra){
+  if(!pc) return "";
+  if(!pc.up) return `<span class="bqP down ${extra||""}">${hiddenArt()}</span>`;
+  const cat = Pix.sprite(pc.t === "o" ? "orange" : "black", POSE[pc.k]);
+  const hat = pc.k === 1 ? `<i class="bqHat">${Pix.icon("crown")}</i>` : pc.k === 6 ? `<i class="bqFire">${Pix.icon("flame", { R:"#ff7a3a", Y:"#ffd36b" })}</i>` : "";
+  return `<span class="bqP up ${pc.t} k${pc.k} ${extra||""}" title="${TEAM[pc.t]}・${CAT[pc.k]}"><span class="bqCat">${cat}</span>${hat}<b>${CH[pc.t][pc.k]}</b></span>`;
+}
 const alive = (st, t) => st.board.some(x => x && x.t === t);
 function canAct(st, t){ if(st.board.some(x => x && !x.up)) return true; return st.board.some((x, i) => x && x.t === t && moves(st, i).length); }
 
@@ -49,8 +80,7 @@ App.registerGame({
     const myTeam = () => s && s.color ? s.color[me()] : null;
     const myTurn = () => s && !s.win && s.turn === me();
     const nm = u => u === me() ? "你" : ctx.nameOf(u);
-    const piece = (pc, extra) => !pc ? "" : !pc.up ? `<span class="bqP down ${extra||""}"><i>${Pix.icon("paw")}</i></span>`
-      : `<span class="bqP ${pc.t} ${extra||""}" title="${TEAM[pc.t]}・${CAT[pc.k]}"><b>${CH[pc.t][pc.k]}</b></span>`;
+    const piece = (pc, extra) => (extra === "sm" && pc) ? `<span class="bqTok ${pc.t}">${CH[pc.t][pc.k]}</span>` : pieceArt(pc, extra);
     el.innerHTML = `<div class="box bq"><div class="bqPl" id="bqPl"></div><div class="bqSt" id="bqSt"></div>
       <div class="bqDead" id="bqD1"></div><div class="bqBoard" id="bqB"></div><div class="bqDead" id="bqD2"></div>
       <details class="bqHelp"><summary>📖 大小規則</summary><div class="bqRank">${[1,2,3,4,5,6,7].map(k=>`<div>${piece({t:"o",k,up:true})}${piece({t:"b",k,up:true})}<span>${CAT[k]}</span></div>`).join("")}</div>
@@ -125,5 +155,5 @@ App.registerGame({
   unmount(){ if(this._rs) this._rs(); if(this._u) this._u(); if(this._p) this._p(); },
 });
 
-if(window.GameArt) window.GameArt.banqi = () => `<span class="gaL bqArt" style="left:6%;top:10%;width:88%;height:80%">${[["o",1,"帥"],["d"],["b",7,"卒"],["d"],["b",6,"包"],["o",2,"仕"]].map(([t,k,c])=>`<span class="bqP ${t==="d"?"down":t}">${t==="d" ? `<i>${Pix.icon("paw")}</i>` : `<b>${c}</b>`}</span>`).join("")}</span>`;
+if(window.GameArt) window.GameArt.banqi = () => `<span class="gaL bqArt" style="left:4%;top:6%;width:92%;height:88%">${[{t:"o",k:1,up:true},{up:false},{t:"b",k:7,up:true},{up:false},{t:"b",k:6,up:true},{t:"o",k:2,up:true}].map(p=>pieceArt(p)).join("")}</span>`;
 })();

@@ -1723,25 +1723,32 @@ body.locked .stkFab,body.locked .stkTray,body.inCall .stkFab{display:none}
 .bqC{border:0;background:none;padding:6%;display:flex;align-items:center;justify-content:center;position:relative;aspect-ratio:1/1}
 .bqC.sel{background:rgba(255,255,255,.55)}
 .bqC.go::after{content:"";position:absolute;width:26%;height:26%;border-radius:50%;background:rgba(111,191,155,.9);border:2px solid var(--line)}
-.bqC.eat .bqP{box-shadow:0 0 0 3px #e5486a,0 0 10px 3px rgba(229,72,106,.6);animation:bqShake .5s infinite}
+.bqC.eat{background:rgba(229,72,106,.28)}.bqC.eat .bqP{animation:bqShake .5s infinite}.bqC.eat::before{content:"";position:absolute;inset:6%;border:3px dashed #e5486a;border-radius:50%}
 .bqC.last{background:rgba(255,224,138,.45)}
-.bqP{position:relative;width:100%;aspect-ratio:1/1;border-radius:50%;background:#fff6e6;border:3px solid var(--line);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(90,59,46,.35)}
-.bqP::before,.bqP::after{content:"";position:absolute;top:-9%;width:30%;height:30%;background:inherit;border:3px solid var(--line);border-right:0;border-bottom:0;transform:rotate(45deg) skew(8deg,8deg);z-index:-1}
-.bqP::before{left:6%}.bqP::after{right:6%}
-.bqP b{font-weight:400;font-size:clamp(16px,6.2vw,28px);line-height:1;position:relative;top:4%}
-.bqP.o{background:#ffe7cc}.bqP.o b{color:#d9612b}
-.bqP.b{background:#e9e4ef}.bqP.b b{color:#2b1d18}
-.bqP.down{background:#c98b5a}.bqP.down i{width:48%;opacity:.85}.bqP.down i svg{width:100%;height:auto;display:block}
+.bqP{position:relative;width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center}
+.bqP svg{display:block}
+.bqP.down svg{width:96%;height:auto;filter:drop-shadow(0 2px 0 rgba(90,59,46,.3))}
+.bqP.up .bqCat{width:100%;height:100%;display:block;filter:drop-shadow(0 2px 0 rgba(90,59,46,.3))}
+.bqP.up .bqCat svg{width:100%;height:100%}
+.bqP.up.k7 .bqCat{transform:scale(.82) translateY(10%)}
+.bqP.up b{position:absolute;right:-4%;bottom:-4%;width:46%;aspect-ratio:1/1;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:400;font-size:clamp(11px,3.9vw,18px);line-height:1;box-shadow:1px 1px 0 rgba(90,59,46,.35)}
+.bqP.o b{background:#fff3e2;color:#d9481f}
+.bqP.b b{background:#3b3140;color:#fff}
+.bqHat{position:absolute;left:28%;top:-14%;width:44%;animation:bqBob 1.6s steps(2) infinite}.bqHat svg{width:100%;height:auto}
+.bqFire{position:absolute;left:-2%;top:-6%;width:32%;animation:beat 1s steps(2) infinite}.bqFire svg{width:100%;height:auto}
 .bqP.flip{animation:bqFlip .45s ease-out}.bqP.pop{animation:bqPop .4s ease-out}
-.bqP.sm{width:24px;border-width:2px;box-shadow:none}.bqP.sm::before,.bqP.sm::after{display:none}.bqP.sm b{font-size:13px}
+.bqC.sel .bqP.up .bqCat{animation:bob .5s steps(2) infinite}
+.bqTok{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);font-size:12px}
+.bqTok.o{background:#fff3e2;color:#d9481f}.bqTok.b{background:#3b3140;color:#fff}
+@keyframes bqBob{50%{transform:translateY(-6%)}}
 @keyframes bqFlip{0%{transform:rotateY(90deg) scale(1.15)}100%{transform:none}}
 @keyframes bqPop{0%{transform:scale(1.35)}100%{transform:none}}
 @keyframes bqShake{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
 .bqDead{display:flex;flex-wrap:wrap;align-items:center;gap:3px;min-height:26px;font-size:12px;color:var(--muted)}
 .bqHelp{font-size:13px}.bqHelp summary{cursor:pointer;text-align:center}
 .bqRank{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.bqRank>div{display:flex;flex-direction:column;align-items:center;gap:2px}
-.bqRank .bqP{width:34px;display:inline-flex;margin:0 1px}.bqRank .bqP b{font-size:17px}.bqRank>div>span:last-child{font-size:11px}
+.bqRank .bqP{width:40px;display:inline-flex;margin:0 1px}
 .bqRank>div{flex-direction:row;flex-wrap:wrap;justify-content:center}
 .bqHelp p{margin:4px 0;line-height:1.6}.bqHelp b{font-weight:400;color:var(--pinkT)}
-.ga .bqArt{display:grid;grid-template-columns:repeat(3,1fr);gap:8%;align-content:center}.ga .bqArt .bqP{border-width:2px}.ga .bqArt .bqP b{font-size:14px}.ga .bqArt .bqP::before,.ga .bqArt .bqP::after{border-width:2px}
+.ga .bqArt{display:grid;grid-template-columns:repeat(3,1fr);gap:4%;align-content:center}.ga .bqArt .bqP b{font-size:11px;border-width:1px}
 .bqC,.bqRank>div,.ga .bqArt{isolation:isolate}
