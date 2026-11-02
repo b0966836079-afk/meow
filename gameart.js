@@ -34,6 +34,8 @@ const DOOR = ["OOOOOOOOOOOO","ONNNNNNNNNNO","ONOOOOOOOONO","ONONNNNNNONO","ONONN
 const KEY = [".OOO.......",'OYYYO......',"OY.YOOOOOOO","OYYYOYYYYYO",".OOO.OYOYO.","......O.O.."];
 const POT = ["..W..W....","...W..W...","OOOOOOOOOO","OGGGGGGGGO","OGGGGGGGGOO","OGGGGGGGGO.","OGGGGGGGGO.",".OOOOOOOO..","..F.Y.F...",".YFYFYFY.."];
 const BOAT = ["OOO..................","OGWO.................","OGGOOOOOOOOOOOOOOOOOO","OGGRRRRRRRRRRRRRRRRRO",".OGRYRRYRRYRRYRRYRRO.","..ORRRRRRRRRRRRRRRO..","...OOOOOOOOOOOOOOOO.."];
+const CAN = [".OOOOOO.","OWWWWWWO","OOOOOOOO","OKKKKKKO","OKWKKWKO","OKKKKKKO","OKKKKKKO","OOOOOOOO"];
+const MOUSE = [".OO..OO...","OKKO.OKO..","OGGGGGGGO.","OGEGGGEGGO","OGGGKGGGGOOOO",".OGGGGGGO....","..OOOOOO....."];
 const PAL = { K:"#f0708d", W:"#ffffff", Y:"#ffd36b", E:"#2b1d18", B:"#6fb7e8", G:"#6cc49d", R:"#e5486a" };
 
 window.GameArt = {
@@ -44,6 +46,7 @@ window.GameArt = {
   battleship: () => L(P(SHIP, PAL), "left:10%;top:8%;width:80%") + L(P(WAVES, PAL), "left:6%;bottom:6%;width:88%"),
   quickdraw: () => L(S("calico","surprised"), "left:4%;bottom:0;width:62%") + L(P(HAT, { Y:"#c98a4a", R:"#e5486a" }), "left:14%;top:4%;width:42%") + L(P(EXCL, PAL), "right:10%;top:10%;width:9%"),
   fishing: () => L(S("white","happy"), "left:0;bottom:0;width:56%") + L(P(ROD, { G:"#a0703c" }), "left:40%;top:0;width:44%") + L(Pix.icon("fish"), "right:0;bottom:8%;width:30%") + `<span class="gaLine"></span>`,
+  defense: () => L(S("calico","angry"), "left:0;bottom:0;width:46%") + L(P(CAN, { W:"#d6dbe3", K:"#f0708d" }), "right:30%;bottom:4%;width:20%") + L(P(MOUSE, { G:"#a7aec2", K:"#f7a7b8", E:"#2b1d18" }), "right:0;bottom:4%;width:28%"),
   boat: () => L(P(BOAT, { R:"#e5486a", Y:"#ffcf4a", G:"#5cb87a", W:"#ffffff" }), "left:4%;top:24%;width:92%") + L(S("orange","happy"), "left:22%;top:0;width:30%") + L(S("white","happy",1), "left:50%;top:0;width:30%") + `<span class="gaWater"></span>`,
   kitchen: () => L(S("white","happy"), "left:0;bottom:0;width:48%") + L(P(POT, { G:"#8a8aa0", F:"#ff7a3a", Y:"#ffcf4a", W:"#ffffff" }), "right:4%;bottom:6%;width:40%"),
   escape: () => L(S("calico","surprised"), "left:0;bottom:0;width:50%") + L(P(DOOR, { N:"#c98b4f", Y:"#ffcf4a" }), "right:6%;bottom:4%;width:34%") + L(P(KEY, { Y:"#ffcf4a" }), "left:40%;top:4%;width:24%"),

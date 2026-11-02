@@ -1359,3 +1359,31 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .btRow.on{transform:translateY(4px);box-shadow:0 1px 0 var(--shadow)}
 .btPart{flex:1;border:3px dashed var(--line);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);transition:background .1s}
 .btPart.on{background:#e6f8ee;color:var(--ink)}
+/* 守護罐罐大作戰 */
+.tdLobby{text-align:center}
+.tdHero{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:80px}
+.tdHero>svg{width:58px;height:58px}.tdHero .tdCan{width:40px;margin-right:6px}.tdHero .tdCan svg{width:100%;display:block}
+.tdIntro{font-size:14px;line-height:1.7;margin:6px 0 8px}.tdIntro b{font-weight:400;color:var(--pinkT)}
+.tdTw{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
+.tdTw div{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:4px 2px;display:flex;flex-direction:column;align-items:center}
+.tdTw svg{width:42px;height:42px}.tdTw b{font-weight:400;font-size:12px}.tdTw span{font-size:10px;color:var(--muted);line-height:1.3}.tdTw i{font-style:normal;font-size:11px}
+.tdHow{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11.5px;margin-bottom:8px}
+.tdHow span{background:var(--card);border:2px solid var(--line);border-radius:10px;padding:5px 4px}
+.tdGo{width:100%;height:50px;font-size:18px;margin-bottom:6px}
+.tdPlay{padding:8px;user-select:none;-webkit-user-select:none}
+.tdTop{display:flex;align-items:center;gap:10px;font-size:14px;margin-bottom:6px}
+.tdTop #tdLives{display:flex;align-items:center;gap:3px}.tdCanI{width:16px;display:inline-block}.tdCanI svg{width:100%;display:block}
+.tdTop #tdCoins{flex:1;color:var(--pinkT)}.tdTop .btn{width:auto;padding:4px 12px;font-size:13px}.tdTop .btn.ask{background:#ffe08a}
+.tdStage{position:relative;max-width:380px;margin:0 auto}
+#tdC{width:100%;display:block;border:3px solid var(--line);border-radius:10px;image-rendering:pixelated;touch-action:manipulation}
+.tdMsg{position:absolute;left:8%;right:8%;top:50%;transform:translateY(-50%);background:var(--card);border:3px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+.tdMsg b{font-weight:400;font-size:19px}.tdMsg p{margin:6px 0;font-size:14px}.tdMsg .btn{width:100%;margin-top:6px}
+.tdBar{margin-top:8px;min-height:84px;display:flex;flex-direction:column;gap:6px}
+.tdPick{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.tdPick button{font:inherit;color:var(--ink);background:var(--card);border:2px solid var(--line);border-radius:10px;padding:3px 1px;display:flex;flex-direction:column;align-items:center}
+.tdPick button svg{width:38px;height:38px}.tdPick b{font-weight:400;font-size:11px}.tdPick i{font-style:normal;font-size:11px}
+.tdPick button.poor{opacity:.45}
+.tdInfo{display:flex;align-items:center;gap:8px;text-align:left}.tdInfo svg{width:48px;height:48px}.tdInfo b{font-weight:400;display:block}.tdInfo span{font-size:12px;color:var(--muted)}
+.tdBar .btn{width:100%;padding:8px}.tdBar .tdX{padding:5px}
+.tdWaveB{display:flex;flex-direction:column;align-items:center;height:64px;font-size:17px}.tdWaveB small{font-size:11px;opacity:.85}
+.tdHint,.tdNote{font-size:12px;color:var(--muted);text-align:center;padding:10px 0}
