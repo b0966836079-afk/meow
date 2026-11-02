@@ -296,7 +296,7 @@ const App = (function(){
   }
   let kb = null;
   function viewChat(v){
-    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="chatTools"><button class="chatSearch callB" id="bCallA" title="語音通話">📞 語音</button><button class="chatSearch callB" id="bCallV" title="視訊通話">🎥 視訊</button><span style="flex:1"></span><button class="chatSearch" id="bSearch" title="搜尋訊息">🔍 搜尋訊息</button></div><div class="pinBar hidden"></div><div class="list" id="list"></div>
+    v.innerHTML = `<div class="box chat"><div class="chatTruce">${truceBar()}${busyBar()}</div><div class="chatTools"><button class="ctB voice" id="bCallA" title="語音通話">${icon("phone")}<span>語音</span></button><button class="ctB video" id="bCallV" title="視訊通話">${icon("vcam")}<span>視訊</span></button><span style="flex:1"></span><button class="ctB find" id="bSearch" title="搜尋訊息">${icon("search")}<span>搜尋</span></button></div><div class="pinBar hidden"></div><div class="list" id="list"></div>
       <div class="stickers hidden" id="stk"><button data-s="poke" class="pokeBtn" title="戳一下">${icon("paw")}<b>戳一下</b></button>${STICKERS.map(x=>`<button data-s="${x[0]}">${stickerHtml(x[0], me.cat||"orange")}</button>`).join("")}</div>
       <div class="combo hidden" id="combo"></div>
       <div class="replyBar hidden" id="replyBar"></div>

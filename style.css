@@ -1391,7 +1391,7 @@ body[data-kbsize="l"] .ime .k{height:59px}body[data-kbsize="l"] .ime .kv{font-si
 .list .older-end{opacity:.7}
 /* 搜尋訊息 */
 .chat{position:relative}
-.chatTools{display:flex;justify-content:flex-end;padding:4px 8px 0}
+.chatTools{display:flex;justify-content:flex-end;padding:8px 10px 4px;border-bottom:3px dashed var(--shadow)}
 .chatSearch{font:inherit;font-size:12px;color:var(--ink);border:2px solid var(--line);border-radius:999px;background:var(--card);padding:2px 10px;line-height:1.4}
 .srchSheet{position:fixed;inset:0;z-index:118;background:rgba(40,25,20,.45);display:flex;align-items:flex-start;justify-content:center;padding:calc(env(safe-area-inset-top) + 12px) 10px 10px}
 .srchBox{width:100%;max-width:520px;max-height:86dvh;background:var(--paper,var(--card));border:3px solid var(--line);border-radius:16px;box-shadow:0 6px 0 var(--shadow);display:flex;flex-direction:column;overflow:hidden;animation:pdUp .2s ease-out}
@@ -1562,3 +1562,9 @@ body.inCall{overflow:hidden}
 .callOv.mini .mB.end{background:#f7a7b8}.callOv.mini .mB.end svg{transform:rotate(135deg)}
 .callOv.mini .mB:active{transform:translateY(2px)}
 .cBtn.mini{background:#fff6d6}
+
+/* 聊天上方工具列 */
+.ctB{font:inherit;font-size:13px;color:var(--ink);display:flex;align-items:center;gap:5px;border:3px solid var(--line);background:var(--card);padding:3px 9px 3px 6px;box-shadow:3px 3px 0 var(--shadow);line-height:1.2}
+.ctB svg{width:20px;height:20px;display:block}
+.ctB:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.ctB.voice{background:var(--mintL)}.ctB.video{background:var(--pinkL)}.ctB.find{background:var(--sky)}
