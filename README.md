@@ -94,3 +94,6 @@ Taiwanese banqi on a 8x4 board (portrait). Teams 橘貓隊 (帥仕相俥傌炮�
 
 ## 等你的星星罐 (games/stars.js)
 Solo game for when the partner is busy: fold a paper star step by step (paper → knot → 6 wraps → tuck → pinch 5 corners), optionally hide a ≤40-char message, and drop it into the jar for the partner. State key "stars": s[uid] = [{c,m,at,seen}]. The partner opens unread stars one by one. First 10 stars a day give 1 coin each. Partner is notified at most once per 3h. The status board shows a "去摺星星等 ta" button when the partner is busy.
+
+## 喵喵俄羅斯方塊 (games/tetris.js)
+The original cat Tetris, brought back 11/4 as its own game (id "cattris") next to the Block Blast style 喵喵方塊. Keeps state key "tetris", so old best scores carry over. Pet log kind "cattris".
