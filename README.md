@@ -80,8 +80,8 @@
 ## App lock (密碼鎖)
 Settings → 密碼鎖. A 4-digit PIN stored only on this device (salted SHA-256 in localStorage `mw_lock`). Asks on open and after leaving the app for 30s / 1min / 5min (or only on open). Forgot PIN: type the nest invite code to turn the lock off. It is a privacy lock against people holding the phone, not account security.
 
-## 喵喵方塊 (games/tetris.js)
-Cat Tetris. 10x20 board, each cell is a 12px square cat head (one colour per piece). 7-bag, simple wall kicks, ghost, hold, next x3, lock delay 0.5s (15 resets). Buttons with auto-repeat plus board gestures (drag = move, tap = rotate, fast swipe down = hard drop). Auto-pauses when the app is hidden. State key "tetris": best/lines/plays per uid. Coins = lines cleared (max 60), pet log kind "tetris".
+## 喵喵方塊 (games/blocks.js)
+Block Blast style (replaced the old Tetris version 11/4). 8x8 board, 3 random pieces to drag in (no rotation), full rows/columns blast. Combo grows with consecutive clears (resets after 3 placements without a clear); clearing the whole board +300. Game id stays "tetris" (same card), state key "blast" (best/lines per uid). An unfinished game is kept in localStorage `mw_blast`. Coins = lines (max 60), pet log kind "tetris".
 
 ## 喵喵撞球 (games/pool.js)
 Turn-based 8-ball. Balls are cat heads (1-7 素色貓, 9-15 條紋貓, 8 小黑貓, cue 白貓). The shooter simulates the shot locally (fixed 1/240s steps), judges it (fouls, groups, ball in hand, 8-ball win/loss) and CAS-saves the resulting positions plus `last={a,pw,start}`; the other phone replays the shot from `start` and then snaps to the saved positions. State key "pool". Winner gets 5 coins (pet log "pool"). Also a local 自己練習 mode.
