@@ -1851,11 +1851,3 @@ body.locked .stkFab,body.locked .stkTray,body.inCall .stkFab{display:none}
 .bbDemo{position:relative;width:200px;height:100px;margin:4px auto}.bbDemo img{position:absolute;width:16.66%;image-rendering:pixelated}
 .ga .bbArt img{position:absolute;width:25%;image-rendering:pixelated}
 
-/* 俄羅斯方塊：滑動操作 */
-.tsGame .tsMid{touch-action:none}
-.tsGame .tsTip{display:flex;flex-wrap:wrap;gap:4px 8px;justify-content:center;margin-top:8px;max-width:400px}
-.tsGame .tsTip span{font-size:11px;color:var(--muted);background:rgba(255,255,255,.6);border:2px solid var(--shadow);padding:0 6px}
-.tsGuide{position:absolute;inset:0;z-index:5;background:rgba(40,25,20,.5);display:flex;align-items:center;justify-content:center;padding:20px}
-.tsGuide>div{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:16px;width:min(320px,100%);display:flex;flex-direction:column;gap:6px}
-.tsGuide h3{font-weight:400;margin:0 0 4px;text-align:center}.tsGuide p{margin:0;font-size:14px}.tsGuide b{font-weight:400;color:var(--pinkT);display:inline-block;min-width:110px}
-.tsGuide small{color:var(--muted);text-align:center;margin:4px 0}
