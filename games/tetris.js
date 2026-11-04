@@ -66,11 +66,10 @@ function play(opts){
         <div class="tsStrip"><div class="tsBox tsHold" id="tsHold"><span>收起來</span><i></i></div><div class="tsBox tsNext"><span>下一個</span><i id="tsN0"></i><i id="tsN1" class="sm"></i><i id="tsN2" class="sm"></i></div></div>
         <div class="tsWrap" id="tsWrap"><canvas id="tsCv" width="${COLS*C}" height="${ROWS*C}"></canvas><div class="tsPop" id="tsPop"></div></div>
       </div>
-      <div class="tsPad">
-        <button data-a="L" class="tsB">◀</button><button data-a="R" class="tsB">▶</button><button data-a="D" class="tsB">▼</button>
-        <button data-a="U" class="tsB rot">↻</button><button data-a="X" class="tsB drop">⤓</button>
-      </div>
-      <div class="tsTip">在板子上也可以滑：左右滑移動・點一下轉・往下快滑直接落下</div>
+      <div class="tsTip"><span>👆 點右邊：右轉</span><span>點左邊：左轉</span><span>↔ 拖：移動</span><span>↓ 拖：加速</span><span>⇣ 快滑：落下</span><span>⇡ 上滑：收起來</span></div>
+      <div class="tsGuide hidden" id="tsGuide"><div><h3>新的玩法：手指滑就好 🐾</h3>
+        <p><b>↔ 左右拖</b>　方塊跟著手指移動</p><p><b>👆 點一下</b>　旋轉（點畫面左邊是左轉）</p><p><b>↓ 慢慢往下拖</b>　加速往下</p><p><b>⇣ 往下快滑</b>　直接落到底</p><p><b>⇡ 往上滑</b>　把方塊收起來</p>
+        <small>整個畫面都可以滑，不用對準方塊喔</small><button class="btn" id="tsGuideOk">知道了，開始！</button></div></div>
       <div class="tsEnd hidden" id="tsEnd"></div>`;
     document.body.appendChild(ov);
     const $ = s => ov.querySelector(s);
@@ -90,9 +89,10 @@ function play(opts){
     const cells = (p, dx, dy, r) => rotCells(p.k, r==null ? p.r : r).map(([x,y]) => [x + p.x + (dx||0), y + p.y + (dy||0)]);
     const fits = (p, dx, dy, r) => cells(p, dx, dy, r).every(([x,y]) => x>=0 && x<COLS && y<ROWS && (y<0 || !board[y][x]));
     function spawn(k){
-      cur = { k: k || queue.shift(), r: 0, x: 3, y: -1 }; if(!k) queue.push(nextKind());
+      cur = { k: k || queue.shift(), r: 0, x: 3, y: 0 }; if(!k) queue.push(nextKind());
       if(cur.k === "O") cur.x = 3;
-      if(!fits(cur)) { cur.y = -2; if(!fits(cur)) return gameOver(); }
+      if(cur.k === "I") cur.y = -1;   // I lies on row 1 of its box
+      if(!fits(cur)) { cur.y--; if(!fits(cur)) { cur.y--; if(!fits(cur)) return gameOver(); } }
       fallT = 0; lockT = 0; lockMoves = 0; drawSide();
     }
     function drawSide(){
@@ -101,23 +101,41 @@ function play(opts){
     }
     const onGround = () => !fits(cur, 0, 1);
     function moved(){ if(onGround() && lockMoves < 15){ lockT = 0; lockMoves++; } }
-    function move(dx){ if(!cur || clearing || over || paused) return false; if(fits(cur, dx, 0)){ cur.x += dx; snd("key"); moved(); return true; } return false; }
+    function move(dx){ if(!cur || clearing || over || paused) return false; if(fits(cur, dx, 0)){ cur.x += dx; snd("key"); moved(); lastRot = false; return true; } return false; }
+    // SRS wall kicks (y flipped because our y grows downward)
+    const KJ = { "01":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]], "10":[[0,0],[1,0],[1,-1],[0,2],[1,2]], "12":[[0,0],[1,0],[1,-1],[0,2],[1,2]], "21":[[0,0],[-1,0],[-1,1],[0,-2],[-1,-2]],
+      "23":[[0,0],[1,0],[1,1],[0,-2],[1,-2]], "32":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]], "30":[[0,0],[-1,0],[-1,-1],[0,2],[-1,2]], "03":[[0,0],[1,0],[1,1],[0,-2],[1,-2]] };
+    const KI = { "01":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]], "10":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]], "12":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]], "21":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]],
+      "23":[[0,0],[2,0],[-1,0],[2,1],[-1,-2]], "32":[[0,0],[-2,0],[1,0],[-2,-1],[1,2]], "30":[[0,0],[1,0],[-2,0],[1,-2],[-2,1]], "03":[[0,0],[-1,0],[2,0],[-1,2],[2,-1]] };
+    let lastRot = false;
     function rotate(dir){
       if(!cur || clearing || over || paused || cur.k === "O") return;
-      const nr = (cur.r + dir + 4) % 4;
-      for(const [kx, ky] of [[0,0],[-1,0],[1,0],[0,-1],[-2,0],[2,0],[-1,-1],[1,-1]]){
-        if(fits(cur, kx, ky, nr)){ cur.x += kx; cur.y += ky; cur.r = nr; snd("tap"); moved(); return; } }
+      const nr = (cur.r + dir + 4) % 4, tab = (cur.k === "I" ? KI : KJ)[`${cur.r}${nr}`];
+      for(const [kx, ky] of tab){ const dy = -ky;
+        if(fits(cur, kx, dy, nr)){ cur.x += kx; cur.y += dy; cur.r = nr; snd("tap"); moved(); lastRot = true; return; } }
     }
-    function soft(){ if(!cur || clearing || over || paused) return; if(fits(cur, 0, 1)){ cur.y++; score += 1; fallT = 0; updHud(); } }
-    function hard(){ if(!cur || clearing || over || paused) return; let n = 0; while(fits(cur, 0, 1)){ cur.y++; n++; } score += n*2; snd("place"); lock(); }
+    function soft(){ if(!cur || clearing || over || paused) return; if(fits(cur, 0, 1)){ cur.y++; score += 1; fallT = 0; lastRot = false; updHud(); } }
+    function hard(){ if(!cur || clearing || over || paused) return; let n = 0; while(fits(cur, 0, 1)){ cur.y++; n++; } if(n) lastRot = false; score += n*2; snd("place"); if(navigator.vibrate) try{ navigator.vibrate(18); }catch(e){} lock(); }
     function doHold(){ if(!cur || clearing || over || paused || held) return; const k = cur.k; if(hold){ const h2 = hold; hold = k; spawn(h2); } else { hold = k; spawn(); } held = true; snd("select"); drawSide(); }
+    let b2b = false;
     function lock(){
+      // T-spin: last action was a rotation and 3 of the 4 corners around the T are blocked
+      let tspin = false;
+      if(cur.k === "T" && lastRot){ let n = 0; for(const [dx, dy] of [[0,0],[2,0],[0,2],[2,2]]){ const X = cur.x+dx, Y = cur.y+dy; if(X<0 || X>=COLS || Y>=ROWS || (Y>=0 && board[Y][X])) n++; } tspin = n >= 3; }
       for(const [x,y] of cells(cur)){ if(y < 0){ return gameOver(); } board[y][x] = cur.k; }
-      cur = null; held = false;
+      cur = null; held = false; lastRot = false;
       const full = []; for(let y=0;y<ROWS;y++) if(board[y].every(Boolean)) full.push(y);
-      if(full.length){ clearing = { rows: full, t: 0 }; combo++; const pts = [0,100,300,500,800][full.length] * level + (combo > 0 ? 50*combo*level : 0); score += pts; lines += full.length;
-        snd(full.length >= 4 ? "level" : "combo", full.length);
-        pop(full.length === 4 ? "喵喵方塊！四行 🎉" : full.length === 3 ? "三行！太厲害了" : full.length === 2 ? "兩行～" : combo > 0 ? `連續 ${combo+1} 次！` : "", full.length >= 2 || combo > 0);
+      if(tspin && !full.length){ score += 400*level; pop("T-Spin！", true); snd("combo", 2); }
+      if(full.length){ clearing = { rows: full, t: 0 }; combo++;
+        const big = full.length === 4 || tspin;
+        let pts = (tspin ? [0,800,1200,1600][full.length] : [0,100,300,500,800][full.length]) * level;
+        const btb = big && b2b; if(btb) pts = Math.round(pts * 1.5); b2b = big;
+        pts += combo > 0 ? 50*combo*level : 0; score += pts; lines += full.length;
+        const left = board.filter((r, y) => !full.includes(y)).every(r => r.every(c => !c));
+        if(left){ score += 2000*level; setTimeout(()=>pop("全部清空！✨ +" + 2000*level, true), 650); }
+        snd(full.length >= 4 || tspin ? "level" : "combo", full.length);
+        const names = ["","單消","雙消","三消"];
+        pop((btb ? "連續大招 " : "") + (tspin ? `T-Spin ${names[full.length] || ""}！` : full.length === 4 ? "喵喵四消！🎉" : full.length === 3 ? "三行！太厲害了" : full.length === 2 ? "兩行～" : combo > 0 ? `連續 ${combo+1} 次！` : ""), full.length >= 2 || combo > 0 || tspin);
         const nl = Math.floor(lines/10) + 1; if(nl > level){ level = nl; setTimeout(()=>pop(`等級 ${level}！變快囉`, true), 500); }
       } else { combo = -1; snd("place"); spawn(); }
       updHud();
@@ -169,24 +187,29 @@ function play(opts){
       const k = Math.max(1, Math.min(aw / W, (ah - 8) / H));
       cv.style.width = Math.floor(W*k) + "px"; cv.style.height = Math.floor(H*k) + "px";
     }
-    // buttons with auto-repeat
     let downHeld = false;
-    ov.querySelectorAll(".tsB").forEach(b => {
-      const a = b.dataset.a; let rep = 0, rep2 = 0;
-      const act = () => { if(a==="L") move(-1); else if(a==="R") move(1); else if(a==="U") rotate(1); else if(a==="X") hard(); };
-      b.addEventListener("pointerdown", e => { e.preventDefault(); b.classList.add("on"); if(a==="D"){ downHeld = true; soft(); return; } act();
-        if(a==="L" || a==="R"){ rep = setTimeout(()=>{ rep2 = setInterval(act, 55); }, 170); } });
-      const up = () => { b.classList.remove("on"); clearTimeout(rep); clearInterval(rep2); if(a==="D") downHeld = false; };
-      b.addEventListener("pointerup", up); b.addEventListener("pointerleave", up); b.addEventListener("pointercancel", up);
-    });
-    // gestures on the board
-    const wrap = $("#tsWrap"); let gs = null;
-    wrap.addEventListener("pointerdown", e => { if(over) return; gs = { x:e.clientX, y:e.clientY, t:performance.now(), mx:0, moved:false, dropped:false }; try{ wrap.setPointerCapture(e.pointerId); }catch(_){} });
-    wrap.addEventListener("pointermove", e => { if(!gs) return; const cw = cv.getBoundingClientRect().width / COLS;
-      const steps = Math.trunc((e.clientX - gs.x) / (cw*0.9)); while(gs.mx < steps){ move(1); gs.mx++; gs.moved = true; } while(gs.mx > steps){ move(-1); gs.mx--; gs.moved = true; }
-      const dy = e.clientY - gs.y, dt = performance.now() - gs.t; if(!gs.dropped && dy > cw*2.2 && dy / Math.max(1,dt) > 0.6 && Math.abs(e.clientX-gs.x) < dy*0.6){ gs.dropped = true; gs.moved = true; hard(); } });
-    wrap.addEventListener("pointerup", e => { if(!gs) return; if(!gs.moved && Math.abs(e.clientY-gs.y) < 12 && performance.now() - gs.t < 300) rotate(1); gs = null; });
-    wrap.addEventListener("pointercancel", () => { gs = null; });
+    // gestures anywhere in the middle of the screen (modern swipe controls)
+    const pad = $(".tsMid"); let gs = null;
+    const cwOf = () => cv.getBoundingClientRect().width / COLS;
+    pad.addEventListener("pointerdown", e => { if(over || paused || e.target.closest("#tsHold")) return; e.preventDefault();
+      gs = { id:e.pointerId, x:e.clientX, y:e.clientY, t:performance.now(), mx:0, sy:0, moved:false, done:false, hist:[[performance.now(), e.clientX, e.clientY]] };
+      try{ pad.setPointerCapture(e.pointerId); }catch(_){} });
+    pad.addEventListener("pointermove", e => { if(!gs || gs.done || e.pointerId !== gs.id) return; const cw = cwOf(), now = performance.now();
+      gs.hist.push([now, e.clientX, e.clientY]); while(gs.hist.length > 2 && now - gs.hist[0][0] > 90) gs.hist.shift();
+      const [t0, x0, y0] = gs.hist[0], vy = (e.clientY - y0) / Math.max(1, now - t0), vx = (e.clientX - x0) / Math.max(1, now - t0);
+      const dx = e.clientX - gs.x, dy = e.clientY - gs.y;
+      // fast flick down = hard drop, fast flick up = hold
+      if(vy > 1.25 && dy > cw*1.5 && Math.abs(vy) > Math.abs(vx)*1.6){ gs.done = true; gs.moved = true; hard(); return; }
+      if(vy < -1.1 && dy < -cw*1.5 && Math.abs(vy) > Math.abs(vx)*1.6){ gs.done = true; gs.moved = true; doHold(); return; }
+      // drag left/right: piece follows the finger
+      const steps = Math.round(dx / (cw*0.9)); while(gs.mx < steps){ if(!move(1)) { gs.mx = steps; break; } gs.mx++; gs.moved = true; } while(gs.mx > steps){ if(!move(-1)) { gs.mx = steps; break; } gs.mx--; gs.moved = true; }
+      // slow drag down = soft drop, one row per cell of finger travel
+      if(dy > 0 && Math.abs(dy) > Math.abs(dx)*0.8){ const rows = Math.floor(dy / (cw*0.9)); while(gs.sy < rows){ soft(); gs.sy++; gs.moved = true; } }
+      if(Math.abs(dx) > 10 || Math.abs(dy) > 10) gs.moved = true; });
+    pad.addEventListener("pointerup", e => { if(!gs || e.pointerId !== gs.id) return;
+      if(!gs.moved && !gs.done && performance.now() - gs.t < 320){ rotate(e.clientX < window.innerWidth/3 ? -1 : 1); }
+      gs = null; });
+    pad.addEventListener("pointercancel", () => { gs = null; });
     const onKey = e => { if(over) return; const k = e.key; if(k==="ArrowLeft") move(-1); else if(k==="ArrowRight") move(1); else if(k==="ArrowUp" || k==="x") rotate(1); else if(k==="z") rotate(-1); else if(k==="ArrowDown") soft(); else if(k===" "){ e.preventDefault(); hard(); } else if(k==="c" || k==="Shift") doHold(); else if(k==="p" || k==="Escape") setPause(!paused); };
     document.addEventListener("keydown", onKey);
     $("#tsHold").addEventListener("click", doHold);
@@ -200,6 +223,8 @@ function play(opts){
     window.addEventListener("resize", size);
     if(window.__mock) window.__ts = { board: () => board, cur: () => cur, fill(rows){ for(const [y, s] of rows) board[y] = [...s].map(c => c === "." ? null : c); }, set(k){ spawn(k); }, hard, move, rotate, hold: doHold, score: () => score, lines: () => lines, end: gameOver, pause: setPause };
     spawn(); updHud();
+    let seen = 0; try{ seen = +(localStorage.getItem("mw_tsGuide") || 0); }catch(e){}
+    if(seen < 2){ paused = true; $("#tsGuide").classList.remove("hidden"); $("#tsGuideOk").addEventListener("click", () => { snd("select"); $("#tsGuide").classList.add("hidden"); paused = false; try{ localStorage.setItem("mw_tsGuide", String(seen + 1)); }catch(e){} }); }
     requestAnimationFrame(() => { size(); last = performance.now(); raf = requestAnimationFrame(loop); });
   });
 }
@@ -222,7 +247,7 @@ App.registerGame({
       el.innerHTML = `<div class="box tsLobby">
         <div class="tsParade">${KINDS.map(k=>`<span title="${PIECES[k].name}">${pieceHtml(k)}</span>`).join("")}</div>
         <p class="tsIntro">七種貓貓方塊從天上掉下來！<br>把它們排好，<b>排滿一整行</b>就會消掉 🐾</p>
-        <div class="tsHow"><span>◀ ▶ 移動</span><span>↻ 旋轉</span><span>▼ 加速</span><span>⤓ 直接落下</span><span>點左邊的框可以先收起來</span></div>
+        <div class="tsHow"><span>↔ 拖：移動</span><span>👆 點：旋轉</span><span>↓ 拖：加速</span><span>⇣ 快滑：落下</span><span>⇡ 上滑：收起來</span><span>有 T-Spin 和連續大招</span></div>
         <div class="tsBest">${row(ctx.me.name, me())}${p ? row(p.name, p.user_id) : ""}</div>
         <button class="btn" id="tsGo">🧱 開始玩！</button>
         <div class="k" style="text-align:center">每消一行得 1 個貓幣，會送進養貓房間 🪙</div></div>`;
