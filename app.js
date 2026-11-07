@@ -1381,8 +1381,15 @@ const App = (function(){
   function stkFab(){
     if($("stkFab")) return;
     const b = document.createElement("button"); b.id = "stkFab"; b.className = "stkFab"; b.title = "傳貼圖給 ta";
-    b.innerHTML = `${sprite(me.cat||"orange","love")}<i>${icon("heart")}</i>`;
-    b.addEventListener("click", e=>{ e.stopPropagation(); SFX.tap(); $("stkTray") ? stkClose() : stkTray(); });
+    b.innerHTML = `<i>${icon("heart")}</i>`;
+    // drag it up/down along the edge so it never covers what you're playing; position is remembered
+    const y0 = +(store.get("mw_stkY") || 0) || 0.62;
+    b.style.top = `calc(${(y0*100).toFixed(1)}% - 22px)`;
+    let dr = null;
+    b.addEventListener("pointerdown", e=>{ dr = { y: e.clientY, moved: false }; try{ b.setPointerCapture(e.pointerId); }catch(_){} });
+    b.addEventListener("pointermove", e=>{ if(!dr) return; if(Math.abs(e.clientY - dr.y) > 6) dr.moved = true; if(dr.moved){ const f = Math.max(0.1, Math.min(0.9, e.clientY / window.innerHeight)); b.style.top = `calc(${(f*100).toFixed(1)}% - 22px)`; dr.f = f; } });
+    b.addEventListener("pointerup", e=>{ const d = dr; dr = null; if(d && d.moved){ if(d.f) store.set("mw_stkY", d.f.toFixed(3)); return; } e.stopPropagation(); SFX.tap(); $("stkTray") ? stkClose() : stkTray(); });
+    b.addEventListener("pointercancel", ()=>{ dr = null; });
     document.body.appendChild(b);
   }
   function stkClose(all){ const t = $("stkTray"); if(t) t.remove(); if(all){ const f = $("stkFab"); if(f) f.remove(); } }

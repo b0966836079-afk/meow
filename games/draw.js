@@ -73,20 +73,38 @@ App.registerGame({
       if(s.strokes.length < drawn || strokeKey()!==drawnKey){ redraw(); return; }
       const news = s.strokes.slice(drawn); drawn = s.strokes.length;
       (async()=>{ for(const st of news){ const n = st.p.length/2, steps = Math.min(24, Math.max(4, Math.round(n/2)));
+        if(st.id && live.has(String(st.id).split("_")[0])){ paintStroke(st); continue; }   // already drawn live
         for(let k=1;k<=steps;k++){ await new Promise(r=>requestAnimationFrame(r)); paintStroke(st, Math.ceil(n*k/steps)); } } })();
+    }
+    // live strokes: the drawer broadcasts points while drawing, the guesser paints them right away
+    const live = new Set(), liveP = {};
+    let liveBuf = [], liveT = 0;
+    function liveFlush(force){
+      if(!cur || !liveBuf.length) return; const now = Date.now(); if(!force && now - liveT < 70) return; liveT = now;
+      ctx.broadcast({ g:"drw", r: s.round, id: cur.id, c: cur.c, w: cur.w, e: cur.e, p: liveBuf }); liveBuf = [];
+    }
+    function onLive(m){
+      if(!m || m.g !== "drw" || !s || s.phase !== "draw" || m.r !== s.round || isDrawer() || !g) return;
+      live.add(m.id); const L = liveP[m.id] || (liveP[m.id] = []);
+      const pts = L.slice(-2).concat(m.p); L.push(...m.p);
+      g.strokeStyle = m.e ? BG : COLORS[m.c]; g.fillStyle = g.strokeStyle; g.lineWidth = SIZES[m.w]*scale*(m.e?1.8:1);
+      if(pts.length === 2){ g.beginPath(); g.arc(pts[0]*scale, pts[1]*scale, g.lineWidth/2, 0, Math.PI*2); g.fill(); return; }
+      g.beginPath(); g.moveTo(pts[0]*scale, pts[1]*scale); for(let i=2;i<pts.length;i+=2) g.lineTo(pts[i]*scale, pts[i+1]*scale); g.stroke();
     }
     function pos(e){ const r = cv.getBoundingClientRect(); return [Math.round((e.clientX-r.left)/r.width*W), Math.round((e.clientY-r.top)/r.height*H)]; }
     function bindDraw(){
       cv.addEventListener("pointerdown", e=>{ if(!isDrawer() || s.phase!=="draw") return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
-        const [x,y] = pos(e); cur = { c:tool.c, w:tool.w, e:tool.er?1:0, p:[x,y] }; paintStroke(cur); });
+        const [x,y] = pos(e); cur = { id: Math.random().toString(36).slice(2, 9), c:tool.c, w:tool.w, e:tool.er?1:0, p:[x,y] }; paintStroke(cur); liveBuf = [x,y]; liveT = 0; liveFlush(true); });
       cv.addEventListener("pointermove", e=>{ if(!cur) return; const [x,y] = pos(e), p = cur.p, lx = p[p.length-2], ly = p[p.length-1];
-        if(Math.hypot(x-lx, y-ly) < 6) return; p.push(Math.max(0,Math.min(W,x)), Math.max(0,Math.min(H,y)));
+        if(Math.hypot(x-lx, y-ly) < 6) return; const X = Math.max(0,Math.min(W,x)), Y = Math.max(0,Math.min(H,y)); p.push(X, Y); liveBuf.push(X, Y); liveFlush(false);
         const n = p.length/2; g.strokeStyle = cur.e?BG:COLORS[cur.c]; g.lineWidth = SIZES[cur.w]*scale*(cur.e?1.8:1);
         g.beginPath(); g.moveTo(p[(n-2)*2]*scale, p[(n-2)*2+1]*scale); g.lineTo(p[(n-1)*2]*scale, p[(n-1)*2+1]*scale); g.stroke(); });
-      const end = async ()=>{ if(!cur) return; const st = cur; cur = null; if(st.p.length > 400) st.p = st.p.slice(0, 400);
-        myPend.push(st);
-        const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(st); if(x.strokes.length>160) x.strokes = x.strokes.slice(-160); return x; });
-        myPend = myPend.filter(q=>q!==st); if(!ns) redraw(); };
+      const end = async ()=>{ if(!cur) return; liveFlush(true); const st = cur; cur = null;
+        // long strokes are split into pieces (each piece overlaps one point) instead of being cut off
+        const parts = []; for(let i=0, k=0; i < st.p.length - 2 || i === 0; i += 398, k++){ parts.push({ id: k ? st.id + "_" + k : st.id, c: st.c, w: st.w, e: st.e, p: st.p.slice(i, i + 400) }); if(i + 400 >= st.p.length) break; }
+        myPend.push(...parts);
+        const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(...parts); if(x.strokes.length>320) x.strokes = x.strokes.slice(-320); return x; });
+        myPend = myPend.filter(q=>!parts.includes(q)); if(!ns){ redraw(); ctx.toast("這一筆沒存到，再畫一次 🙏"); } };
       cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
       cv.style.touchAction = "none";
     }
@@ -130,7 +148,7 @@ App.registerGame({
             box.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>{ tool.c = +b.dataset.c; tool.er = false; SFX.tap(); toolsUi(); }));
             box.querySelector("[data-er]").addEventListener("click", ()=>{ tool.er = !tool.er; SFX.tap(); toolsUi(); });
             box.querySelectorAll("[data-w]").forEach(b=>b.addEventListener("click", ()=>{ tool.w = +b.dataset.w; SFX.tap(); toolsUi(); }));
-            $("#drUndo").addEventListener("click", ()=>{ SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || !x.strokes.length) return undefined; x.strokes.pop(); return x; }); });
+            $("#drUndo").addEventListener("click", ()=>{ SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || !x.strokes.length) return undefined; const last = x.strokes.pop(); const base = last && last.id ? String(last.id).split("_")[0] : null; if(base) while(x.strokes.length && String(x.strokes[x.strokes.length-1].id||"").split("_")[0] === base) x.strokes.pop(); return x; }); });
             $("#drClr").addEventListener("click", ()=>{ if(!s.strokes.length) return; SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw") return undefined; x.strokes = []; return x; }); });
             $("#drHint").addEventListener("click", ()=>{ if(s.hint >= [...s.word].length-1){ ctx.toast("不能再提示了，再說就是答案啦 😹"); return; } SFX.select(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw") return undefined; x.hint = Math.min([...x.word].length-1, (x.hint||0)+1); return x; }); });
             $("#drGive").addEventListener("click", ()=>finish(false, "give"));
@@ -224,6 +242,7 @@ App.registerGame({
       if(s && s.phase==="done" && g) redraw();
     }
     this._u = ctx.onState("draw", onState);
+    this._b = ctx.onBroadcast(onLive);
     tick = setInterval(()=>{ if(!s || s.phase!=="draw") return; timeUi(); if(Date.now() > s.until + 600) finish(false, "time"); }, 500);
     const onResize = () => { if(cv) setupCanvas(); };
     window.addEventListener("resize", onResize);
@@ -237,6 +256,6 @@ App.registerGame({
       render();
     })();
   },
-  unmount(){ if(this._u) this._u(); if(this._cleanup) this._cleanup(); },
+  unmount(){ if(this._u) this._u(); if(this._b) this._b(); if(this._cleanup) this._cleanup(); },
 });
 })();
