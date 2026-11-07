@@ -328,10 +328,11 @@ const App = (function(){
     function keepCaret(){ if(document.activeElement!==txt){ try{ txt.focus({ preventScroll:true }); }catch(e){} } if(txt._caretUpdate) txt._caretUpdate(); }
     txt.addEventListener("pointerdown", ()=>{ txt._touched = true; });
     setupCaret(txt);
-    const toSys_ = () => { sysKb=true; showKb(false); txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
-    const toMeow = () => { sysKb=false; txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
+    const toSys_ = () => { sysKb=true; store.set("mw_sysKb", "1"); showKb(false); txt.removeAttribute("inputmode"); txt.placeholder="手機鍵盤模式"; txt.focus(); $("bKb").classList.remove("hidden"); };
+    const toMeow = () => { sysKb=false; store.set("mw_sysKb", "0"); txt.setAttribute("inputmode","none"); txt.placeholder="點這裡打字…"; txt.blur(); $("bKb").classList.add("hidden"); showKb(true); };
     txt.insertAdjacentHTML("beforebegin", `<button id="bKb" class="hidden" title="喵喵鍵盤">${icon("keys")}</button>`);
     $("bKb").addEventListener("click", toMeow);
+    if(store.get("mw_sysKb") === "1"){ sysKb = true; txt.removeAttribute("inputmode"); txt.placeholder = "手機鍵盤模式"; $("bKb").classList.remove("hidden"); }
     txt.addEventListener("click", ()=>{ if(!sysKb){ showKb(true); keepCaret(); } });
     txt.addEventListener("input", ()=>{ if(!sysKb){ autoSize(); if(chatUpdSend) chatUpdSend(); } });
     $("bSend").addEventListener("click", ()=>{ if(!txt.value.trim() && !(kb && kb.composing())){ startVoice(); return; } if(kb && kb.composing()) kb.flush(); sendText(); });
@@ -1059,6 +1060,40 @@ const App = (function(){
     };
   }
   ctx.caretField = caretField;
+  // The same meow keyboard as the chat, docked at the bottom of the screen, for any caretField:
+  // types at the cursor, 常用語, 顏文字, 📱 手機鍵盤 (remembered for every box), 收起.
+  let dock = null;
+  function dockKeyboard(fld, o){
+    o = o || {};
+    const wrap = fld.el.parentElement; if(wrap && getComputedStyle(wrap).position === "static") wrap.style.position = "relative";
+    let swap = null;
+    const sysMode = () => store.get("mw_sysKb") === "1";
+    const showSwap = on => { if(on && !swap){ swap = document.createElement("button"); swap.type = "button"; swap.className = "kbSwap"; swap.title = "換回喵喵鍵盤"; swap.innerHTML = icon("keys");
+        swap.addEventListener("click", e => { e.preventDefault(); store.set("mw_sysKb", "0"); fld.el.setAttribute("inputmode", "none"); fld.el.blur(); showSwap(false); open(); }); wrap.appendChild(swap); }
+      if(!on && swap){ swap.remove(); swap = null; } };
+    const applyMode = () => { if(sysMode()){ fld.el.removeAttribute("inputmode"); showSwap(true); } else { fld.el.setAttribute("inputmode", "none"); showSwap(false); } };
+    function close(){ if(dock && dock.fld === fld){ dock.host.remove(); dock = null; document.body.classList.remove("dockKb"); document.body.style.removeProperty("--dockH"); if(o.onClose) o.onClose(); } }
+    function open(){
+      if(sysMode()){ applyMode(); return; }
+      if(dock && dock.fld === fld) { fld.focus(); return; }
+      if(dock) dock.close();
+      const host = document.createElement("div"); host.className = "dockKbHost"; document.body.appendChild(host);
+      const kb = IME.mount(host, { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>fld.before(), mascot: sprite(me.cat||"orange","loaf"),
+        anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: o.phrases || QK[MI().qk], kaomoji: window.KAOMOJI, enterLabel: o.enterLabel || "完成",
+        commit: t => fld.insert(t), backspace: () => fld.del(), send: () => { if(o.onEnter) o.onEnter(); else close(); },
+        hide: () => close(), toSys: () => { store.set("mw_sysKb", "1"); close(); applyMode(); try{ fld.el.focus(); }catch(e){} toast("換成手機鍵盤了，想換回來按框框旁邊的 ⌨"); },
+        fx: (k) => { if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } });
+      dock = { host, kb, fld, close };
+      document.body.classList.add("dockKb");
+      requestAnimationFrame(() => { document.body.style.setProperty("--dockH", host.offsetHeight + "px"); fld.focus();
+        const r = fld.el.getBoundingClientRect(), top = window.innerHeight - host.offsetHeight; if(r.bottom > top - 8) window.scrollBy({ top: r.bottom - top + 16, behavior: "smooth" }); });
+    }
+    applyMode();
+    fld.el.addEventListener("click", () => { if(!sysMode()) open(); });
+    fld.el.addEventListener("keydown", e => { if(sysMode() && e.key === "Enter" && !e.isComposing && e.keyCode !== 229 && o.onEnter){ e.preventDefault(); o.onEnter(); } });
+    return { open, close, composing: () => !!(dock && dock.fld === fld && dock.kb.composing()), flush: () => { if(dock && dock.fld === fld) dock.kb.flush(); }, isOpen: () => !!(dock && dock.fld === fld) };
+  }
+  ctx.dockKeyboard = dockKeyboard;
   // ---------- voice messages ----------
   let chatUpdSend = null, voiceRec = null, voiceAudio = null, voicePlaying = 0;
   const voiceCache = {};

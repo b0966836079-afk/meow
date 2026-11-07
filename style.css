@@ -2046,3 +2046,11 @@ input.drIn:focus{outline:none}
 .dr.drFull .drActRow button{font-size:11px;padding:7px 0}
 .nativeCaret{caret-color:#e5486a}
 body.drkb .stkFab,body.drkb .stkTray{display:none}
+
+/* 遊戲裡的喵喵鍵盤：跟聊天室一樣固定在螢幕最下面 */
+.dockKbHost{position:fixed;left:0;right:0;bottom:0;z-index:138;border-top:3px solid var(--kb-line);background:var(--kb-bg);padding:12px 0 env(safe-area-inset-bottom);max-width:560px;margin:0 auto}
+body.dockKb{padding-bottom:var(--dockH,300px)}
+body.dockKb #nav,body.dockKb #fab,body.dockKb .stkFab,body.dockKb .stkTray{display:none}
+.kbSwap{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:2px solid var(--line);background:var(--card);padding:3px;z-index:2}
+.kbSwap svg{width:100%;height:100%;display:block}
+.drGuess .kbSwap{right:auto;left:calc(100% - 118px)}

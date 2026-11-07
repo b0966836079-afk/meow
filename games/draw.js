@@ -276,7 +276,7 @@ App.registerGame({
               </div>
               <div class="drFeed" id="drFeed"></div><button class="btn sub drGive" id="drGive">😵 放棄這題</button>`
             : `<div class="drFeed" id="drFeed"></div>
-              <div class="drGuess"><input class="drIn" id="drIn" placeholder="點這裡猜猜看…"><button class="btn" id="drSend">猜！</button></div><div id="drKb" class="drKb"></div>`}`;
+              <div class="drGuess"><input class="drIn" id="drIn" placeholder="點這裡猜猜看…" enterkeyhint="send"><button class="btn" id="drSend">猜！</button></div>`}`;
           setupCanvas(); bindDraw();
           if(drawer){
             const pickColor = c => { tool.c = c; if(tool.t === "er") tool.t = "pen"; tool.recent = [c].concat((tool.recent||[]).filter(x=>x!==c)).slice(0, 6); saveTool(); toolsUi(); };
@@ -294,8 +294,8 @@ App.registerGame({
             toolsUi();
           } else {
             gf = ctx.caretField($("#drIn"), 20); gf.el.addEventListener("input", ()=>{ guessText = gf.value; });
+            kb = ctx.dockKeyboard(gf, { enterLabel:"猜！", onEnter: () => sendGuess(), phrases: ["是不是","好像是","應該是","我猜","動物","食物","哈哈","不知道"] });
             guessText = ""; paintGuess();
-            $("#drIn").addEventListener("click", openKb);
             $("#drSend").addEventListener("click", sendGuess);
           }
         } else animateNew();
@@ -338,16 +338,10 @@ App.registerGame({
     }
     let gf = null;
     function paintGuess(){ if(gf && gf.el.isConnected && gf.value !== guessText) gf.value = guessText; }
-    function openKb(){
-      const host = $("#drKb"); if(!host || kb) return;
-      kb = ctx.keyboard(host, { enterLabel:"猜！", textBefore: ()=> gf ? gf.before() : guessText, commit: t=>{ if(gf) gf.insert(t); },
-        backspace: ()=>{ if(gf) gf.del(); }, send: ()=>sendGuess(), hide: closeKb });
-      if(gf) gf.focus();
-      document.body.classList.add("drkb"); host.scrollIntoView({block:"end"});
-    }
-    function closeKb(){ const host = $("#drKb"); if(host) host.innerHTML = ""; kb = null; document.body.classList.remove("drkb"); }
+    function closeKb(){ if(kb && kb.close) kb.close(); }
     async function sendGuess(){
       if(kb && kb.composing()) kb.flush();
+      if(gf) guessText = gf.value;
       const t = guessText.trim(); if(!t || !s || s.phase!=="draw") return;
       guessText = ""; paintGuess(); SFX.send();
       let won = false;
@@ -393,7 +387,7 @@ App.registerGame({
     tick = setInterval(()=>{ if(!s || s.phase!=="draw") return; timeUi(); if(Date.now() > s.until + 600) finish(false, "time"); }, 500);
     const onResize = () => { if(cv) setupCanvas(); };
     window.addEventListener("resize", onResize);
-    this._cleanup = () => { document.body.classList.remove("drkb"); document.body.classList.remove("drFullOn"); clearInterval(tick); window.removeEventListener("resize", onResize); };
+    this._cleanup = () => { closeKb(); document.body.classList.remove("drkb"); document.body.classList.remove("drFullOn"); clearInterval(tick); window.removeEventListener("resize", onResize); };
     (async()=>{
       const I = ctx.players();
       let c = await ctx.getState("draw");
