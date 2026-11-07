@@ -14,6 +14,11 @@ const GLYPH = {
 const gsvg = {};
 const glyph = (k, col) => gsvg[k+col] || (gsvg[k+col] = `<svg viewBox="0 0 7 7" shape-rendering="crispEdges">${GLYPH[k].map((row,y)=>[...row].map((ch,x)=>ch==="#"?`<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${col}"/>`:"").join("")).join("")}</svg>`);
 const POSE = { k:"happy", q:"love", r:"normal", b:"normal", n:"surprised", p:"happy" };
+// how the pieces look (saved on each phone, so each of you can pick your own)
+const STYLES = [["cat","貓咪棋子"],["token","貓耳棋子"],["classic","經典棋子"]];
+const CATC = [["white","白貓"],["black","黑貓"],["orange","橘貓"],["gray","灰貓"],["calico","三花"]];
+const BOARDS = [["wood","木頭","#f6e4c4","#c99a6b"],["pink","草莓","#ffe9ef","#f2a7bb"],["mint","薄荷","#eaf7ee","#8fcfaa"],["sky","汽水","#eaf4ff","#8db7e3"],["green","經典","#eeeed2","#769656"]];
+const loadPref = () => { try{ return Object.assign({ style:"cat", w:"white", b:"black", board:"wood", set:false }, JSON.parse(localStorage.getItem("mw_chStyle")||"{}")); }catch(e){ return { style:"cat", w:"white", b:"black", board:"wood", set:false }; } };
 const START = "rnbqkbnrpppppppp................................PPPPPPPPRNBQKBNR";
 const isW = c => c >= "A" && c <= "Z", colorOf = c => c === "." ? null : isW(c) ? "w" : "b", low = c => c.toLowerCase();
 const RC = i => [i >> 3, i & 7], SQ = (r, c) => r*8 + c, inB = (r, c) => r>=0 && r<8 && c>=0 && c<8;
@@ -86,22 +91,46 @@ App.registerGame({
   icon: () => Pix.sprite("white","happy"),
   mount(el, ctx){
     const { esc, SFX } = ctx;
-    let s = null, sel = -1, busy = false, fxSq = -1;
+    let s = null, sel = -1, busy = false, fxSq = -1, pref = loadPref();
     const me = () => ctx.me.uid;
     const myCol = () => s ? (s.p[0] === me() ? "w" : s.p[1] === me() ? "b" : null) : null;
     const uidOf = col => s.p[col === "w" ? 0 : 1];
     const myTurn = () => s && !s.win && myCol() === s.turn;
     const nm = u => u === me() ? "你" : ctx.nameOf(u);
-    const piece = (c, cls) => { const col = colorOf(c), t = low(c);
+    const piece = (c, cls, P) => { P = P || pref; const col = colorOf(c), t = low(c), title = `${col === "w" ? "白" : "黑"}${NAME[t]}`;
+      if(P.style === "classic") return `<span class="chP cl ${col} ${t} ${cls||""}" title="${title}">${glyph(t, col === "w" ? "#fffaf0" : "#2b1d18")}</span>`;
+      if(P.style === "token") return `<span class="chP tk ${col} ${t} ${cls||""}" title="${title}" style="--tc:${col === "w" ? "#fffaf0" : "#3b3140"}">${glyph(t, col === "w" ? "#5a3b2e" : "#fff6e6")}</span>`;
       const hat = t === "k" ? `<i class="chHat">${Pix.icon("crown")}</i>` : t === "q" ? `<i class="chHat q">${Pix.icon("flower")}</i>` : "";
-      return `<span class="chP ${col} ${t} ${cls||""}" title="${col === "w" ? "白" : "黑"}${NAME[t]}"><span class="chCat">${Pix.sprite(col === "w" ? "white" : "black", POSE[t])}</span>${hat}<b>${glyph(t, col === "w" ? "#5a3b2e" : "#fff6e6")}</b></span>`; };
+      return `<span class="chP ${col} ${t} ${cls||""}" title="${title}"><span class="chCat">${Pix.sprite(P[col] || (col === "w" ? "white" : "black"), POSE[t])}</span>${hat}<b>${glyph(t, col === "w" ? "#5a3b2e" : "#fff6e6")}</b></span>`; };
+    const applyBoard = () => { const bd = BOARDS.find(x => x[0] === pref.board) || BOARDS[0]; el.querySelector(".ch").style.setProperty("--lt", bd[2]); el.querySelector(".ch").style.setProperty("--dk", bd[3]); };
+    function stylePicker(first){
+      const o = document.createElement("div"); o.className = "chPromo chStyle"; let P = Object.assign({}, pref);
+      const paint = () => { const bd = BOARDS.find(x => x[0] === P.board) || BOARDS[0];
+        o.innerHTML = `<div><b>${first ? "開始前，先選你喜歡的棋子樣式 🎨" : "棋子樣式"}</b>
+          <div class="chPrev" style="--lt:${bd[2]};--dk:${bd[3]}">${["r","n","k","q"].map((t,i)=>`<i class="${i%2?"dk":"lt"}">${piece(t.toUpperCase(), "", P)}</i>`).join("")}${["q","k","n","r"].map((t,i)=>`<i class="${i%2?"lt":"dk"}">${piece(t, "", P)}</i>`).join("")}</div>
+          <div class="chOptT">棋子</div><div class="chOpt">${STYLES.map(([k,n])=>`<button data-s="${k}" class="${P.style===k?"on":""}">${n}</button>`).join("")}</div>
+          ${P.style === "cat" ? `<div class="chOptT">白方的貓</div><div class="chOpt">${CATC.map(([k,n])=>`<button data-w="${k}" class="${P.w===k?"on":""}">${n}</button>`).join("")}</div>
+          <div class="chOptT">黑方的貓</div><div class="chOpt">${CATC.map(([k,n])=>`<button data-b="${k}" class="${P.b===k?"on":""}">${n}</button>`).join("")}</div>` : ""}
+          <div class="chOptT">棋盤</div><div class="chOpt">${BOARDS.map(([k,n,a,b2])=>`<button data-bd="${k}" class="${P.board===k?"on":""}"><span style="background:linear-gradient(90deg,${a} 50%,${b2} 50%)"></span>${n}</button>`).join("")}</div>
+          <p class="chNote">只會改你自己手機上看到的樣子，ta 可以選 ta 喜歡的</p>
+          <button class="btn" id="chStyOk">就用這個！</button></div>`;
+        o.querySelectorAll("[data-s]").forEach(b=>b.addEventListener("click", ()=>{ P.style = b.dataset.s; SFX.tap(); paint(); }));
+        o.querySelectorAll("[data-w]").forEach(b=>b.addEventListener("click", ()=>{ P.w = b.dataset.w; SFX.tap(); paint(); }));
+        o.querySelectorAll("[data-b]").forEach(b=>b.addEventListener("click", ()=>{ P.b = b.dataset.b; SFX.tap(); paint(); }));
+        o.querySelectorAll("[data-bd]").forEach(b=>b.addEventListener("click", ()=>{ P.board = b.dataset.bd; SFX.tap(); paint(); }));
+        o.querySelector("#chStyOk").addEventListener("click", ()=>{ P.set = true; pref = P; try{ localStorage.setItem("mw_chStyle", JSON.stringify(P)); }catch(e){} SFX.select(); o.remove(); applyBoard(); ui(); }); };
+      paint(); document.body.appendChild(o);
+    }
     el.innerHTML = `<div class="box ch"><div class="chPl" id="chPl"></div><div class="chSt" id="chSt"></div>
       <div class="chCap" id="chCapT"></div><div class="chBoard" id="chB"></div><div class="chCap" id="chCapB"></div>
       <div class="chHist" id="chHist"></div>
-      <div class="chBtns"><button class="btn sub" id="chResign">🏳️ 認輸</button><button class="btn sub" id="chNew">重新開一局</button></div>
+      <div class="chBtns"><button class="btn sub" id="chResign">🏳️ 認輸</button><button class="btn sub" id="chSty">🎨 棋子樣式</button><button class="btn sub" id="chNew">重新開一局</button></div>
       <details class="bqHelp"><summary>📖 棋子介紹</summary><div class="chHelp">${["k","q","r","b","n","p"].map(t=>`<div>${piece("K".replace("K", t.toUpperCase()))}<span><b>${NAME[t]}</b>${({k:"走一格，被將死就輸了",q:"直的、橫的、斜的都能走很遠",r:"直走橫走，走多遠都可以",b:"只能斜著走",n:"走「日」字，可以跳過別人",p:"往前一格，第一步可以兩格，斜前方吃子，走到底可以升變"})[t]}</span></div>`).join("")}</div>
         <p>特殊規則都有：王車易位（國王點兩格就會跟城堡交換）、吃過路兵、升變時可以選要變成什麼。</p></details></div>`;
     const $ = q => el.querySelector(q);
+    applyBoard();
+    $("#chSty").addEventListener("click", ()=>{ SFX.tap(); stylePicker(false); });
+    if(!pref.set) setTimeout(()=>stylePicker(true), 300);
     function ui(){
       if(!s){ $("#chSt").textContent = ctx.partner() ? "準備中…" : `等${ctx.pw ? ctx.pw() : "另一半"}加入就可以玩了`; $("#chB").innerHTML = ""; return; }
       const col = myCol() || "w", flip = col === "b";

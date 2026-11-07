@@ -1975,7 +1975,7 @@ body.drFullOn #fab,body.drFullOn .stkFab{display:none}
 .chChk{color:#fff;background:#e5486a;padding:0 6px;margin-left:6px;animation:drBlink .8s steps(2) infinite}
 .chBoard{display:grid;grid-template-columns:repeat(8,1fr);border:4px solid var(--line);box-shadow:4px 4px 0 var(--shadow);width:min(100%,calc(100dvh - 330px));min-width:260px;margin:0 auto;aspect-ratio:1/1}
 .chC{position:relative;border:0;padding:4%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;isolation:isolate}
-.chC.lt{background:#f6e4c4}.chC.dk{background:#c99a6b}
+.chC.lt{background:var(--lt,#f6e4c4)}.chC.dk{background:var(--dk,#c99a6b)}
 .chC.last{box-shadow:inset 0 0 0 100px rgba(255,224,90,.42)}
 .chC.sel{box-shadow:inset 0 0 0 100px rgba(255,255,255,.55)}
 .chC.chk{box-shadow:inset 0 0 0 100px rgba(229,72,106,.55)}
@@ -2002,3 +2002,15 @@ body.drFullOn #fab,body.drFullOn .stkFab{display:none}
 .chPromoR button{font:inherit;border:3px solid var(--line);background:var(--card);padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--ink)}.chPromoR .chP{width:52px;height:52px}.chPromoR span{font-size:12px}
 .ga .chArt{display:grid;grid-template-columns:repeat(4,1fr);border:3px solid #5a3b2e}.ga .chArt>i{background:#f6e4c4}.ga .chArt>i.d{background:#c99a6b}
 .ga .chA1,.ga .chA2{position:absolute;width:42%}.ga .chA1{left:4%;bottom:2%}.ga .chA2{right:4%;top:2%}.ga .chA1 svg,.ga .chA2 svg{width:100%;height:auto}
+.chP.cl{display:flex;align-items:center;justify-content:center;padding:6%}.chP.cl svg{width:100%;height:100%;filter:drop-shadow(1px 0 0 #2b1d18) drop-shadow(-1px 0 0 #2b1d18) drop-shadow(0 1px 0 #2b1d18) drop-shadow(0 -1px 0 #2b1d18) drop-shadow(0 2px 0 rgba(90,59,46,.35))}
+.chP.b.cl svg{filter:drop-shadow(1px 0 0 #fff6e6) drop-shadow(-1px 0 0 #fff6e6) drop-shadow(0 1px 0 #fff6e6) drop-shadow(0 -1px 0 #fff6e6) drop-shadow(0 2px 0 rgba(90,59,46,.35))}
+.chP.tk{display:flex;align-items:center;justify-content:center;border-radius:50%;background:var(--tc);border:2px solid var(--line);padding:18%;box-shadow:0 2px 0 rgba(90,59,46,.35);width:88%;height:88%;margin:6%}
+.chP.tk::before,.chP.tk::after{content:"";position:absolute;top:-10%;width:30%;height:30%;background:var(--tc);border:2px solid var(--line);border-right:0;border-bottom:0;transform:rotate(45deg) skew(8deg,8deg);z-index:-1}
+.chP.tk::before{left:6%}.chP.tk::after{right:6%}.chP.tk svg{width:100%;height:100%}
+.chStyle>div{width:min(340px,100%);display:flex;flex-direction:column;gap:6px}
+.chPrev{display:grid;grid-template-columns:repeat(4,1fr);border:3px solid var(--line);width:200px;margin:4px auto}.chPrev i{aspect-ratio:1/1;display:flex;padding:3px;position:relative;isolation:isolate}.chPrev i.lt{background:var(--lt)}.chPrev i.dk{background:var(--dk)}
+.chOptT{font-size:12px;color:var(--muted);text-align:left}
+.chOpt{display:flex;flex-wrap:wrap;gap:5px}.chOpt button{font:inherit;font-size:13px;border:2px solid var(--line);background:var(--card);padding:3px 9px;color:var(--ink);display:flex;align-items:center;gap:4px}.chOpt button.on{background:var(--pink);color:#fff}
+.chOpt button span{width:16px;height:12px;border:1px solid var(--line);display:inline-block}
+.chNote{font-size:11px;color:var(--muted);margin:2px 0}
+.chBtns .btn{font-size:13px;padding-left:4px;padding-right:4px}
