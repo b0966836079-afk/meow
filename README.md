@@ -101,3 +101,6 @@ The original cat Tetris, brought back 11/4 as its own game (id "cattris") next t
 ## 記事本 (games/notes.js)
 Shared notebook (hidden game "notes", opened from the 5th home tile 記事). Text notes and checklists, 6 colours, pin, search, filters. State key "notes": list of {id,t,title,body,items,color,pin,by,at,up,rem:{at,to:me|ta|both,by},done}.
 Reminders: `B.memoSet()` writes rows to `memo_alarms` (supabase/update_9_memo.sql). pg_cron runs `fire_memos()` every minute, which inserts a chat message kind "memo" with the *other* member as sender, so the existing push webhook notifies the right person. Without the SQL the reminder still shows inside the notebook and on the home tile.
+
+### 你畫我猜 drawing tools (11/7)
+Tools: 鉛筆 / 麥克筆 (38% alpha) / 油漆桶 (scanline flood fill, replayed in order on both phones) / 直線 / 圓形 / 方形 / 橡皮擦; 20-colour palette + custom colour; size slider 2–48; undo (whole stroke) / redo; 清空 asks twice; 大畫布 fullscreen; two-finger pinch zoom & pan (one finger always draws, a second finger cancels the stroke). Strokes store {id,t,c:"#hex",sz,p}; old strokes ({c:index,w:index,e}) still render. Live points are broadcast (`g:"drw"`) so the guesser sees lines as they are drawn. Tool choice remembered in localStorage `mw_drTool`.

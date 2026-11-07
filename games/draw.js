@@ -18,8 +18,10 @@ const ALL = []; for(const c in WORDS) for(const w of WORDS[c]) ALL.push([w,c]);
 const ALL_B = ALL.filter(x=>x[1]!=="我們").concat(WORDS_B.map(w=>[w,"閨蜜"]));
 const WORDS_M = ["打籃球","打電動","烤肉","喝啤酒","機車","健身","釣魚","露營","看球賽","吃宵夜","鹹酥雞","網咖","開黑","打撞球","保齡球","爬山","騎腳踏車","衝浪","賽車","擊掌","勾肩搭背","畢業旅行","當兵","拔河","打雪仗","抓娃娃","吃到飽","漢堡","拉麵","啞鈴","球鞋","棒球帽","遊戲手把","耳機麥克風","外送","熬夜","打呼","搞笑自拍","生日驚喜","夜衝","看日出","吃火鍋","便利商店","泡麵","背包旅行","足球","桌球","滑板","烤香腸","乾杯"];
 const ALL_M = ALL.filter(x=>x[1]!=="我們").concat(WORDS_M.map(w=>[w,"兄弟"]));
-const COLORS = ["#3b2a24","#e5486a","#f39a3d","#f6c945","#5cb87a","#4a90d9","#9b6fd6","#f7a7b8","#8a5a33"];
+const COLORS = ["#3b2a24","#e5486a","#f39a3d","#f6c945","#5cb87a","#4a90d9","#9b6fd6","#f7a7b8","#8a5a33"];   // old strokes store an index into this
 const SIZES = [5, 11, 22];
+const PALETTE = ["#2b1d18","#6b5a52","#a8a29e","#ffffff","#e5486a","#ff8fab","#f39a3d","#f6c945","#fff27a","#9be27a","#5cb87a","#2f8f6b","#7fd3e8","#4a90d9","#2f4ea8","#9b6fd6","#d6a2ff","#8a5a33","#c98b5a","#f3d3a4"];
+const TOOLS = [["pen","✏️","鉛筆"],["mark","🖍️","麥克筆"],["fill","🪣","油漆桶"],["line","📏","直線"],["oval","⭕","圓形"],["rect","⬜","方形"],["er","🧽","橡皮擦"]];
 const BG = "#fffaf2", W = 1000, H = 750, TIME = 100;
 const norm = s => String(s||"").replace(/[\s，。！？!?,.~～、「」"'：:；;]/g,"").toLowerCase();
 
@@ -30,7 +32,7 @@ App.registerGame({
   icon: () => Pix.sprite("calico","surprised"),
   mount(el, ctx){
     const { sprite, esc, SFX } = ctx;
-    let s = null, drawn = 0, drawnKey = "", tool = { c:0, w:1, er:false }, cur = null, kb = null, guessText = "", tick = null, lastGuessN = 0, lastPhase = null, myPend = [];
+    let s = null, drawn = 0, drawnKey = "", cur = null, kb = null, guessText = "", tick = null, lastGuessN = 0, lastPhase = null, myPend = [];
     const me = () => ctx.me.uid, other = () => ctx.players().find(i=>i!==me());
     const $ = q => el.querySelector(q);
     el.innerHTML = `<div class="box dr" id="dr"></div>`;
@@ -46,21 +48,65 @@ App.registerGame({
       solved:(prev&&prev.solved)||0, streak:(prev&&prev.streak)||0, best:(prev&&prev.best)||0, fast:(prev&&prev.fast)||0, used:(prev&&prev.used)||[], hist:(prev&&prev.hist)||[], result:null });
 
     // ---------- canvas ----------
-    let cv = null, g = null, scale = 1;
+    // stroke: { id, t:"pen"|"mark"|"er"|"line"|"oval"|"rect"|"fill", c:"#hex" (old: index), sz (old: w index), p:[x,y,...] }
+    let cv = null, g = null, scale = 1, base = null;
+    let tool = Object.assign({ t:"pen", c:"#2b1d18", sz:8, recent:[] }, (()=>{ try{ return JSON.parse(localStorage.getItem("mw_drTool")||"{}"); }catch(e){ return {}; } })());
+    const saveTool = () => { try{ localStorage.setItem("mw_drTool", JSON.stringify({ t:tool.t, c:tool.c, sz:tool.sz, recent:tool.recent })); }catch(e){} };
+    let redoStack = [], view = { z:1, x:0, y:0 };
     function setupCanvas(){
       cv = $("#drCv"); if(!cv) return;
-      const r = cv.getBoundingClientRect(), dpr = Math.min(3, window.devicePixelRatio||1);
-      cv.width = Math.round(r.width*dpr); cv.height = Math.round(r.width*.75*dpr); cv.style.height = (r.width*.75)+"px";
-      g = cv.getContext("2d"); scale = cv.width / W; g.lineCap = "round"; g.lineJoin = "round";
+      const dpr = Math.min(2.5, window.devicePixelRatio||1) * (box.classList.contains("drFull") ? 1.4 : 1);
+      const w = cv.offsetWidth || cv.parentElement.clientWidth;
+      cv.width = Math.round(w*dpr); cv.height = Math.round(w*.75*dpr); cv.style.height = (w*.75)+"px";
+      g = cv.getContext("2d", { willReadFrequently: true }); scale = cv.width / W; g.lineCap = "round"; g.lineJoin = "round";
       redraw();
     }
+    const colOf = st => typeof st.c === "number" ? COLORS[st.c] || "#2b1d18" : (st.c || "#2b1d18");
+    const typeOf = st => st.t || (st.e ? "er" : "pen");
+    const sizeOf = st => st.sz != null ? st.sz : SIZES[st.w] || 8;
+    function floodFill(x0, y0, hex){
+      const Wd = cv.width, Hd = cv.height, X = Math.round(x0*scale), Y = Math.round(y0*scale); if(X<0||Y<0||X>=Wd||Y>=Hd) return;
+      const img = g.getImageData(0, 0, Wd, Hd), d = img.data, at = (X + Y*Wd)*4;
+      const tr = d[at], tg = d[at+1], tb = d[at+2];
+      const [fr, fg, fb] = [1,3,5].map(k=>parseInt(hex.slice(k,k+2),16));
+      if(Math.abs(tr-fr)+Math.abs(tg-fg)+Math.abs(tb-fb) < 12) return;
+      const TOL = 110, same = i => Math.abs(d[i]-tr)+Math.abs(d[i+1]-tg)+Math.abs(d[i+2]-tb) <= TOL;
+      const mark = new Uint8Array(Wd*Hd), stack = [X, Y];
+      while(stack.length){
+        const y = stack.pop(); let x = stack.pop(); let i = y*Wd + x;
+        while(x >= 0 && !mark[i] && same(i*4)){ x--; i--; } x++; i++;
+        let up = false, dn = false;
+        while(x < Wd && !mark[i] && same(i*4)){
+          mark[i] = 1;
+          if(y > 0){ const k = i - Wd; if(!mark[k] && same(k*4)){ if(!up){ stack.push(x, y-1); up = true; } } else up = false; }
+          if(y < Hd-1){ const k = i + Wd; if(!mark[k] && same(k*4)){ if(!dn){ stack.push(x, y+1); dn = true; } } else dn = false; }
+          x++; i++;
+        }
+      }
+      // paint the filled area, grown by 1px so there are no light seams along anti-aliased edges
+      for(let y=0;y<Hd;y++) for(let x=0;x<Wd;x++){ const i = y*Wd + x; if(mark[i] || (x>0 && mark[i-1]) || (x<Wd-1 && mark[i+1]) || (y>0 && mark[i-Wd]) || (y<Hd-1 && mark[i+Wd])){ const o = i*4; d[o] = fr; d[o+1] = fg; d[o+2] = fb; d[o+3] = 255; } }
+      g.putImageData(img, 0, 0);
+    }
     function paintStroke(st, upto){
-      const p = st.p, n = Math.min(upto==null ? p.length/2 : upto, p.length/2); if(!n) return;
-      g.strokeStyle = st.e ? BG : COLORS[st.c]; g.fillStyle = g.strokeStyle; g.lineWidth = SIZES[st.w]*scale*(st.e?1.8:1);
-      if(n===1){ g.beginPath(); g.arc(p[0]*scale, p[1]*scale, g.lineWidth/2, 0, Math.PI*2); g.fill(); return; }
-      g.beginPath(); g.moveTo(p[0]*scale, p[1]*scale);
-      for(let i=1;i<n-1;i++){ const x=p[i*2]*scale, y=p[i*2+1]*scale, nx=p[i*2+2]*scale, ny=p[i*2+3]*scale; g.quadraticCurveTo(x, y, (x+nx)/2, (y+ny)/2); }
-      g.lineTo(p[(n-1)*2]*scale, p[(n-1)*2+1]*scale); g.stroke();
+      const t = typeOf(st), p = st.p, n = Math.min(upto==null ? p.length/2 : upto, p.length/2); if(!n) return;
+      if(t === "fill"){ floodFill(p[0], p[1], colOf(st)); return; }
+      g.save();
+      g.strokeStyle = t === "er" ? BG : colOf(st); g.fillStyle = g.strokeStyle;
+      g.lineWidth = sizeOf(st)*scale*(t === "er" ? 1.8 : t === "mark" ? 2.2 : 1); g.lineCap = "round"; g.lineJoin = "round";
+      if(t === "mark"){ g.globalAlpha = 0.38; g.lineCap = "butt"; g.lineJoin = "round"; }
+      const S = v => v*scale;
+      if(t === "line" || t === "oval" || t === "rect"){
+        const x1 = S(p[0]), y1 = S(p[1]), x2 = S(p[p.length-2]), y2 = S(p[p.length-1]);
+        g.beginPath();
+        if(t === "line"){ g.moveTo(x1, y1); g.lineTo(x2, y2); }
+        else if(t === "rect"){ g.rect(Math.min(x1,x2), Math.min(y1,y2), Math.abs(x2-x1), Math.abs(y2-y1)); }
+        else g.ellipse((x1+x2)/2, (y1+y2)/2, Math.max(1, Math.abs(x2-x1)/2), Math.max(1, Math.abs(y2-y1)/2), 0, 0, Math.PI*2);
+        g.stroke(); g.restore(); return;
+      }
+      if(n===1){ g.beginPath(); g.arc(S(p[0]), S(p[1]), g.lineWidth/2, 0, Math.PI*2); g.fill(); g.restore(); return; }
+      g.beginPath(); g.moveTo(S(p[0]), S(p[1]));
+      for(let i=1;i<n-1;i++){ const x=S(p[i*2]), y=S(p[i*2+1]), nx=S(p[i*2+2]), ny=S(p[i*2+3]); g.quadraticCurveTo(x, y, (x+nx)/2, (y+ny)/2); }
+      g.lineTo(S(p[(n-1)*2]), S(p[(n-1)*2+1])); g.stroke(); g.restore();
     }
     function redraw(){
       if(!g) return; g.fillStyle = BG; g.fillRect(0,0,cv.width,cv.height);
@@ -72,42 +118,85 @@ App.registerGame({
       if(!g || !s) return;
       if(s.strokes.length < drawn || strokeKey()!==drawnKey){ redraw(); return; }
       const news = s.strokes.slice(drawn); drawn = s.strokes.length;
+      if(news.some(st => typeOf(st) === "fill" || typeOf(st) === "mark")){ redraw(); return; }
       (async()=>{ for(const st of news){ const n = st.p.length/2, steps = Math.min(24, Math.max(4, Math.round(n/2)));
-        if(st.id && live.has(String(st.id).split("_")[0])){ paintStroke(st); continue; }   // already drawn live
+        if(st.id && live.has(String(st.id).split("_")[0])){ continue; }   // already drawn live
+        if(["line","oval","rect"].includes(typeOf(st))){ paintStroke(st); continue; }
         for(let k=1;k<=steps;k++){ await new Promise(r=>requestAnimationFrame(r)); paintStroke(st, Math.ceil(n*k/steps)); } } })();
     }
     // live strokes: the drawer broadcasts points while drawing, the guesser paints them right away
-    const live = new Set(), liveP = {};
+    const live = new Set(), liveS = {};
     let liveBuf = [], liveT = 0;
     function liveFlush(force){
       if(!cur || !liveBuf.length) return; const now = Date.now(); if(!force && now - liveT < 70) return; liveT = now;
-      ctx.broadcast({ g:"drw", r: s.round, id: cur.id, c: cur.c, w: cur.w, e: cur.e, p: liveBuf }); liveBuf = [];
+      ctx.broadcast({ g:"drw", r: s.round, id: cur.id, t: cur.t, c: cur.c, sz: cur.sz, p: liveBuf }); liveBuf = [];
     }
     function onLive(m){
       if(!m || m.g !== "drw" || !s || s.phase !== "draw" || m.r !== s.round || isDrawer() || !g) return;
-      live.add(m.id); const L = liveP[m.id] || (liveP[m.id] = []);
-      const pts = L.slice(-2).concat(m.p); L.push(...m.p);
-      g.strokeStyle = m.e ? BG : COLORS[m.c]; g.fillStyle = g.strokeStyle; g.lineWidth = SIZES[m.w]*scale*(m.e?1.8:1);
-      if(pts.length === 2){ g.beginPath(); g.arc(pts[0]*scale, pts[1]*scale, g.lineWidth/2, 0, Math.PI*2); g.fill(); return; }
-      g.beginPath(); g.moveTo(pts[0]*scale, pts[1]*scale); for(let i=2;i<pts.length;i+=2) g.lineTo(pts[i]*scale, pts[i+1]*scale); g.stroke();
+      if(!["pen","mark","er"].includes(m.t || "pen")) return;
+      let L = liveS[m.id]; if(!L){ L = liveS[m.id] = { t: m.t, c: m.c, sz: m.sz, p: [], snap: g.getImageData(0, 0, cv.width, cv.height) }; live.add(m.id); }
+      L.p.push(...m.p); g.putImageData(L.snap, 0, 0); paintStroke(L);
     }
     function pos(e){ const r = cv.getBoundingClientRect(); return [Math.round((e.clientX-r.left)/r.width*W), Math.round((e.clientY-r.top)/r.height*H)]; }
     function bindDraw(){
-      cv.addEventListener("pointerdown", e=>{ if(!isDrawer() || s.phase!=="draw") return; e.preventDefault(); cv.setPointerCapture(e.pointerId);
-        const [x,y] = pos(e); cur = { id: Math.random().toString(36).slice(2, 9), c:tool.c, w:tool.w, e:tool.er?1:0, p:[x,y] }; paintStroke(cur); liveBuf = [x,y]; liveT = 0; liveFlush(true); });
-      cv.addEventListener("pointermove", e=>{ if(!cur) return; const [x,y] = pos(e), p = cur.p, lx = p[p.length-2], ly = p[p.length-1];
-        if(Math.hypot(x-lx, y-ly) < 6) return; const X = Math.max(0,Math.min(W,x)), Y = Math.max(0,Math.min(H,y)); p.push(X, Y); liveBuf.push(X, Y); liveFlush(false);
-        const n = p.length/2; g.strokeStyle = cur.e?BG:COLORS[cur.c]; g.lineWidth = SIZES[cur.w]*scale*(cur.e?1.8:1);
-        g.beginPath(); g.moveTo(p[(n-2)*2]*scale, p[(n-2)*2+1]*scale); g.lineTo(p[(n-1)*2]*scale, p[(n-1)*2+1]*scale); g.stroke(); });
-      const end = async ()=>{ if(!cur) return; liveFlush(true); const st = cur; cur = null;
+      let sm = null, pendFill = null; const pts = new Map(); let pinch = null;
+      const zr = $("#drZR");
+      const applyZoom = () => { cv.style.transformOrigin = "0 0"; cv.style.transform = view.z > 1.01 ? `translate(${view.x}px,${view.y}px) scale(${view.z})` : ""; if(zr) zr.classList.toggle("hidden", view.z <= 1.01); };
+      if(zr) zr.addEventListener("click", ()=>{ view = { z:1, x:0, y:0 }; applyZoom(); SFX.tap(); });
+      applyZoom();
+      cv.addEventListener("pointerdown", e=>{ pts.set(e.pointerId, [e.clientX, e.clientY]); if(!isDrawer() || s.phase!=="draw") return; e.preventDefault();
+        if(pts.size === 2){ // two fingers: cancel the stroke and pinch-zoom / move the canvas
+          pendFill = null; if(cur){ cur = null; if(base) g.putImageData(base, 0, 0); base = null; }
+          const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx: (a[0]+b[0])/2, my: (a[1]+b[1])/2, z: view.z, x: view.x, y: view.y }; return; }
+        if(pts.size > 2) return;
+        try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+        const [x,y] = pos(e); redoStack = [];
+        if(tool.t === "fill"){ pendFill = [x, y]; return; }   // filled on release, so a pinch doesn't fill by accident
+        cur = { id: Math.random().toString(36).slice(2, 9), t: tool.t, c: tool.c, sz: tool.sz, p:[x,y] }; sm = [x, y];
+        base = g.getImageData(0, 0, cv.width, cv.height); paintStroke(cur);
+        if(["pen","mark","er"].includes(cur.t)){ liveBuf = [x,y]; liveT = 0; liveFlush(true); } });
+      cv.addEventListener("pointermove", e=>{ if(pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+        if(pinch && pts.size >= 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
+          const z = Math.max(1, Math.min(5, pinch.z * d / pinch.d)), st = $("#drStage").getBoundingClientRect();
+          // keep the point under the fingers fixed while zooming, then follow the fingers
+          const ox = pinch.mx - st.left, oy = pinch.my - st.top, k = z / pinch.z;
+          let x = ox - (ox - pinch.x)*k + (mx - pinch.mx), y = oy - (oy - pinch.y)*k + (my - pinch.my);
+          const w = cv.offsetWidth, h = cv.offsetHeight; x = Math.min(0, Math.max(w - w*z, x)); y = Math.min(0, Math.max(h - h*z, y));
+          view = { z, x, y }; applyZoom(); return; }
+        if(!cur) return;
+        const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+        for(const ev of (evs.length ? evs : [e])){
+          let [x,y] = pos(ev); x = Math.max(0,Math.min(W,x)); y = Math.max(0,Math.min(H,y));
+          const p = cur.p;
+          if(["line","oval","rect"].includes(cur.t)){ p.length = 2; p.push(x, y); continue; }
+          // light smoothing so lines look clean even with a shaky finger
+          sm = [sm[0] + (x - sm[0])*0.55, sm[1] + (y - sm[1])*0.55]; const X = Math.round(sm[0]), Y = Math.round(sm[1]);
+          const lx = p[p.length-2], ly = p[p.length-1]; if(Math.hypot(X-lx, Y-ly) < 3) continue;
+          p.push(X, Y); liveBuf.push(X, Y);
+        }
+        g.putImageData(base, 0, 0); paintStroke(cur); liveFlush(false); });
+      const end = async e=>{ pts.delete(e.pointerId); if(pts.size < 2) pinch = null;
+        if(pendFill && !pts.size){ const [x, y] = pendFill; pendFill = null; const st = { id: Math.random().toString(36).slice(2, 9), t:"fill", c: tool.c, p:[x,y] }; paintStroke(st); SFX.place(); commit([st]); return; }
+        if(!cur) return; liveFlush(true); const st = cur; cur = null; base = null;
+        if(["line","oval","rect"].includes(st.t) && st.p.length < 4) st.p.push(st.p[0]+1, st.p[1]+1);
         // long strokes are split into pieces (each piece overlaps one point) instead of being cut off
-        const parts = []; for(let i=0, k=0; i < st.p.length - 2 || i === 0; i += 398, k++){ parts.push({ id: k ? st.id + "_" + k : st.id, c: st.c, w: st.w, e: st.e, p: st.p.slice(i, i + 400) }); if(i + 400 >= st.p.length) break; }
-        myPend.push(...parts);
-        const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(...parts); if(x.strokes.length>320) x.strokes = x.strokes.slice(-320); return x; });
-        myPend = myPend.filter(q=>!parts.includes(q)); if(!ns){ redraw(); ctx.toast("這一筆沒存到，再畫一次 🙏"); } };
+        const parts = []; for(let i=0, k=0; ; i += 398, k++){ parts.push({ id: k ? st.id + "_" + k : st.id, t: st.t, c: st.c, sz: st.sz, p: st.p.slice(i, i + 400) }); if(i + 400 >= st.p.length) break; }
+        commit(parts); };
       cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
       cv.style.touchAction = "none";
     }
+    async function commit(parts){
+      myPend.push(...parts);
+      const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(...parts); if(x.strokes.length>400) x.strokes = x.strokes.slice(-400); return x; });
+      myPend = myPend.filter(q=>!parts.includes(q)); if(!ns){ redraw(); ctx.toast("這一筆沒存到，再畫一次 🙏"); }
+    }
+    function undo(){
+      ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || !x.strokes.length) return undefined;
+        const last = x.strokes.pop(), base2 = last && last.id ? String(last.id).split("_")[0] : null, gone = [last];
+        if(base2) while(x.strokes.length && String(x.strokes[x.strokes.length-1].id||"").split("_")[0] === base2) gone.unshift(x.strokes.pop());
+        redoStack.push(gone); return x; });
+    }
+    function redo(){ const gone = redoStack.pop(); if(!gone) return; commit(gone); }
     const isDrawer = () => s && s.drawer===me();
     const left = () => s ? Math.max(0, Math.ceil((s.until - Date.now())/1000)) : 0;
     const hintText = () => { if(!s || !s.word) return ""; const a=[...s.word]; return a.map((ch,i)=>i<s.hint?ch:"□").join(" "); };
@@ -136,20 +225,28 @@ App.registerGame({
         if(!$("#drCv") || box.dataset.mode !== (drawer?"d":"g")+s.round){
           box.dataset.mode = (drawer?"d":"g")+s.round;
           box.innerHTML = `<div class="drTop"><span class="drWord" id="drWord"></span><span class="drTime" id="drTime"></span></div>
-            <canvas class="drCv" id="drCv"></canvas>
-            ${drawer ? `<div class="drTools" id="drTools">${COLORS.map((c,i)=>`<button data-c="${i}" style="background:${c}"></button>`).join("")}<button data-er class="er">🧽</button></div>
-              <div class="drTools2"><span class="drSz">${SIZES.map((z,i)=>`<button data-w="${i}"><i style="width:${6+i*6}px;height:${6+i*6}px"></i></button>`).join("")}</span>
-              <button class="btn sub" id="drUndo">↩ 復原</button><button class="btn sub" id="drClr">🗑 清空</button><button class="btn sub" id="drHint">💡 提示</button></div>
+            <div class="drStage" id="drStage"><canvas class="drCv" id="drCv"></canvas>${drawer ? `<button class="drZoomR hidden" id="drZR">🔍 回到 1 倍</button>` : ""}</div>
+            ${drawer ? `<div class="drBar" id="drBar">
+                <div class="drToolRow">${TOOLS.map(([k,ic,nm])=>`<button data-t="${k}" title="${nm}"><span>${ic}</span><i>${nm}</i></button>`).join("")}</div>
+                <div class="drColRow"><div class="drCols">${PALETTE.map(c=>`<button data-c="${c}" style="background:${c}"></button>`).join("")}</div><label class="drPickC" title="自己調顏色"><input type="color" id="drColor">🎨</label></div>
+                <div class="drSzRow"><span class="drDot" id="drDot"></span><input type="range" id="drSize" min="2" max="48" step="1"><span class="drSzN" id="drSzN"></span></div>
+                <div class="drActRow"><button id="drUndo">↩ 復原</button><button id="drRedo">↪ 重做</button><button id="drClr">🗑 清空</button><button id="drHint">💡 提示</button><button id="drFull">⛶ 大畫布</button></div>
+              </div>
               <div class="drFeed" id="drFeed"></div><button class="btn sub drGive" id="drGive">😵 放棄這題</button>`
             : `<div class="drFeed" id="drFeed"></div>
               <div class="drGuess"><div class="drIn" id="drIn"><span class="ph">點這裡猜猜看…</span></div><button class="btn" id="drSend">猜！</button></div><div id="drKb" class="drKb"></div>`}`;
           setupCanvas(); bindDraw();
           if(drawer){
-            box.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>{ tool.c = +b.dataset.c; tool.er = false; SFX.tap(); toolsUi(); }));
-            box.querySelector("[data-er]").addEventListener("click", ()=>{ tool.er = !tool.er; SFX.tap(); toolsUi(); });
-            box.querySelectorAll("[data-w]").forEach(b=>b.addEventListener("click", ()=>{ tool.w = +b.dataset.w; SFX.tap(); toolsUi(); }));
-            $("#drUndo").addEventListener("click", ()=>{ SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || !x.strokes.length) return undefined; const last = x.strokes.pop(); const base = last && last.id ? String(last.id).split("_")[0] : null; if(base) while(x.strokes.length && String(x.strokes[x.strokes.length-1].id||"").split("_")[0] === base) x.strokes.pop(); return x; }); });
-            $("#drClr").addEventListener("click", ()=>{ if(!s.strokes.length) return; SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw") return undefined; x.strokes = []; return x; }); });
+            const pickColor = c => { tool.c = c; if(tool.t === "er") tool.t = "pen"; tool.recent = [c].concat((tool.recent||[]).filter(x=>x!==c)).slice(0, 6); saveTool(); toolsUi(); };
+            box.querySelectorAll("[data-t]").forEach(b=>b.addEventListener("click", ()=>{ tool.t = b.dataset.t; SFX.tap(); saveTool(); toolsUi(); }));
+            box.querySelectorAll("[data-c]").forEach(b=>b.addEventListener("click", ()=>{ SFX.tap(); pickColor(b.dataset.c); }));
+            $("#drColor").addEventListener("input", e=>pickColor(e.target.value));
+            $("#drSize").addEventListener("input", e=>{ tool.sz = +e.target.value; saveTool(); toolsUi(); });
+            $("#drUndo").addEventListener("click", ()=>{ SFX.del(); undo(); });
+            $("#drRedo").addEventListener("click", ()=>{ if(!redoStack.length){ ctx.toast("沒有可以重做的"); return; } SFX.tap(); redo(); });
+            $("#drFull").addEventListener("click", ()=>{ SFX.tap(); box.classList.toggle("drFull"); document.body.classList.toggle("drFullOn", box.classList.contains("drFull")); $("#drFull").textContent = box.classList.contains("drFull") ? "↙ 縮小" : "⛶ 大畫布"; requestAnimationFrame(setupCanvas); });
+            let clrArm = 0;
+            $("#drClr").addEventListener("click", ()=>{ if(!s.strokes.length) return; const t = Date.now(); if(t - clrArm > 2500){ clrArm = t; ctx.toast("再按一次清空整張圖"); return; } SFX.del(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw") return undefined; redoStack.push(x.strokes.slice()); x.strokes = []; return x; }); });
             $("#drHint").addEventListener("click", ()=>{ if(s.hint >= [...s.word].length-1){ ctx.toast("不能再提示了，再說就是答案啦 😹"); return; } SFX.select(); ctx.update("draw", x=>{ if(!x || x.phase!=="draw") return undefined; x.hint = Math.min([...x.word].length-1, (x.hint||0)+1); return x; }); });
             $("#drGive").addEventListener("click", ()=>finish(false, "give"));
             toolsUi();
@@ -164,7 +261,7 @@ App.registerGame({
         return;
       }
       // done
-      closeKb();
+      closeKb(); box.classList.remove("drFull"); document.body.classList.remove("drFullOn");
       const r = s.result || {}, secs = r.secs||0, pName = ctx.nameOf(s.drawer===me()?other():s.drawer);
       const head = r.ok ? `🎉 答對了！${r.secs?`只用了 ${secs} 秒`:""}` : r.why==="give" ? "😵 這題放棄了" : "⏰ 時間到了～";
       box.dataset.mode = "";
@@ -177,9 +274,14 @@ App.registerGame({
       $("#drNext").addEventListener("click", next);
     }
     function toolsUi(){
-      box.querySelectorAll("[data-c]").forEach(b=>b.classList.toggle("on", !tool.er && +b.dataset.c===tool.c));
-      const er = box.querySelector("[data-er]"); if(er) er.classList.toggle("on", tool.er);
-      box.querySelectorAll("[data-w]").forEach(b=>b.classList.toggle("on", +b.dataset.w===tool.w));
+      box.querySelectorAll("[data-t]").forEach(b=>b.classList.toggle("on", b.dataset.t===tool.t));
+      box.querySelectorAll("[data-c]").forEach(b=>b.classList.toggle("on", tool.t!=="er" && b.dataset.c.toLowerCase()===String(tool.c).toLowerCase()));
+      const pc = $("#drColor"); if(pc && /^#[0-9a-f]{6}$/i.test(tool.c)) pc.value = tool.c;
+      const lab = box.querySelector(".drPickC"); if(lab) lab.style.background = PALETTE.includes(tool.c) ? "" : tool.c;
+      const sz = $("#drSize"); if(sz) sz.value = tool.sz;
+      const dot = $("#drDot"); if(dot){ const px = Math.max(3, Math.min(34, tool.sz * (cv ? cv.getBoundingClientRect().width / W : .35) * (tool.t==="er"?1.8:tool.t==="mark"?2.2:1))); dot.style.width = dot.style.height = px + "px"; dot.style.background = tool.t==="er" ? "#fff" : tool.c; dot.style.opacity = tool.t==="mark" ? .45 : 1; }
+      const n = $("#drSzN"); if(n) n.textContent = tool.sz;
+      if(cv) cv.dataset.tool = tool.t;
     }
     function timeUi(){ const t = $("#drTime"); if(!t || !s || s.phase!=="draw") return; const l = left(); t.textContent = `⏱ ${l}`; t.classList.toggle("low", l<=15); }
     function feed(){
@@ -246,7 +348,7 @@ App.registerGame({
     tick = setInterval(()=>{ if(!s || s.phase!=="draw") return; timeUi(); if(Date.now() > s.until + 600) finish(false, "time"); }, 500);
     const onResize = () => { if(cv) setupCanvas(); };
     window.addEventListener("resize", onResize);
-    this._cleanup = () => { document.body.classList.remove("drkb"); clearInterval(tick); window.removeEventListener("resize", onResize); };
+    this._cleanup = () => { document.body.classList.remove("drkb"); document.body.classList.remove("drFullOn"); clearInterval(tick); window.removeEventListener("resize", onResize); };
     (async()=>{
       const I = ctx.players();
       let c = await ctx.getState("draw");
