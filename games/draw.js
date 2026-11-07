@@ -21,6 +21,20 @@ const ALL_M = ALL.filter(x=>x[1]!=="我們").concat(WORDS_M.map(w=>[w,"兄弟"])
 const COLORS = ["#3b2a24","#e5486a","#f39a3d","#f6c945","#5cb87a","#4a90d9","#9b6fd6","#f7a7b8","#8a5a33"];   // old strokes store an index into this
 const SIZES = [5, 11, 22];
 const PALETTE = ["#2b1d18","#6b5a52","#a8a29e","#ffffff","#e5486a","#ff8fab","#f39a3d","#f6c945","#fff27a","#9be27a","#5cb87a","#2f8f6b","#7fd3e8","#4a90d9","#2f4ea8","#9b6fd6","#d6a2ff","#8a5a33","#c98b5a","#f3d3a4"];
+// compact stroke points: "x,y;" then 2 chars per point (dx,dy in -31..31). ~4x smaller than a number array,
+// so saving a drawing with lots of strokes stays fast.
+const A64 = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+function encP(p){
+  if(p.length < 2) return ""; let out = `${p[0]},${p[1]};`, px = p[0], py = p[1];
+  for(let i=2;i<p.length;i+=2){ let dx = p[i]-px, dy = p[i+1]-py;
+    while(dx || dy){ const sx = Math.max(-31, Math.min(31, dx)), sy = Math.max(-31, Math.min(31, dy)); out += A64[sx+32] + A64[sy+32]; px += sx; py += sy; dx -= sx; dy -= sy; if(!dx && !dy) break; }
+  }
+  return out; }
+function decP(q){
+  const k = q.indexOf(";"); if(k < 0) return []; const [x0, y0] = q.slice(0, k).split(",").map(Number); const p = [x0, y0]; let x = x0, y = y0;
+  for(let i=k+1;i+1<q.length;i+=2){ x += A64.indexOf(q[i]) - 32; y += A64.indexOf(q[i+1]) - 32; p.push(x, y); }
+  return p; }
+const ptsOf = st => st.p || (st.q != null ? (st._p || (Object.defineProperty(st, "_p", { value: decP(st.q), enumerable: false }), st._p)) : []);
 const TOOLS = [["pen","✏️","鉛筆"],["mark","🖍️","麥克筆"],["fill","🪣","油漆桶"],["line","📏","直線"],["oval","⭕","圓形"],["rect","⬜","方形"],["er","🧽","橡皮擦"]];
 const BG = "#fffaf2", W = 1000, H = 750, TIME = 100;
 const norm = s => String(s||"").replace(/[\s，。！？!?,.~～、「」"'：:；;]/g,"").toLowerCase();
@@ -71,24 +85,24 @@ App.registerGame({
       const [fr, fg, fb] = [1,3,5].map(k=>parseInt(hex.slice(k,k+2),16));
       if(Math.abs(tr-fr)+Math.abs(tg-fg)+Math.abs(tb-fb) < 12) return;
       const TOL = 110, same = i => Math.abs(d[i]-tr)+Math.abs(d[i+1]-tg)+Math.abs(d[i+2]-tb) <= TOL;
-      const mark = new Uint8Array(Wd*Hd), stack = [X, Y];
+      const mark = new Uint8Array(Wd*Hd), stack = [X, Y]; let x0b = X, x1b = X, y0b = Y, y1b = Y;
       while(stack.length){
         const y = stack.pop(); let x = stack.pop(); let i = y*Wd + x;
         while(x >= 0 && !mark[i] && same(i*4)){ x--; i--; } x++; i++;
         let up = false, dn = false;
         while(x < Wd && !mark[i] && same(i*4)){
-          mark[i] = 1;
+          mark[i] = 1; if(x < x0b) x0b = x; if(x > x1b) x1b = x; if(y < y0b) y0b = y; if(y > y1b) y1b = y;
           if(y > 0){ const k = i - Wd; if(!mark[k] && same(k*4)){ if(!up){ stack.push(x, y-1); up = true; } } else up = false; }
           if(y < Hd-1){ const k = i + Wd; if(!mark[k] && same(k*4)){ if(!dn){ stack.push(x, y+1); dn = true; } } else dn = false; }
           x++; i++;
         }
       }
       // paint the filled area, grown by 1px so there are no light seams along anti-aliased edges
-      for(let y=0;y<Hd;y++) for(let x=0;x<Wd;x++){ const i = y*Wd + x; if(mark[i] || (x>0 && mark[i-1]) || (x<Wd-1 && mark[i+1]) || (y>0 && mark[i-Wd]) || (y<Hd-1 && mark[i+Wd])){ const o = i*4; d[o] = fr; d[o+1] = fg; d[o+2] = fb; d[o+3] = 255; } }
+      for(let y=Math.max(0,y0b-1);y<=Math.min(Hd-1,y1b+1);y++) for(let x=Math.max(0,x0b-1);x<=Math.min(Wd-1,x1b+1);x++){ const i = y*Wd + x; if(mark[i] || (x>0 && mark[i-1]) || (x<Wd-1 && mark[i+1]) || (y>0 && mark[i-Wd]) || (y<Hd-1 && mark[i+Wd])){ const o = i*4; d[o] = fr; d[o+1] = fg; d[o+2] = fb; d[o+3] = 255; } }
       g.putImageData(img, 0, 0);
     }
     function paintStroke(st, upto){
-      const t = typeOf(st), p = st.p, n = Math.min(upto==null ? p.length/2 : upto, p.length/2); if(!n) return;
+      const t = typeOf(st), p = ptsOf(st), n = Math.min(upto==null ? p.length/2 : upto, p.length/2); if(!n) return;
       if(t === "fill"){ floodFill(p[0], p[1], colOf(st)); return; }
       g.save();
       g.strokeStyle = t === "er" ? BG : colOf(st); g.fillStyle = g.strokeStyle;
@@ -108,18 +122,25 @@ App.registerGame({
       for(let i=1;i<n-1;i++){ const x=S(p[i*2]), y=S(p[i*2+1]), nx=S(p[i*2+2]), ny=S(p[i*2+3]); g.quadraticCurveTo(x, y, (x+nx)/2, (y+ny)/2); }
       g.lineTo(S(p[(n-1)*2]), S(p[(n-1)*2+1])); g.stroke(); g.restore();
     }
+    // draw only the newest piece of a pen / eraser line (cheap, used while the finger is moving)
+    function paintSeg(st, from){
+      const p = ptsOf(st), t = typeOf(st); if(p.length - from < 2) return;
+      g.save(); g.strokeStyle = t === "er" ? BG : colOf(st); g.fillStyle = g.strokeStyle; g.lineWidth = sizeOf(st)*scale*(t === "er" ? 1.8 : 1); g.lineCap = "round"; g.lineJoin = "round";
+      if(p.length === 2){ g.beginPath(); g.arc(p[0]*scale, p[1]*scale, g.lineWidth/2, 0, Math.PI*2); g.fill(); g.restore(); return; }
+      g.beginPath(); g.moveTo(p[from]*scale, p[from+1]*scale); for(let i=from+2;i<p.length;i+=2) g.lineTo(p[i]*scale, p[i+1]*scale); g.stroke(); g.restore();
+    }
     function redraw(){
       if(!g) return; g.fillStyle = BG; g.fillRect(0,0,cv.width,cv.height);
       const all = (s && s.strokes || []).concat(myPend); all.forEach(st=>paintStroke(st)); if(cur) paintStroke(cur);
       drawn = s ? s.strokes.length : 0; drawnKey = strokeKey();
     }
-    const strokeKey = () => s ? s.round+":"+(s.strokes[0] ? s.strokes[0].p.slice(0,4).join(",") : "") : "";
+    const strokeKey = () => s ? s.round+":"+(s.strokes[0] ? (s.strokes[0].id || ptsOf(s.strokes[0]).slice(0,4).join(",")) : "") : "";
     function animateNew(){
       if(!g || !s) return;
       if(s.strokes.length < drawn || strokeKey()!==drawnKey){ redraw(); return; }
       const news = s.strokes.slice(drawn); drawn = s.strokes.length;
       if(news.some(st => typeOf(st) === "fill" || typeOf(st) === "mark")){ redraw(); return; }
-      (async()=>{ for(const st of news){ const n = st.p.length/2, steps = Math.min(24, Math.max(4, Math.round(n/2)));
+      (async()=>{ for(const st of news){ const n = ptsOf(st).length/2, steps = Math.min(24, Math.max(4, Math.round(n/2)));
         if(st.id && live.has(String(st.id).split("_")[0])){ continue; }   // already drawn live
         if(["line","oval","rect"].includes(typeOf(st))){ paintStroke(st); continue; }
         for(let k=1;k<=steps;k++){ await new Promise(r=>requestAnimationFrame(r)); paintStroke(st, Math.ceil(n*k/steps)); } } })();
@@ -134,26 +155,27 @@ App.registerGame({
     function onLive(m){
       if(!m || m.g !== "drw" || !s || s.phase !== "draw" || m.r !== s.round || isDrawer() || !g) return;
       if(!["pen","mark","er"].includes(m.t || "pen")) return;
-      let L = liveS[m.id]; if(!L){ L = liveS[m.id] = { t: m.t, c: m.c, sz: m.sz, p: [], snap: g.getImageData(0, 0, cv.width, cv.height) }; live.add(m.id); }
-      L.p.push(...m.p); g.putImageData(L.snap, 0, 0); paintStroke(L);
+      let L = liveS[m.id]; if(!L){ L = liveS[m.id] = { t: m.t, c: m.c, sz: m.sz, p: [], snap: m.t === "mark" ? g.getImageData(0, 0, cv.width, cv.height) : null }; live.add(m.id); }
+      const from = Math.max(0, L.p.length - 2); L.p.push(...m.p);
+      if(L.snap){ g.putImageData(L.snap, 0, 0); paintStroke(L); } else paintSeg(L, from);
     }
     function pos(e){ const r = cv.getBoundingClientRect(); return [Math.round((e.clientX-r.left)/r.width*W), Math.round((e.clientY-r.top)/r.height*H)]; }
     function bindDraw(){
-      let sm = null, pendFill = null; const pts = new Map(); let pinch = null;
+      let sm = null, pendFill = null, frameReq = 0; const pts = new Map(); let pinch = null;
       const zr = $("#drZR");
       const applyZoom = () => { cv.style.transformOrigin = "0 0"; cv.style.transform = view.z > 1.01 ? `translate(${view.x}px,${view.y}px) scale(${view.z})` : ""; if(zr) zr.classList.toggle("hidden", view.z <= 1.01); };
       if(zr) zr.addEventListener("click", ()=>{ view = { z:1, x:0, y:0 }; applyZoom(); SFX.tap(); });
       applyZoom();
       cv.addEventListener("pointerdown", e=>{ pts.set(e.pointerId, [e.clientX, e.clientY]); if(!isDrawer() || s.phase!=="draw") return; e.preventDefault();
         if(pts.size === 2){ // two fingers: cancel the stroke and pinch-zoom / move the canvas
-          pendFill = null; if(cur){ cur = null; if(base) g.putImageData(base, 0, 0); base = null; }
+          pendFill = null; if(cur){ cur = null; if(base) g.putImageData(base, 0, 0); else redraw(); base = null; }
           const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx: (a[0]+b[0])/2, my: (a[1]+b[1])/2, z: view.z, x: view.x, y: view.y }; return; }
         if(pts.size > 2) return;
         try{ cv.setPointerCapture(e.pointerId); }catch(_){}
         const [x,y] = pos(e); redoStack = [];
         if(tool.t === "fill"){ pendFill = [x, y]; return; }   // filled on release, so a pinch doesn't fill by accident
         cur = { id: Math.random().toString(36).slice(2, 9), t: tool.t, c: tool.c, sz: tool.sz, p:[x,y] }; sm = [x, y];
-        base = g.getImageData(0, 0, cv.width, cv.height); paintStroke(cur);
+        base = ["mark","line","oval","rect"].includes(cur.t) ? g.getImageData(0, 0, cv.width, cv.height) : null; paintStroke(cur); cur._d = 0;
         if(["pen","mark","er"].includes(cur.t)){ liveBuf = [x,y]; liveT = 0; liveFlush(true); } });
       cv.addEventListener("pointermove", e=>{ if(pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
         if(pinch && pts.size >= 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
@@ -174,21 +196,30 @@ App.registerGame({
           const lx = p[p.length-2], ly = p[p.length-1]; if(Math.hypot(X-lx, Y-ly) < 3) continue;
           p.push(X, Y); liveBuf.push(X, Y);
         }
-        g.putImageData(base, 0, 0); paintStroke(cur); liveFlush(false); });
+        if(!frameReq) frameReq = requestAnimationFrame(()=>{ frameReq = 0; if(!cur) return;
+          if(base){ g.putImageData(base, 0, 0); paintStroke(cur); } else { paintSeg(cur, Math.max(0, cur._d - 2)); cur._d = cur.p.length; } });
+        liveFlush(false); });
       const end = async e=>{ pts.delete(e.pointerId); if(pts.size < 2) pinch = null;
         if(pendFill && !pts.size){ const [x, y] = pendFill; pendFill = null; const st = { id: Math.random().toString(36).slice(2, 9), t:"fill", c: tool.c, p:[x,y] }; paintStroke(st); SFX.place(); commit([st]); return; }
         if(!cur) return; liveFlush(true); const st = cur; cur = null; base = null;
         if(["line","oval","rect"].includes(st.t) && st.p.length < 4) st.p.push(st.p[0]+1, st.p[1]+1);
-        // long strokes are split into pieces (each piece overlaps one point) instead of being cut off
-        const parts = []; for(let i=0, k=0; ; i += 398, k++){ parts.push({ id: k ? st.id + "_" + k : st.id, t: st.t, c: st.c, sz: st.sz, p: st.p.slice(i, i + 400) }); if(i + 400 >= st.p.length) break; }
-        commit(parts); };
+        base = null;
+        if(st.p.length > 3000) st.p = st.p.slice(0, 3000);
+        commit([st]); };
       cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
       cv.style.touchAction = "none";
     }
-    async function commit(parts){
-      myPend.push(...parts);
-      const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(...parts); if(x.strokes.length>400) x.strokes = x.strokes.slice(-400); return x; });
-      myPend = myPend.filter(q=>!parts.includes(q)); if(!ns){ redraw(); ctx.toast("這一筆沒存到，再畫一次 🙏"); }
+    // strokes are saved one batch at a time: while one save is on its way, new strokes wait and go together in the next one.
+    // (saving every stroke at once made the two phones fight over the same version and could freeze the game)
+    let saveQ = [], saving = false;
+    function commit(parts){ myPend.push(...parts); saveQ.push(...parts); flushSave(); }
+    async function flushSave(){
+      if(saving || !saveQ.length) return; saving = true;
+      const batch = saveQ.splice(0), packed = batch.map(st => { const o = { id: st.id, t: st.t, c: st.c }; if(st.sz != null) o.sz = st.sz; if(st.w != null) o.w = st.w; if(st.e) o.e = st.e; o.q = encP(st.p); return o; });
+      const ns = await ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || x.drawer!==me()) return undefined; x.strokes.push(...packed); if(x.strokes.length>400) x.strokes = x.strokes.slice(-400); return x; }).catch(()=>null);
+      saving = false; myPend = myPend.filter(q=>!batch.includes(q));
+      if(!ns){ if(s && s.phase === "draw"){ redraw(); ctx.toast("剛剛畫的沒存到，再畫一次 🙏"); } }
+      if(saveQ.length) setTimeout(flushSave, 60);
     }
     function undo(){
       ctx.update("draw", x=>{ if(!x || x.phase!=="draw" || !x.strokes.length) return undefined;
@@ -196,7 +227,7 @@ App.registerGame({
         if(base2) while(x.strokes.length && String(x.strokes[x.strokes.length-1].id||"").split("_")[0] === base2) gone.unshift(x.strokes.pop());
         redoStack.push(gone); return x; });
     }
-    function redo(){ const gone = redoStack.pop(); if(!gone) return; commit(gone); }
+    function redo(){ const gone = redoStack.pop(); if(!gone) return; commit(gone.map(st => ({ id: st.id, t: st.t, c: st.c, sz: st.sz, p: ptsOf(st).slice(), e: st.e, w: st.w }))); }
     const isDrawer = () => s && s.drawer===me();
     const left = () => s ? Math.max(0, Math.ceil((s.until - Date.now())/1000)) : 0;
     const hintText = () => { if(!s || !s.word) return ""; const a=[...s.word]; return a.map((ch,i)=>i<s.hint?ch:"□").join(" "); };
