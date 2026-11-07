@@ -107,7 +107,7 @@ function play(opts){
           <div class="tsStats" id="tsStats"></div>
           <div class="tsAct" id="tsAct"></div>
         </div>
-        <div class="tsWrap" id="tsWrap"><div class="tsGb" id="tsGb"><i></i></div><canvas id="tsCv" width="${COLS*C}" height="${VIS*C}"></canvas><div class="tsPop" id="tsPop"></div><div class="tsCd" id="tsCd"></div></div>
+        <div class="tsWrap" id="tsWrap"><div class="tsGb" id="tsGb"><i></i></div><canvas id="tsCv" width="${COLS*C}" height="${VIS*C}"></canvas><div class="tsPop" id="tsPop"></div><div class="tsBigTx" id="tsBigTx"></div><div class="tsCd" id="tsCd"></div></div>
         <div class="tsCol">
           <div class="tsBox tsNext"><span>下一個</span>${[0,1,2,3,4].map(i=>`<i id="tsN${i}"></i>`).join("")}</div>
           ${isVs ? `<div class="tsFoe" id="tsFoe"><span>${esc(opts.foe || "ta")}</span><canvas id="tsFc" width="${COLS*4}" height="${VIS*4}"></canvas><em id="tsFg"></em></div>` : ""}
@@ -117,10 +117,39 @@ function play(opts){
         <div class="tsCl"><button data-a="L" class="tsB">◀</button><button data-a="R" class="tsB">▶</button><button data-a="H" class="tsB hold">收</button><button data-a="D" class="tsB">▼</button></div>
         <div class="tsCl"><button data-a="CCW" class="tsB rot">↺</button><button data-a="CW" class="tsB rot">↻</button><button data-a="F" class="tsB rot sm">180°</button><button data-a="X" class="tsB drop">⤓</button></div>
       </div>
+      <canvas class="tsFx" id="tsFx"></canvas>
       <div class="tsEnd hidden" id="tsEnd"></div>`;
     document.body.appendChild(ov);
     const $ = s => ov.querySelector(s);
     const cv = $("#tsCv"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false;
+    // ---- animations (particles, trails, beams, attack orbs) drawn on a full-screen canvas ----
+    const fx = $("#tsFx"), fg = fx.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1);
+    let parts = [], trails = [], beams = [], orbs = [], lockFlash = null;
+    const fxSize = () => { fx.width = Math.round(window.innerWidth * dpr); fx.height = Math.round(window.innerHeight * dpr); };
+    const cellXY = (x, y) => { const r = cv.getBoundingClientRect(), cw = r.width / COLS; return [r.left + (x + .5) * cw, r.top + (y - HID + .5) * cw, cw]; };
+    const furOf = k => k === "g" || k === "dead" ? "#b4abbd" : (PIECES[k] ? PIECES[k].fur : "#f7a7c0");
+    function spark(x, y, c, n, spd, opt){ opt = opt || {}; for(let i=0;i<n;i++){ const a = opt.up ? -Math.PI/2 + (Math.random()-.5)*2.2 : Math.random()*Math.PI*2, v = spd * (.4 + Math.random()*.8);
+      parts.push({ x, y, vx: Math.cos(a)*v, vy: Math.sin(a)*v - (opt.up ? spd*.3 : 0), t: 0, max: (opt.life || .7) * (.6 + Math.random()*.6), c: Array.isArray(c) ? c[(Math.random()*c.length)|0] : c, s: (opt.size || 4) * (.6 + Math.random()*.7), h: Math.random() < (opt.hearts || .12), g: opt.g == null ? 900 : opt.g, spin: Math.random()*6 }); } }
+    const anim = (el, cls) => { if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    function bigText(t, cls){ const b = $("#tsBigTx"); b.textContent = t; b.className = "tsBigTx"; void b.offsetWidth; b.className = "tsBigTx on " + (cls || ""); }
+    const CONF = ["#f7a7c0","#a9cdee","#ffe08a","#9ed9b4","#c9b6f0","#f6a95c"];
+    function confetti(n){ const r = cv.getBoundingClientRect(); for(let i=0;i<n;i++) spark(r.left + Math.random()*r.width, r.top - 10, CONF, 1, 160, { life: 1.6, size: 5, g: 380, hearts: .25 }); }
+    function drawHeart(x, y, s){ const u = s / 4; [[1,0],[3,0],[0,1],[1,1],[2,1],[3,1],[4,1],[1,2],[2,2],[3,2],[2,3]].forEach(([a,b]) => fg.fillRect(x + (a-2.5)*u, y + (b-1.5)*u, u+.5, u+.5)); }
+    function fxStep(dt){
+      fg.setTransform(dpr, 0, 0, dpr, 0, 0); fg.clearRect(0, 0, fx.width, fx.height);
+      trails = trails.filter(t => (t.t += dt) < .28);
+      for(const t of trails){ const a = 1 - t.t/.28; const gr = fg.createLinearGradient(0, t.y0, 0, t.y1); gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(1, t.c); fg.globalAlpha = a * .75; fg.fillStyle = gr; fg.fillRect(t.x - t.w*.42*a, t.y0, t.w*.84*a, t.y1 - t.y0); }
+      beams = beams.filter(b => (b.t += dt) < .35);
+      for(const b of beams){ const k = b.t/.35, r = cv.getBoundingClientRect(); fg.globalAlpha = (1-k) * .9; fg.fillStyle = "#fff"; const h = b.h * (1 + k*1.5); fg.fillRect(r.left - k*20, b.y - h/2, r.width + k*40, h); fg.globalAlpha = (1-k) * .5; fg.fillStyle = "#f7a7c0"; fg.fillRect(r.left - k*30, b.y - h*.08, r.width + k*60, h*.16); }
+      orbs = orbs.filter(o => { o.t += dt; const k = Math.min(1, o.t / .45); if(k >= 1 && !o.hit){ o.hit = true; spark(o.x1, o.y1, ["#e5486a","#f7a7c0","#fff"], 14, 160, { life: .5, size: 4, g: 0 }); anim($("#tsFoe"), "hit"); } return o.t < .5; });
+      for(const o of orbs){ const k = Math.min(1, o.t/.45), e = k*k*(3-2*k), x = o.x0 + (o.x1-o.x0)*e, y = o.y0 + (o.y1-o.y0)*e - Math.sin(k*Math.PI)*60;
+        fg.globalAlpha = 1; fg.fillStyle = "#e5486a"; const rr = 5 + Math.min(8, o.n); fg.beginPath(); fg.arc(x, y, rr, 0, 7); fg.fill(); fg.fillStyle = "#fff"; fg.beginPath(); fg.arc(x - rr*.3, y - rr*.3, rr*.35, 0, 7); fg.fill();
+        spark(x, y, ["#f7a7c0","#e5486a"], 1, 30, { life: .3, size: 4, g: 0, hearts: .3 }); }
+      parts = parts.filter(p => (p.t += dt) < p.max);
+      for(const p of parts){ p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; const a = 1 - p.t/p.max; fg.globalAlpha = Math.min(1, a * 1.4); fg.fillStyle = p.c;
+        if(p.h) drawHeart(p.x, p.y, p.s * 1.6); else { const sz = p.s * (.5 + a*.5); fg.fillRect(p.x - sz/2, p.y - sz/2, sz, sz); } }
+      fg.globalAlpha = 1;
+    }
     const W = COLS*C, H = VIS*C;
     const bg = document.createElement("canvas"); bg.width = W; bg.height = H; { const b = bg.getContext("2d");
       b.fillStyle = "#fff9ef"; b.fillRect(0, 0, W, H);
@@ -167,7 +196,12 @@ function play(opts){
       return false;
     }
     function soft(){ if(!live()) return; if(fits(cur, 0, 1)){ cur.y++; score += 1; fallT = 0; lastRot = false; bdDirty = true; } }
-    function hard(){ if(!live()) return; let n = 0; while(fits(cur, 0, 1)){ cur.y++; n++; } if(n) lastRot = false; score += n*2; lock(); }
+    function hard(){ if(!live()) return; const y0 = cur.y; let n = 0; while(fits(cur, 0, 1)){ cur.y++; n++; } if(n) lastRot = false; score += n*2;
+      if(n > 0){ const top = {}; for(const [x,y] of cells(cur)){ if(top[x] == null || y < top[x]) top[x] = y; }
+        for(const x in top){ const [cx, cyEnd, cw] = cellXY(+x, top[x]), cyStart = cellXY(+x, Math.max(HID - .5, top[x] - n))[1]; trails.push({ x: cx, y0: cyStart - cw/2, y1: cyEnd + cw/2, w: cw, c: furOf(cur.k), t: 0 }); }
+        for(const [x,y] of cells(cur)) if(!fits(cur, 0, 1) && (y + 1 >= ROWS || board[y+1][x])) { const [cx, cy, cw] = cellXY(x, y); spark(cx, cy + cw/2, ["#fff", furOf(cur.k)], 2, 90, { up: true, life: .35, size: 3 }); }
+        $("#tsWrap").style.setProperty("--bump", Math.min(7, 2 + n/3) + "px"); anim($("#tsWrap"), "bump"); }
+      lock(); }
     function doHold(){ if(!live() || held) return; const k = cur.k; if(hold){ const h2 = hold; hold = k; spawn(h2); } else { hold = k; spawn(); } held = true; snd("select"); drawSide(); }
     function tSpin(){
       if(cur.k !== "T" || !lastRot) return 0;
@@ -183,6 +217,8 @@ function play(opts){
       const cs = cells(cur);
       if(cs.every(([,y]) => y < HID)) { for(const [x,y] of cs) if(y >= 0) board[y][x] = cur.k; return topOut(); }   // locked above the field
       for(const [x,y] of cs){ if(y >= 0) board[y][x] = cur.k; }
+      lockFlash = { cells: cs, t: 0 };
+      if(ts) for(const [x,y] of cs){ const [cx, cy] = cellXY(x, y); spark(cx, cy, ["#ffe08a","#fff","#f7a7c0"], 3, 120, { life: .5, size: 4, g: 0 }); }
       cur = null; held = false; pieces++; bdDirty = true;
       const full = []; for(let y=0;y<ROWS;y++) if(board[y].every(Boolean)) full.push(y);
       const n = full.length;
@@ -206,10 +242,20 @@ function play(opts){
         if(atk > 0){
           let a = atk;   // cancel incoming garbage first
           while(a > 0 && incoming.length){ const take = Math.min(a, incoming[0].n); incoming[0].n -= take; a -= take; if(!incoming[0].n) incoming.shift(); }
-          if(a > 0 && isVs){ atkSent += a; send({ k:"atk", n:a, col:(Math.random() * COLS) | 0 }); }
+          if(a > 0 && isVs){ atkSent += a; send({ k:"atk", n:a, col:(Math.random() * COLS) | 0 });
+            const fr = $("#tsFc") && $("#tsFc").getBoundingClientRect(), br = cv.getBoundingClientRect();
+            if(fr) orbs.push({ x0: br.left + br.width/2, y0: br.top + br.height*.6, x1: fr.left + fr.width/2, y1: fr.top + fr.height/2, n: a, t: 0 }); }
           drawGb();
         }
         clearing = { rows: full, t: 0 };
+        const big = n >= 4 || ts === 2 || pc;
+        for(const y of full){ const [, cy, cw] = cellXY(0, y); beams.push({ y: cy, h: cw, t: 0 });
+          for(let x=0;x<COLS;x++){ const [cx] = cellXY(x, y); spark(cx, cy, [furOf(board[y][x]), "#fff"], big ? 4 : 2, big ? 260 : 170, { up: true, life: big ? .9 : .65, size: cw*.32 }); } }
+        if(big) anim($("#tsMid"), "shake");
+        if(pc){ bigText("全部清空！", "pc"); confetti(60); }
+        else if(ts === 2) bigText(`T-Spin ${["","單消","雙消","三消"][n]}！`, "ts");
+        else if(n === 4) bigText(b2b > 0 ? `B2B 四消！` : "四消！", "quad");
+        else if(combo >= 3) bigText(`${combo} 連擊！`, "combo");
         snd(n >= 4 || ts === 2 ? "level" : "combo", n);
         const name = ts === 2 ? `T-Spin ${["","單消","雙消","三消"][n]}！` : ts === 1 ? `T-Spin Mini ${["","單消","雙消"][n] || ""}` : n === 4 ? "四消 QUAD！🎉" : n === 3 ? "三消！" : n === 2 ? "雙消" : "";
         act([pc ? "✨ 全部清空！" : "", name, hardClear && b2b > 0 ? `B2B ×${b2b}` : "", combo > 0 ? `${combo} 連擊` : ""].filter(Boolean), pc || ts === 2 || n === 4);
@@ -234,7 +280,7 @@ function play(opts){
         }
         g0.n -= take; cap -= take; if(!g0.n) incoming.shift();
       }
-      snd("miss"); ov.classList.remove("hit"); void ov.offsetWidth; ov.classList.add("hit");
+      snd("miss"); anim($("#tsWrap"), "hit"); { const r = cv.getBoundingClientRect(); for(let i=0;i<10;i++) spark(r.left + Math.random()*r.width, r.bottom, ["#b4abbd","#e5486a"], 1, 140, { up: true, life: .5, size: 4 }); }
       drawGb(); bdDirty = true; return true;
     }
     function drawGb(){ const n = incoming.reduce((a,b)=>a+b.n, 0); const i = $("#tsGb i"); i.style.height = Math.min(100, n / VIS * 100) + "%"; $("#tsGb").classList.toggle("on", n > 0); }
@@ -259,10 +305,11 @@ function play(opts){
       }
       over = true; cur = null; snd("miss");
       if(isVs) send({ k:"ko" });
+      setTimeout(()=>{ if(!done) anim($("#tsWrap"), "fall"); }, 350);
       let y = ROWS - 1; const greyT = setInterval(()=>{ if(y < 0 || done){ clearInterval(greyT); return; } for(let x=0;x<COLS;x++) if(board[y][x]) board[y][x] = "dead"; y--; }, 30);
-      setTimeout(()=>finish(isVs ? "lose" : mode === "sprint" ? "fail" : "over"), 900);
+      setTimeout(()=>finish(isVs ? "lose" : mode === "sprint" ? "fail" : "over"), 1300);
     }
-    function win(why){ if(over) return; over = true; cur = null; snd("level"); setTimeout(()=>finish(why), why === "sprint" ? 500 : 700); }
+    function win(why){ if(over) return; over = true; cur = null; snd("level"); confetti(why === "win" ? 90 : 50); if(why === "win") bigText("KO！", "ko"); else if(why === "sprint") bigText("完成！", "pc"); else if(why === "blitz") bigText("時間到！", "quad"); setTimeout(()=>finish(why), why === "win" ? 1500 : 1100); }
     function finish(why){
       if(done || result) return;
       const r = result = { mode, why, score, lines, level, time: Math.round(tm * 1000), win: why === "win", atk: atkTotal, pps: +pps(), apm: +apm() };
@@ -289,11 +336,11 @@ function play(opts){
     function setPause(p){ if(over || isVs || !started) return; paused = p; const b = $("#tsPa"); if(b) b.textContent = p ? "▶" : "⏸"; ov.classList.toggle("paused", p); }
     // ---- input: held directions with DAS / ARR, handled inside the game loop ----
     let hdir = 0, dasT = 0, arrT = 0, downHeld = false; const dirs = [];
-    function press(d){ const i = dirs.indexOf(d); if(i >= 0) dirs.splice(i, 1); dirs.push(d); hdir = d; dasT = 0; arrT = 0; move(d); }
+    function press(d){ const i = dirs.indexOf(d); if(i >= 0) dirs.splice(i, 1); dirs.push(d); hdir = d; dasT = 0; arrT = 0; if(!move(d) && live()) anim(cv, d < 0 ? "nl" : "nr"); }
     function release(d){ const i = dirs.indexOf(d); if(i >= 0) dirs.splice(i, 1); const nd = dirs.length ? dirs[dirs.length-1] : 0; if(nd !== hdir){ hdir = nd; dasT = 0; arrT = 0; } }
     function update(dt){
       if(over || paused) return;
-      if(!started){ cdT += dt; const cd = $("#tsCd"); cd.textContent = cdT < 0.8 ? "準備…" : "開始！"; cd.className = "tsCd on" + (cdT >= 0.8 ? " go" : "");
+      if(!started){ cdT += dt; const cd = $("#tsCd"); const tx = cdT < 0.8 ? "準備…" : "開始！"; if(cd.textContent !== tx){ cd.textContent = tx; cd.className = "tsCd"; void cd.offsetWidth; cd.className = "tsCd on" + (cdT >= 0.8 ? " go" : ""); }
         if(cdT >= 1.2){ started = true; cd.className = "tsCd"; } return; }
       tm += dt;
       if(mode === "blitz" && tm >= 120){ tm = 120; updHud(); return win("blitz"); }
@@ -322,6 +369,7 @@ function play(opts){
         if(gy > 0) for(const [x,y] of cells(cur, 0, gy)) if(y >= HID) g.drawImage(cellSprite(cur.k, "ghost"), x*C, ry(y));
         for(const [x,y] of cells(cur)) if(y >= HID) g.drawImage(cellSprite(cur.k, "normal"), x*C, ry(y));
       }
+      if(lockFlash){ const a = 1 - lockFlash.t / .14; if(a <= 0) lockFlash = null; else { g.fillStyle = `rgba(255,255,255,${(a*.75).toFixed(2)})`; for(const [x,y] of lockFlash.cells) if(y >= HID) g.fillRect(x*C, ry(y), C, C); } }
       // danger: stack close to the top
       let top = ROWS; for(let y=0;y<ROWS && top===ROWS;y++) if(board[y].some(c => c && c !== "dead")) top = y;
       ov.classList.toggle("danger", !over && top < HID + 4);
@@ -338,12 +386,13 @@ function play(opts){
     function send(p){ try{ opts.net && opts.net.send(p); }catch(e){} }
     const offNet = opts.net && opts.net.on(p => {
       if(done) return; foeSeen = performance.now();
-      if(p.k === "atk" && !over){ const n = Math.max(0, Math.min(20, p.n|0)); if(n){ incoming.push({ n, col: Math.max(0, Math.min(COLS-1, p.col|0)) }); drawGb(); snd("tap"); } }
+      if(p.k === "atk" && !over){ const n = Math.max(0, Math.min(20, p.n|0)); if(n){ incoming.push({ n, col: Math.max(0, Math.min(COLS-1, p.col|0)) }); drawGb(); anim($("#tsGb"), "pulse"); snd("tap"); } }
       else if(p.k === "bd") drawFoe(String(p.b || ""), p.gb|0);
-      else if(p.k === "ko" && !over){ act(["KO！🎉"], true); win("win"); }
+      else if(p.k === "ko" && !over){ win("win"); }
     });
-    function loop(t){ if(done) return; let dt = (t - last)/1000; last = t; if(dt > 0.1) dt = 0.1; update(dt); try{ draw(); }catch(e){} raf = requestAnimationFrame(loop); }
+    function loop(t){ if(done) return; let dt = (t - last)/1000; last = t; if(dt > 0.1) dt = 0.1; update(dt); if(lockFlash) lockFlash.t += dt; try{ draw(); fxStep(dt); }catch(e){} raf = requestAnimationFrame(loop); }
     function size(){
+      fxSize();
       const mid = $("#tsMid"), cols = ov.querySelectorAll(".tsCol");
       const sideW = cols[0].offsetWidth + cols[1].offsetWidth + 12;
       const aw = Math.min(mid.clientWidth - sideW, 360), ah = mid.clientHeight - 6;
