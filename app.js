@@ -1780,7 +1780,7 @@ const App = (function(){
       <div class="box set"><h2>聊天背景</h2><div class="walls" id="wls">${WALLS.map(([id,n])=>`<button data-w="${id}" class="${(store.get("mw_wall")||"paws")===id?"on":""}"><span class="wv" data-wall="${id}"><span class="chat"><span class="list"></span></span></span>${n}</button>`).join("")}</div>
         <div class="k">「我的照片」可以選一張你們的合照當背景（只存在這支手機）。</div></div>
       <div class="box set"><h2>通知</h2><div class="k">${ps==="on"?"✅ 已開啟：ta 傳訊息時你的手機會跳通知":ps==="denied"?"❌ 通知被封鎖了，請到手機的瀏覽器設定裡允許通知":ps==="ios-home"?"📱 iPhone 要先把這個網頁「加入主畫面」，從主畫面圖示打開後才能開通知":ps==="unsupported"?"這個瀏覽器不支援通知，請用 Chrome（Android）或 Safari 加入主畫面（iPhone）":"還沒開啟"}</div>
-        ${ps!=="on"&&ps!=="unsupported"&&ps!=="ios-home"?`<button class="btn mint" id="bPush2">開啟通知</button>`:""}${ps==="on"?`<button class="btn sub" id="bTest">傳一則測試訊息給 ta</button>`:""}</div>
+        ${ps!=="on"&&ps!=="unsupported"&&ps!=="ios-home"?`<button class="btn mint" id="bPush2">開啟通知</button>`:""}${ps==="on"?`<button class="btn mint" id="bSelfTest" style="margin-bottom:8px">🔔 傳一則測試通知給自己</button><button class="btn sub" id="bTest">傳一則測試訊息給 ta</button>`:""}</div>
       <div class="box set"><h2>邀請碼</h2><div class="code" style="text-align:center">${esc(B.code||"")}</div><div class="k">${pw()}打開網址後輸入這組碼就能加入。換手機時，用同一個名字再輸入一次即可。</div><button class="btn sub" id="bInv2">傳邀請連結</button></div>
       ${lockBox()}
       <div class="box set"><h2>其他</h2><div class="row" style="justify-content:flex-start"><button class="btn sub" id="bSnd">${SFX.on?"♪ 音效 開":"♪ 音效 關"}</button><button class="btn sub" id="bNews">📢 更新紀錄</button><button class="btn sub" id="bReload">重新整理</button><a class="btn sub" href="about.html" style="text-decoration:none;color:inherit">📜 網站聲明</a></div>
@@ -1790,6 +1790,14 @@ const App = (function(){
     drawPk();
     $("bSave").addEventListener("click", async()=>{ const n=$("nm").value.trim().slice(0,10); if(!n) return; me.name=n; me.cat=pick; store.set("mw_name",n); store.set("mw_cat",pick); try{ await B.updateMe({name:n,cat:pick}); }catch(e){} B.track({name:n,cat:pick}); lastHdr=""; renderHeader(); toast(`${sprite(pick,"wave")} 已儲存！`); });
     const b2=$("bPush2"); if(b2) b2.addEventListener("click", ()=>enablePush().then(()=>render()));
+    const bst=$("bSelfTest"); if(bst) bst.addEventListener("click", async ()=>{
+      SFX.tap(); bst.disabled = true;
+      try{ await subscribePush(); }catch(e){}
+      const ok = B.memoSet ? await B.memoSet("test-"+me.uid, "🔔 測試通知：收到這則就代表通知正常！", new Date().toISOString(), [me.uid]).catch(()=>false) : false;
+      if(ok) toast("送出了！把螢幕關掉等 1 分鐘，看看會不會跳出通知 🐾", 7000);
+      else toast("要先在 Supabase 跑 update_9_memo.sql，才能傳測試通知給自己喔", 6000);
+      setTimeout(()=>{ if(bst.isConnected) bst.disabled = false; }, 60000);
+    });
     const bt=$("bTest"); if(bt) bt.addEventListener("click", ()=>{ sendMsg("（測試通知）喵～收到了嗎？","text"); toast("已送出，看看 ta 的手機有沒有跳通知"); });
     $("bInv2").addEventListener("click", shareInvite); bindLockBox();
     // wallpaper previews reuse the real CSS by scoping data-wall on each swatch
