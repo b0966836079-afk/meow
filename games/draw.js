@@ -11,6 +11,7 @@ const WORDS = {
   "職業": ["醫生","護士","警察","消防員","老師","廚師","甜點師","理髮師","司機","機長","空姐","太空人","科學家","畫家","歌手","演員","魔術師","小丑","外送員","郵差","農夫","漁夫","工程師","建築工人","牙醫","獸醫","律師","法官","記者","攝影師","偵探","海盜","忍者","武士","騎士","公主","王子","國王","女王","巫婆","天使","惡魔","吸血鬼","殭屍","鬼","超人","聖誕老人","美人魚","新娘","新郎","嬰兒","老爺爺","老奶奶"],
   "天氣": ["下雨","下雪","打雷","閃電","颱風","龍捲風","雲","太陽雨","冰雹","霧","大風","地震","流星","日出","日落","月蝕","極光","雪花","冰柱","落葉","楓葉","櫻花","春天","夏天","秋天","冬天"],
   "身體": ["眼睛","鼻子","嘴巴","耳朵","頭髮","眉毛","睫毛","牙齒","舌頭","脖子","肩膀","手","手指","指甲","腳","腳趾","膝蓋","肚子","肚臍","屁股","心臟","骨頭","肌肉","鬍子","酒窩","雀斑","雙下巴","黑眼圈","痘痘","光頭","馬尾","雙馬尾","捲髮","瀏海"],
+  "寶可夢": ["妙蛙種子","妙蛙草","妙蛙花","小火龍","火恐龍","噴火龍","傑尼龜","卡咪龜","水箭龜","綠毛蟲","鐵甲蛹","巴大蝶","獨角蟲","大針蜂","波波","比比鳥","大比鳥","小拉達","拉達","烈雀","大嘴雀","阿柏蛇","阿柏怪","皮卡丘","雷丘","穿山鼠","穿山王","尼多蘭","尼多后","尼多朗","尼多王","皮皮","皮可西","六尾","九尾","胖丁","胖可丁","超音蝠","大嘴蝠","走路草","臭臭花","霸王花","派拉斯","毛球","摩魯蛾","地鼠","三地鼠","喵喵","貓老大","可達鴨","哥達鴨","猴怪","火爆猴","卡蒂狗","風速狗","蚊香蝌蚪","蚊香君","蚊香泳士","凱西","勇基拉","胡地","腕力","豪力","怪力","喇叭芽","口呆花","大食花","瑪瑙水母","毒刺水母","小拳石","隆隆石","隆隆岩","小火馬","烈焰馬","呆呆獸","呆殼獸","小磁怪","三合一磁怪","大蔥鴨","嘟嘟","嘟嘟利","小海獅","白海獅","臭泥","臭臭泥","大舌貝","刺甲貝","鬼斯","鬼斯通","耿鬼","大岩蛇","催眠貘","大鉗蟹","巨鉗蟹","霹靂電球","蛋蛋","椰蛋樹","卡拉卡拉","嘎啦嘎啦","飛腿郎","快拳郎","大舌頭","瓦斯彈","獨角犀牛","吉利蛋","蔓藤怪","袋獸","墨海馬","角金魚","金魚王","海星星","寶石海星","魔牆人偶","飛天螳螂","迷唇姐","電擊獸","鴨嘴火獸","凱羅斯","肯泰羅","鯉魚王","暴鯉龍","拉普拉斯","百變怪","伊布","水伊布","雷伊布","火伊布","多邊獸","菊石獸","化石盔","化石翼龍","卡比獸","急凍鳥","閃電鳥","火焰鳥","迷你龍","哈克龍","快龍","超夢","夢幻","菊草葉","火球鼠","小鋸鱷","咕咕","皮丘","寶寶丁","波克比","咩利羊","電龍","瑪力露","太陽伊布","月亮伊布","葉伊布","冰伊布","仙子伊布","呆呆王","未知圖騰","果然翁","大鋼蛇","巨鉗螳螂","熊寶寶","圈圈熊","幼基拉斯","班基拉斯","洛奇亞","鳳王","時拉比","木守宮","火稚雞","水躍魚","拉魯拉絲","沙奈朵","固拉多","蓋歐卡","烈空坐","基拉祈","草苗龜","小火焰猴","波加曼","利歐路","路卡利歐","烈咬陸鯊","藤藤蛇","暖暖豬","水水獺","哈力栗","火狐狸","呱呱泡蛙","甲賀忍蛙","木木梟","火斑喵","球球海獅","謎擬Q","敲音猴","炎兔兒","淚眼蜥","新葉喵","呆火鱷","潤水鴨"],
   "我們": ["約會","求婚","情人節","聖誕樹","生日","煙火","愛心","婚禮","情侶裝","看夜景","野餐","露營","搭帳篷","寫信","撒嬌","吃醋","晚安","早安","想你","抱抱","牽手散步","一起看電影","一起煮飯","一起旅行","交換禮物","慶祝紀念日","吵架","和好","道歉","驚喜","告白","初吻","情書","玫瑰花束","婚戒","結婚蛋糕","蜜月","小窩","養貓","同居","視訊","遠距離","等你下班","接你下班","摸頭","公主抱","背你","餵你吃","一起睡覺","打卡","自拍合照","大頭貼","情侶對戒","抓娃娃機","夾到娃娃","看日出","看流星","許願池"],
 };
 WORDS_B = ["逛街","下午茶","自拍","交換禮物","唱KTV","敷面膜","睡衣派對","追劇","八卦","做指甲","拍貼","吃甜點","閨蜜旅行","穿同款","喝珍奶","聊通宵","化妝","夾娃娃","減肥","吃到飽","演唱會","應援棒","偶像","抱抱","生日派對","野餐","煙火","寫卡片","跳舞","瑜珈","逛夜市","自拍棒","美甲","購物袋","試衣間","咖啡廳","鬆餅","馬卡龍","拍照打卡","姊妹淘","秘密","說悄悄話","打電話聊天","一起哭","一起大笑","畢業典禮","合照","手搖飲","瀏海","捲髮棒"];
@@ -52,13 +53,14 @@ App.registerGame({
     el.innerHTML = `<div class="box dr" id="dr"></div>`;
     const box = $("#dr");
 
-    function pickWords(used){
-      const pool = (ctx.mode()==="bestie"?ALL_B:ctx.mode()==="bro"?ALL_M:ALL).filter(x=>!(used||[]).includes(x[0])), out = [];
+    function pickWords(used, only){
+      let pool = (ctx.mode()==="bestie"?ALL_B:ctx.mode()==="bro"?ALL_M:ALL).filter(x=>!(used||[]).includes(x[0])), out = [];
+      if(only){ const sp = pool.filter(x=>x[1]===only); if(sp.length >= 3){ return sp.sort(()=>Math.random()-.5).slice(0, 3); } }
       const cats = [...new Set(pool.map(x=>x[1]))].sort(()=>Math.random()-.5);
       for(const c of cats){ const opts = pool.filter(x=>x[1]===c); if(opts.length) out.push(opts[Math.floor(Math.random()*opts.length)]); if(out.length===3) break; }
       return out;
     }
-    const fresh = (drawer, prev) => ({ round:(prev&&prev.round||0)+1, drawer, phase:"pick", opts:pickWords(prev&&prev.used), word:null, cat:null, until:0, started:0, strokes:[], guesses:[], hint:0,
+    const fresh = (drawer, prev) => ({ round:(prev&&prev.round||0)+1, drawer, phase:"pick", opts:pickWords(prev&&prev.used, prev&&prev.only), only:(prev&&prev.only)||null, word:null, cat:null, until:0, started:0, strokes:[], guesses:[], hint:0,
       solved:(prev&&prev.solved)||0, streak:(prev&&prev.streak)||0, best:(prev&&prev.best)||0, fast:(prev&&prev.fast)||0, used:(prev&&prev.used)||[], hist:(prev&&prev.hist)||[], result:null });
 
     // ---------- canvas ----------
@@ -253,10 +255,11 @@ App.registerGame({
         if(isDrawer()){
           box.innerHTML = `<div class="drHd"><b>第 ${s.round} 回合・換你畫！</b></div><p class="drSub">選一個你想畫的題目（${esc(p.name)} 看不到喔）</p>
             <div class="drPick">${s.opts.map((o,i)=>`<button data-o="${i}"><i>${esc(o[1])}</i><b>${esc(o[0])}</b></button>`).join("")}</div>
-            <button class="btn sub" id="drRe" style="width:100%;margin-top:8px">🔄 換一組題目</button>
+            <div class="drPickBtns"><button class="btn sub" id="drRe">🔄 換一組題目</button><button class="btn sub ${s.only==="寶可夢"?"on":""}" id="drPk">⚡ 寶可夢專場${s.only==="寶可夢"?"：開":""}</button></div>
             ${ctx.isOnline(p.user_id)?"":`<p class="drWarn">${esc(p.name)} 現在不在線上，選好題目後會通知 ta 來猜</p>`}${stats}`;
           box.querySelectorAll("[data-o]").forEach(b=>b.addEventListener("click", ()=>start(+b.dataset.o)));
-          $("#drRe").addEventListener("click", ()=>{ SFX.tap(); ctx.update("draw", x=>{ if(!x || x.phase!=="pick" || x.drawer!==me()) return undefined; x.opts = pickWords(x.used); return x; }); });
+          $("#drRe").addEventListener("click", ()=>{ SFX.tap(); ctx.update("draw", x=>{ if(!x || x.phase!=="pick" || x.drawer!==me()) return undefined; x.opts = pickWords(x.used, x.only); return x; }); });
+          $("#drPk").addEventListener("click", ()=>{ SFX.select(); ctx.update("draw", x=>{ if(!x || x.phase!=="pick" || x.drawer!==me()) return undefined; x.only = x.only==="寶可夢" ? null : "寶可夢"; x.opts = pickWords(x.used, x.only); return x; }); });
         } else {
           box.innerHTML = `<div class="drWait">${sprite(p.cat,"normal")}<p><b>${esc(p.name)}</b> 正在選題目…</p><p class="drSub">等等你要負責猜 🤔</p></div>${stats}`;
         }
