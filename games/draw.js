@@ -265,7 +265,7 @@ App.registerGame({
               </div>
               <div class="drFeed" id="drFeed"></div><button class="btn sub drGive" id="drGive">😵 放棄這題</button>`
             : `<div class="drFeed" id="drFeed"></div>
-              <div class="drGuess"><div class="drIn" id="drIn"><span class="ph">點這裡猜猜看…</span></div><button class="btn" id="drSend">猜！</button></div><div id="drKb" class="drKb"></div>`}`;
+              <div class="drGuess"><input class="drIn" id="drIn" placeholder="點這裡猜猜看…"><button class="btn" id="drSend">猜！</button></div><div id="drKb" class="drKb"></div>`}`;
           setupCanvas(); bindDraw();
           if(drawer){
             const pickColor = c => { tool.c = c; if(tool.t === "er") tool.t = "pen"; tool.recent = [c].concat((tool.recent||[]).filter(x=>x!==c)).slice(0, 6); saveTool(); toolsUi(); };
@@ -282,6 +282,7 @@ App.registerGame({
             $("#drGive").addEventListener("click", ()=>finish(false, "give"));
             toolsUi();
           } else {
+            gf = ctx.caretField($("#drIn"), 20); gf.el.addEventListener("input", ()=>{ guessText = gf.value; });
             guessText = ""; paintGuess();
             $("#drIn").addEventListener("click", openKb);
             $("#drSend").addEventListener("click", sendGuess);
@@ -324,11 +325,13 @@ App.registerGame({
       if(n > lastGuessN && lastGuessN){ const q = s.guesses[n-1]; if(q && q.by!==me()){ q.close ? SFX.select() : SFX.miss(); } }
       lastGuessN = n;
     }
-    function paintGuess(){ const i = $("#drIn"); if(i) i.innerHTML = guessText ? esc(guessText) : `<span class="ph">點這裡猜猜看…</span>`; }
+    let gf = null;
+    function paintGuess(){ if(gf && gf.el.isConnected && gf.value !== guessText) gf.value = guessText; }
     function openKb(){
       const host = $("#drKb"); if(!host || kb) return;
-      kb = ctx.keyboard(host, { enterLabel:"猜！", commit: t=>{ guessText = (guessText+t).slice(0,20); paintGuess(); },
-        backspace: ()=>{ const a=[...guessText]; a.pop(); guessText=a.join(""); paintGuess(); }, send: ()=>sendGuess(), hide: closeKb });
+      kb = ctx.keyboard(host, { enterLabel:"猜！", textBefore: ()=> gf ? gf.before() : guessText, commit: t=>{ if(gf) gf.insert(t); },
+        backspace: ()=>{ if(gf) gf.del(); }, send: ()=>sendGuess(), hide: closeKb });
+      if(gf) gf.focus();
       document.body.classList.add("drkb"); host.scrollIntoView({block:"end"});
     }
     function closeKb(){ const host = $("#drKb"); if(host) host.innerHTML = ""; kb = null; document.body.classList.remove("drkb"); }

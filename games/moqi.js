@@ -449,26 +449,30 @@ App.registerGame({
         <div class="muted" style="font-size:12px;margin:4px 0 10px">新題目會在下一題優先出場</div>
         <div class="mkKind" style="display:flex;gap:6px;justify-content:center;margin-bottom:10px">
           <button class="btn sub" data-k="you">關於 ${esc(pn)}</button><button class="btn sub" data-k="me">關於我</button><button class="btn sub" data-k="us">關於我們</button></div>
-        <div class="mkField" data-f="q" style="min-height:44px"></div>
+        <div class="mkWrap"><input class="mkField" data-f="q" style="min-height:44px"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
-          ${[0,1,2,3].map(i=>`<div class="mkField" data-f="o${i}"></div>`).join("")}</div>
+          ${[0,1,2,3].map(i=>`<div class="mkWrap"><input class="mkField" data-f="o${i}"></div>`).join("")}</div>
         <div class="err" id="mkErr" style="margin-top:6px"></div>
         <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sub" id="mkCancel" style="flex:1">取消</button><button class="btn" id="mkSave" style="flex:2">出題！</button></div>
         <div id="mkKb" style="margin:12px -14px -16px;border-top:3px solid var(--kb-line);background:var(--kb-bg);padding-top:14px"></div>`;
       const ph = { q:"題目，例如：最想去的國家是？", o0:"選項 1", o1:"選項 2", o2:"選項 3（可不填）", o3:"選項 4（可不填）" };
       const paint = () => {
-        box.querySelectorAll(".mkField").forEach(el=>{ const f=el.dataset.f; el.textContent = F[f] || ph[f]; el.classList.toggle("empty", !F[f]); el.classList.toggle("on", f===active); });
+        box.querySelectorAll(".mkField").forEach(el=>{ const f=el.dataset.f; if(el.value !== F[f]) el.value = F[f]; el.placeholder = ph[f]; el.classList.toggle("empty", !F[f]); el.classList.toggle("on", f===active); });
         box.querySelectorAll(".mkKind button").forEach(b=>b.style.background = b.dataset.k===kind ? "var(--pinkL)" : "#fff");
       };
-      box.querySelectorAll(".mkField").forEach(el=>el.addEventListener("click",()=>{ if(mkKb && mkKb.composing()) mkKb.flush(); active = el.dataset.f; paint(); }));
+      const FLD = {};
+      box.querySelectorAll(".mkField").forEach(el=>{ const f = el.dataset.f; FLD[f] = ctx.caretField(el, f==="q" ? 60 : 20); el.addEventListener("input", ()=>{ F[f] = el.value; el.classList.toggle("empty", !F[f]); });
+        el.addEventListener("focus", ()=>{ if(active !== f){ if(mkKb && mkKb.composing()) mkKb.flush(); active = f; paint(); } });
+        el.addEventListener("click",()=>{ if(mkKb && mkKb.composing()) mkKb.flush(); active = f; paint(); }); });
       box.querySelectorAll(".mkKind button").forEach(b=>b.addEventListener("click",()=>{ kind=b.dataset.k; paint(); }));
       const order = ["q","o0","o1","o2","o3"];
       const mkKb = IME.mount(box.querySelector("#mkKb"), { dictUrl:"zhuyin.txt", anim: ()=>{ try{ return localStorage.getItem("mw_anim")||"jelly"; }catch(e){ return "jelly"; } },
         art: { heart: icon("heart"), star: icon("star"), cat: sprite(ctx.me.cat,"happy"), paw: icon("paw") },
         phrases: [], emojis: ["❤️","😂","🥺","😍","🐱","🍰","✨","❓"], enterLabel: "下一格",
-        commit: t => { F[active] = (F[active] + t).slice(0, active==="q"?60:20); paint(); },
-        backspace: () => { const a=[...F[active]]; a.pop(); F[active]=a.join(""); paint(); },
-        send: () => { const i = order.indexOf(active); active = order[Math.min(i+1, order.length-1)]; paint(); },
+        textBefore: () => FLD[active] ? FLD[active].before() : "",
+        commit: t => { FLD[active].insert(t); },
+        backspace: () => { FLD[active].del(); },
+        send: () => { const i = order.indexOf(active); active = order[Math.min(i+1, order.length-1)]; paint(); FLD[active].focus(); },
         fx: () => SFX.key() });
       box.querySelector("#mkCancel").addEventListener("click", ()=>{ editing=false; draw(); });
       box.querySelector("#mkSave").addEventListener("click", async ()=>{

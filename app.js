@@ -715,13 +715,14 @@ const App = (function(){
   function letterWriter(){
     const p = partner(); if(!p) return;
     let text = "";
-    const o = modal(`<div class="ltPaper"><div class="ltTo">給 ${esc(p.name)}：</div><div class="ltBody" id="ltBody"><span class="ph">想說的話，寫在這裡…</span></div><div class="ltFrom">—— ${esc(me.name)}</div></div>
+    const o = modal(`<div class="ltPaper"><div class="ltTo">給 ${esc(p.name)}：</div><div class="ltWrap"><textarea class="ltBody" id="ltBody" placeholder="想說的話，寫在這裡…"></textarea></div><div class="ltFrom">—— ${esc(me.name)}</div></div>
       <div class="ltBtns"><button class="btn sub" id="ltCancel">取消</button><button class="btn" id="ltSend">💌 寄出</button></div><div id="ltKb" class="ltKb"></div>`, "letter");
-    const body = o.querySelector("#ltBody");
-    const paint = () => { body.innerHTML = text ? esc(text).replace(/\n/g,"<br>") : `<span class="ph">想說的話，寫在這裡…</span>`; body.scrollTop = body.scrollHeight; };
-    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>text, anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], kaomoji: window.KAOMOJI, enterLabel:"換行",
-      commit: t => { text = (text + t).slice(0, 800); paint(); }, backspace: () => { const a=[...text]; a.pop(); text=a.join(""); paint(); },
-      send: () => { text += "\n"; paint(); }, fx: (k,n) => { if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } });
+    const fld = caretField(o.querySelector("#ltBody"), 800);
+    fld.el.addEventListener("input", ()=>{ text = fld.value; });
+    const paint = () => {};
+    const kbx = IME.mount(o.querySelector("#ltKb"), { dictUrl:"zhuyin.txt", prefs: kbPrefs, haptic: ()=>{ if(kbVib()) haptic(); }, textBefore: ()=>fld.before(), anim: ()=>store.get("mw_anim")||"jelly", art: kbArt(), phrases: QK[MI().qk], kaomoji: window.KAOMOJI, enterLabel:"換行",
+      commit: t => fld.insert(t), backspace: () => fld.del(),
+      send: () => fld.insert("\n"), fx: (k,n) => { if(!kbSound()) return; if(k==="del") SFX.del(); else SFX.key(); } });
     o.querySelector("#ltCancel").addEventListener("click", ()=>o.remove());
     o.querySelector("#ltSend").addEventListener("click", async ()=>{
       if(kbx.composing()) kbx.flush();
@@ -1035,6 +1036,28 @@ const App = (function(){
     const iv = setInterval(()=>{ if(!txt.isConnected){ clearInterval(iv); c.remove(); mirror.remove(); return; } sched(); }, 400);
     sched();
   }
+  // A real text box that the meow keyboard types into AT THE CARET, like the chat box:
+  // tap or drag inside it to move the cursor, select text to replace it, delete in the middle.
+  function caretField(input, max){
+    input.setAttribute("inputmode", "none"); input.setAttribute("autocomplete", "off"); input.setAttribute("autocorrect", "off"); input.setAttribute("spellcheck", "false");
+    if(max) input.maxLength = max;
+    const caret = () => { const n = input.value.length; let a = input.selectionStart, b = input.selectionEnd; if(a==null || (document.activeElement!==input && !input._touched)) a = b = n; return [Math.min(a,n), Math.min(b,n)]; };
+    const keep = () => { if(document.activeElement!==input){ try{ input.focus({ preventScroll:true }); }catch(e){} } if(input._caretUpdate) input._caretUpdate(); };
+    const fire = () => input.dispatchEvent(new Event("input", { bubbles:true }));
+    input.addEventListener("pointerdown", ()=>{ input._touched = true; });
+    setupCaret(input);
+    return {
+      el: input,
+      get value(){ return input.value; },
+      set value(v){ input.value = v; input._touched = false; if(input._caretUpdate) input._caretUpdate(); },
+      before(){ return input.value.slice(0, caret()[0]); },
+      insert(t){ const [a,b] = caret(); if(max){ const room = max - (input.value.length - (b-a)); if(room <= 0) return; t = [...t].slice(0, room).join(""); } input.setRangeText(t, a, b, "end"); keep(); fire(); },
+      del(){ const [a,b] = caret(); if(a!==b){ input.setRangeText("", a, b, "end"); keep(); fire(); return; } if(a===0) return;
+        const last = [...input.value.slice(0, a)].pop() || ""; input.setRangeText("", a - last.length, a, "end"); keep(); fire(); },
+      focus: keep,
+    };
+  }
+  ctx.caretField = caretField;
   // ---------- voice messages ----------
   let chatUpdSend = null, voiceRec = null, voiceAudio = null, voicePlaying = 0;
   const voiceCache = {};
