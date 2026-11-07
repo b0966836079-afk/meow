@@ -97,6 +97,9 @@ Solo game for when the partner is busy: fold a paper star step by step (paper �
 
 ## 喵喵俄羅斯方塊 (games/tetris.js)
 The original cat Tetris, brought back 11/4 as its own game (id "cattris") next to the Block Blast style 喵喵方塊. Keeps state key "tetris", so old best scores carry over. Pet log kind "cattris". (A swipe-only version was tried 11/4 and reverted the same day at the user's request: the button version stays.)
+11/8 rebuilt TETR.IO-style (rules only; the app's cute look and on-screen buttons stay, the user did not want TETR.IO's dark style): SRS rotation with guideline wall kicks + 180° kicks, hold, 5-piece preview, 7-bag, 3 hidden spawn rows, lock delay 0.5 s with 15 resets, T-Spin / Mini (3-corner rule), B2B, combo, perfect clear, guideline scoring. DAS/ARR handled in the game loop; 手感 presets 穩穩/標準/超快 saved in `mw_tsFeel`.
+Modes: vs (live 1v1), sprint (40 lines, best ms in `st.sprint`), blitz (2 min, `st.blitz`), marathon (old mode, `st.best`/`st.lines`), zen (never tops out, `st.zenL`).
+Versus: lobby button writes `st.vs.ready[uid]`; when both are ready (within 5 min) it sets `vs.live/run/seed/p` and both phones start with the same seeded bag. Broadcasts `{g:"ts", run, k}`: `atk` (garbage n + hole column; incoming garbage is cancelled by your own attack, max 8 rows per piece), `bd` (board snapshot every 250 ms for the mini view), `ko`. The loser writes `vs.res` and the win count `vs.w`; the winner also gets KO from that state if a broadcast is lost. Quitting a match = forfeit; no message from the other phone for 15 s = disconnected, no result. Attack: TETR.IO table (double 1, triple 2, quad 4, TSS 2, TSD 4, TST 6, B2B +1, combo table, PC +10).
 
 ## 記事本 (games/notes.js)
 Shared notebook (hidden game "notes", opened from the 5th home tile 記事). Text notes and checklists, 6 colours, pin, search, filters. State key "notes": list of {id,t,title,body,items,color,pin,by,at,up,rem:{at,to:me|ta|both,by},done}.

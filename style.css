@@ -1600,36 +1600,58 @@ body.locked #app,body.locked #nav{visibility:hidden}
 .lockPad button.fn{font-size:15px;background:var(--pinkL)}
 
 /* 喵喵方塊 */
-.tsGame{position:fixed;inset:0;z-index:130;background:#f6eee3;background-image:linear-gradient(rgba(90,59,46,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(90,59,46,.045) 2px,transparent 2px);background-size:24px 24px;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px);touch-action:none;user-select:none;-webkit-user-select:none;color:var(--ink)}
-.tsHud{width:100%;max-width:420px;display:flex;align-items:center;gap:6px;margin-bottom:8px}
-.tsQuit,.tsPause{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:4px 8px;box-shadow:3px 3px 0 var(--shadow);color:var(--ink)}
-.tsPause{font-size:14px;padding:3px 9px}
-.tsStat{flex:1;display:flex;flex-direction:column;align-items:center;line-height:1.1}
-.tsStat span{font-size:11px;color:var(--muted)}.tsStat b{font-weight:400;font-size:20px;color:#e5486a;text-shadow:2px 2px 0 #fff}
-.tsMid{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px}
-.tsStrip{display:flex;gap:8px;width:100%;max-width:380px;justify-content:space-between}
-.tsBox{border:3px solid var(--line);background:var(--card);box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:row;align-items:center;padding:3px 8px;gap:8px;height:40px}
-.tsBox>span{font-size:11px;color:var(--muted)}
-.tsBox i{display:flex;align-items:center;justify-content:center;width:40px;height:26px}.tsBox .tsP{width:calc(var(--w) * 9px);height:calc(var(--h) * 9px)}
-.tsBox i.sm{transform:scale(.8);height:20px}
-.tsHold{cursor:pointer}.tsHold i{height:34px}
+.tsGame{position:fixed;inset:0;z-index:130;background:#f6eee3;background-image:linear-gradient(rgba(90,59,46,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(90,59,46,.045) 2px,transparent 2px);background-size:24px 24px;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 6px calc(env(safe-area-inset-bottom) + 8px);touch-action:none;user-select:none;-webkit-user-select:none;color:var(--ink)}
+.tsHud{width:100%;max-width:440px;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.tsQuit,.tsPause{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:4px 8px;box-shadow:3px 3px 0 var(--shadow);color:var(--ink);border-radius:0}
+.tsPause{font-size:14px;padding:4px 10px}
+.tsTop{flex:1;display:flex;flex-direction:column;align-items:center;line-height:1.05}
+.tsTop span{font-size:11px;color:var(--muted)}.tsTop b{font-weight:400;font-size:22px;color:#e5486a;text-shadow:2px 2px 0 #fff}
+.tsVsName{font-size:12px;color:var(--muted);max-width:30%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.tsVsName b{font-weight:400;color:#e5486a}
+.tsMid{flex:1;min-height:0;width:100%;max-width:440px;display:flex;justify-content:center;align-items:flex-start;gap:6px}
+.tsCol{width:58px;flex:none;display:flex;flex-direction:column;gap:6px}
+.tsBox{border:3px solid var(--line);background:var(--card);box-shadow:3px 3px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;padding:3px 2px 5px;gap:5px}
+.tsBox>span{font-size:10px;color:var(--muted)}
+.tsBox i{display:flex;align-items:center;justify-content:center;width:100%;min-height:22px}.tsBox .tsP{width:calc(var(--w) * 11px);height:calc(var(--h) * 11px)}
+.tsNext i:not(#tsN0){min-height:18px}.tsNext i:not(#tsN0) .tsP{width:calc(var(--w) * 9px);height:calc(var(--h) * 9px)}
+.tsHold{cursor:pointer}.tsHold i{min-height:30px}
 .tsP{position:relative;display:block;width:calc(var(--w) * 12px);height:calc(var(--h) * 12px)}
 .tsP img{position:absolute;image-rendering:pixelated;display:block}
-.tsP.used{opacity:.4}
-.tsWrap{position:relative;flex:none}
+.tsP.used{opacity:.35}
+.tsStats{display:flex;flex-direction:column;gap:4px}
+.tsStats div{display:flex;flex-direction:column;line-height:1.1}.tsStats span{font-size:10px;color:var(--muted)}.tsStats b{font-weight:400;font-size:15px;color:#e5486a}
+.tsAct{display:flex;flex-direction:column;gap:2px;opacity:0;font-size:11px;line-height:1.2;color:var(--ink)}
+.tsAct div:first-child{font-size:12px;color:#e5486a}
+.tsAct.on{animation:tsAct 1.6s ease-out}.tsAct.big div:first-child{font-size:14px;color:#e5486a;text-shadow:2px 2px 0 #fff}
+@keyframes tsAct{0%{opacity:0;transform:translateX(-8px)}10%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+.tsWrap{position:relative;flex:none;display:flex}
 .tsWrap canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;border:4px solid var(--line);box-shadow:5px 5px 0 var(--shadow);background:#fff9ef}
-.tsPop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--line);padding:4px 12px;font-size:16px;color:#e5486a;white-space:nowrap;opacity:0;pointer-events:none;box-shadow:3px 3px 0 var(--shadow)}
+.tsGame.danger .tsWrap canvas{border-color:#e5486a;animation:tsDanger .8s steps(2) infinite}
+@keyframes tsDanger{50%{box-shadow:5px 5px 0 #f7a7c0}}
+.tsGame.hit .tsWrap{animation:tsHit .25s}
+@keyframes tsHit{30%{transform:translateY(4px)}}
+.tsGb{width:7px;margin-right:3px;background:var(--card);border:2px solid var(--line);display:flex;flex-direction:column;justify-content:flex-end}
+.tsGb i{display:block;width:100%;height:0;background:#e5486a;transition:height .15s}
+.tsPop{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:3px solid var(--line);box-shadow:3px 3px 0 var(--shadow);padding:4px 12px;font-size:15px;color:#e5486a;white-space:nowrap;opacity:0;pointer-events:none}
 .tsPop.on{animation:tsPop 1.2s ease-out}
 @keyframes tsPop{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-80%) scale(1)}}
-.tsGame.paused .tsWrap::after{content:"暫停中 ⏸\A按 ▶ 繼續";white-space:pre;position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;text-align:center;background:rgba(255,249,239,.92);font-size:18px;color:var(--ink)}
-.tsPad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:100%;max-width:400px;margin-top:10px}
-.tsB{font:inherit;font-size:24px;height:58px;border:3px solid var(--line);background:var(--card);color:var(--ink);box-shadow:4px 4px 0 var(--shadow);touch-action:none}
-.tsB.on{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--shadow);background:var(--pinkL)}
-.tsB.rot{background:#e2f5ec}.tsB.drop{background:var(--pinkL)}
-.tsTip{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+.tsCd{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:28px;color:#e5486a;text-shadow:3px 3px 0 #fff;pointer-events:none}
+.tsCd.on{display:flex}.tsCd.go{font-size:34px}
+.tsGame.paused .tsWrap::after{content:"暫停中 ⏸\A按 ▶ 繼續";white-space:pre;position:absolute;inset:0 0 0 8px;display:flex;align-items:center;justify-content:center;text-align:center;background:rgba(255,249,239,.92);font-size:18px;color:var(--ink)}
+.tsFoe{border:3px solid var(--line);background:var(--card);box-shadow:3px 3px 0 var(--shadow);padding:3px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tsFoe span{font-size:10px;color:#e5486a;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tsFoe canvas{width:100%;image-rendering:pixelated;display:block;border:2px solid var(--line)}
+.tsFoe em{font-style:normal;font-size:9px;line-height:1.2;color:#e5486a;text-align:center}
+.tsPad{display:flex;justify-content:space-between;gap:14px;width:100%;max-width:440px;margin-top:8px}
+.tsCl{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tsB{font:inherit;font-size:22px;height:54px;border:3px solid var(--line);background:var(--card);color:var(--ink);touch-action:none;border-radius:0;box-shadow:3px 3px 0 var(--shadow);padding:0}
+.tsB.on{transform:translate(3px,3px);box-shadow:none;background:var(--pinkL)}
+.tsB.rot{background:#e2f5ec}.tsB.rot.on{background:#c6ead7}
+.tsB.sm{font-size:15px}
+.tsB.hold{font-size:16px;background:#fff3c9}
+.tsB.drop{background:var(--pinkL);font-size:26px}.tsB.drop.on{background:#f7a7c0}
 .tsEnd{position:absolute;inset:0;background:rgba(40,25,20,.45);display:flex;align-items:center;justify-content:center;padding:20px}
-.tsCard{background:var(--paper);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:16px;width:min(300px,100%);text-align:center}
-.tsCard h3{font-weight:400;margin:6px 0 2px}.tsCard p{margin:4px 0;font-size:14px}.tsCard b{font-weight:400;color:#e5486a}
+.tsCard{background:var(--paper);color:var(--ink);border:3px solid var(--line);box-shadow:5px 5px 0 var(--shadow);padding:16px;width:min(300px,100%);text-align:center}
+.tsCard h3{font-weight:400;margin:6px 0 2px}.tsCard p{margin:4px 0;font-size:14px;line-height:1.5}.tsCard b{font-weight:400;color:#e5486a}
 .tsCard .tsBig{font-size:30px;color:#e5486a}
 .tsCats{display:flex;justify-content:center;gap:4px}.tsCats img{width:36px;image-rendering:pixelated;animation:bob .6s steps(2) infinite}.tsCats img:nth-child(2n){animation-delay:.3s}
 .tsBtns{display:flex;gap:8px;margin-top:10px}.tsBtns .btn{flex:1;width:auto}
@@ -1638,9 +1660,18 @@ body.locked #app,body.locked #nav{visibility:hidden}
 .tsParade .tsP{width:calc(var(--w) * 14px);height:calc(var(--h) * 14px)}
 .tsParade span:nth-child(odd){animation:bob .8s steps(2) infinite}
 .tsIntro{margin:0;text-align:center;font-size:14px;line-height:1.6}.tsIntro b{font-weight:400;color:var(--pinkT)}
+.tsModes{display:flex;flex-direction:column;gap:7px}
+.tsModes button{font:inherit;text-align:left;border:3px solid var(--line);background:var(--card);box-shadow:3px 3px 0 var(--shadow);padding:7px 10px;display:grid;grid-template-columns:1fr auto;gap:0 8px;color:var(--ink)}
+.tsModes button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--shadow)}
+.tsModes b{font-weight:400;font-size:16px}.tsModes span{grid-column:1;font-size:12px;color:var(--muted)}
+.tsModes em{grid-column:2;grid-row:1/3;align-self:center;font-style:normal;font-size:13px;color:#e5486a;text-align:right;display:flex;flex-direction:column;line-height:1.3}
+.tsModes em small{font-size:11px;color:var(--muted)}
+.tsModes .vs{background:#ffe3ea}.tsModes .vs span{color:var(--ink)}.tsModes .vs em{grid-column:1;grid-row:auto;text-align:left;color:#e5486a;font-size:12px}
+.tsModes .vs.inv{background:#f7a7c0;animation:bob .8s steps(2) infinite}.tsModes .vs.inv span{color:var(--ink)}
+.tsModes .vs.wait span{color:#e5486a}
+.tsFeel{display:flex;align-items:center;gap:6px;justify-content:center;font-size:13px}.tsFeel span{color:var(--muted)}
+.tsFeel button{font:inherit;font-size:13px;border:2px solid var(--line);background:var(--card);padding:2px 10px;color:var(--ink)}.tsFeel button.on{background:var(--pinkL);color:#e5486a}
 .tsHow{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}.tsHow span{font-size:12px;background:var(--pinkL);border:2px solid var(--line);padding:1px 8px}
-.tsBest{display:flex;gap:8px}.tsBest>div{flex:1;border:3px solid var(--line);background:var(--card);padding:6px;display:flex;flex-direction:column;align-items:center;gap:2px}
-.tsBest b{font-weight:400}.tsBest span{color:#e5486a;font-size:18px}.tsBest em{font-style:normal;font-size:12px;color:var(--muted)}
 .ga img{display:block;image-rendering:pixelated}
 .ga .tsArt{aspect-ratio:6/3}.ga .tsArt img{position:absolute;width:16.66%}
 
