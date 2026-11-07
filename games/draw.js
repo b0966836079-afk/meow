@@ -69,7 +69,13 @@ App.registerGame({
     let redoStack = [], view = { z:1, x:0, y:0 };
     function setupCanvas(){
       cv = $("#drCv"); if(!cv) return;
-      const dpr = Math.min(2.5, window.devicePixelRatio||1) * (box.classList.contains("drFull") ? 1.4 : 1);
+      const full = box.classList.contains("drFull"), dpr = Math.min(2.5, window.devicePixelRatio||1) * (full ? 1.4 : 1);
+      if(full){ // big canvas is landscape: turn the whole panel sideways when the phone is held upright
+        const vw = window.innerWidth, vh = window.innerHeight, portrait = vh > vw, long = portrait ? vh : vw, short = portrait ? vw : vh;
+        box.classList.toggle("rot", portrait); box.style.width = long + "px"; box.style.height = short + "px";
+        const side = Math.min(190, long * .22), cw = Math.max(200, Math.min((short - 20) * W / H, long - side*2 - 36));
+        cv.style.width = cw + "px";
+      } else { box.classList.remove("rot"); box.style.width = box.style.height = ""; cv.style.width = ""; }
       const w = cv.offsetWidth || cv.parentElement.clientWidth;
       cv.width = Math.round(w*dpr); cv.height = Math.round(w*.75*dpr); cv.style.height = (w*.75)+"px";
       g = cv.getContext("2d", { willReadFrequently: true }); scale = cv.width / W; g.lineCap = "round"; g.lineJoin = "round";
@@ -159,7 +165,12 @@ App.registerGame({
       const from = Math.max(0, L.p.length - 2); L.p.push(...m.p);
       if(L.snap){ g.putImageData(L.snap, 0, 0); paintStroke(L); } else paintSeg(L, from);
     }
-    function pos(e){ const r = cv.getBoundingClientRect(); return [Math.round((e.clientX-r.left)/r.width*W), Math.round((e.clientY-r.top)/r.height*H)]; }
+    const rotated = () => box.classList.contains("rot");
+    function pos(e){ const r = cv.getBoundingClientRect();
+      if(rotated()) return [Math.round((e.clientY-r.top)/r.height*W), Math.round((1 - (e.clientX-r.left)/r.width)*H)];
+      return [Math.round((e.clientX-r.left)/r.width*W), Math.round((e.clientY-r.top)/r.height*H)]; }
+    // screen point -> position inside the (maybe sideways) canvas frame, in CSS pixels
+    function local(x, y){ const st = $("#drStage").getBoundingClientRect(); return rotated() ? [y - st.top, st.right - x] : [x - st.left, y - st.top]; }
     function bindDraw(){
       let sm = null, pendFill = null, frameReq = 0; const pts = new Map(); let pinch = null;
       const zr = $("#drZR");
@@ -169,7 +180,7 @@ App.registerGame({
       cv.addEventListener("pointerdown", e=>{ pts.set(e.pointerId, [e.clientX, e.clientY]); if(!isDrawer() || s.phase!=="draw") return; e.preventDefault();
         if(pts.size === 2){ // two fingers: cancel the stroke and pinch-zoom / move the canvas
           pendFill = null; if(cur){ cur = null; if(base) g.putImageData(base, 0, 0); else redraw(); base = null; }
-          const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx: (a[0]+b[0])/2, my: (a[1]+b[1])/2, z: view.z, x: view.x, y: view.y }; return; }
+          const [a, b] = [...pts.values()], [lx, ly] = local((a[0]+b[0])/2, (a[1]+b[1])/2); pinch = { d: Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx: lx, my: ly, z: view.z, x: view.x, y: view.y }; return; }
         if(pts.size > 2) return;
         try{ cv.setPointerCapture(e.pointerId); }catch(_){}
         const [x,y] = pos(e); redoStack = [];
@@ -178,10 +189,10 @@ App.registerGame({
         base = ["mark","line","oval","rect"].includes(cur.t) ? g.getImageData(0, 0, cv.width, cv.height) : null; paintStroke(cur); cur._d = 0;
         if(["pen","mark","er"].includes(cur.t)){ liveBuf = [x,y]; liveT = 0; liveFlush(true); } });
       cv.addEventListener("pointermove", e=>{ if(pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
-        if(pinch && pts.size >= 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, mx = (a[0]+b[0])/2, my = (a[1]+b[1])/2;
-          const z = Math.max(1, Math.min(5, pinch.z * d / pinch.d)), st = $("#drStage").getBoundingClientRect();
+        if(pinch && pts.size >= 2){ const [a, b] = [...pts.values()], d = Math.hypot(a[0]-b[0], a[1]-b[1]) || 1, [mx, my] = local((a[0]+b[0])/2, (a[1]+b[1])/2);
+          const z = Math.max(1, Math.min(5, pinch.z * d / pinch.d));
           // keep the point under the fingers fixed while zooming, then follow the fingers
-          const ox = pinch.mx - st.left, oy = pinch.my - st.top, k = z / pinch.z;
+          const ox = pinch.mx, oy = pinch.my, k = z / pinch.z;
           let x = ox - (ox - pinch.x)*k + (mx - pinch.mx), y = oy - (oy - pinch.y)*k + (my - pinch.my);
           const w = cv.offsetWidth, h = cv.offsetHeight; x = Math.min(0, Math.max(w - w*z, x)); y = Math.min(0, Math.max(h - h*z, y));
           view = { z, x, y }; applyZoom(); return; }
@@ -293,7 +304,7 @@ App.registerGame({
         return;
       }
       // done
-      closeKb(); box.classList.remove("drFull"); document.body.classList.remove("drFullOn");
+      closeKb(); box.classList.remove("drFull", "rot"); box.style.width = box.style.height = ""; document.body.classList.remove("drFullOn");
       const r = s.result || {}, secs = r.secs||0, pName = ctx.nameOf(s.drawer===me()?other():s.drawer);
       const head = r.ok ? `🎉 答對了！${r.secs?`只用了 ${secs} 秒`:""}` : r.why==="give" ? "😵 這題放棄了" : "⏰ 時間到了～";
       box.dataset.mode = "";

@@ -116,3 +116,4 @@ Also: 提和 (draw offer) and 悔棋 (take back your own last move) both need th
 
 ## Typing with the meow keyboard
 Every place that uses the meow keyboard now types into a real input with `inputmode="none"` through `caretField()` (ctx.caretField): chat, 你畫我猜 guesses, letters, 默契大考驗 questions. You can tap/drag to move the cursor, select to replace, and delete in the middle; the pixel caret follows.
+大畫布 is now landscape fullscreen (tools left, canvas middle, colours/size/actions right); when the phone is upright the whole panel is rotated 90° and pointer/pinch coordinates are rotated back.

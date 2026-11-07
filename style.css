@@ -2029,3 +2029,18 @@ body.drFullOn #fab,body.drFullOn .stkFab{display:none}
 input.drIn{user-select:text;-webkit-user-select:text;font:inherit;color:var(--ink);box-sizing:border-box;min-width:0}
 input.drIn::placeholder{color:var(--muted)}
 input.drIn:focus{outline:none}
+
+/* 你畫我猜：大畫布 = 橫向全螢幕（手機直拿時整個轉 90 度） */
+.dr.drFull{inset:auto;left:0;top:0;transform-origin:0 0;display:grid;grid-template-columns:minmax(120px,1fr) auto minmax(150px,1.15fr);grid-template-rows:auto auto 1fr auto;
+  grid-template-areas:"top stage cols" "feed stage cols" "tools stage size" "tools stage acts";column-gap:10px;row-gap:6px;align-items:start;padding:8px 10px;overflow:hidden}
+.dr.drFull.rot{transform:rotate(90deg) translateY(-100%)}
+.dr.drFull .drTop{grid-area:top;order:0;flex-direction:column;align-items:flex-start;gap:2px;margin:0}
+.dr.drFull .drFeed{grid-area:feed;order:0;max-height:96px;overflow:auto;margin:0}
+.dr.drFull .drStage{grid-area:stage;align-self:center}
+.dr.drFull .drBar{display:contents}
+.dr.drFull .drToolRow{grid-area:tools;grid-template-columns:repeat(2,1fr);align-self:end}
+.dr.drFull .drToolRow button{flex-direction:row;gap:4px;justify-content:flex-start;padding:4px 6px}.dr.drFull .drToolRow button i{font-size:12px}
+.dr.drFull .drColRow{grid-area:cols;flex-wrap:wrap}.dr.drFull .drCols{grid-template-columns:repeat(5,1fr)}
+.dr.drFull .drSzRow{grid-area:size;align-self:end}
+.dr.drFull .drActRow{grid-area:acts;grid-template-columns:repeat(3,1fr)}
+.dr.drFull .drActRow button{font-size:11px;padding:7px 0}
