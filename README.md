@@ -108,3 +108,6 @@ Strokes are saved in batches (one save in flight at a time) and points are store
 
 ### 喵喵廚房 landscape (11/7)
 A round now runs in a fullscreen landscape overlay (rotated when the phone is upright, like runner/mono; the joystick vector is rotated back). Top: order tickets with step icons (🔪/🔥 → 🍽) and a patience bar; a "📋 下一步" hint computed from the oldest order; station names drawn on every counter; the big button shows what it will do (`preview()` mirrors `act()`); the chop button lights up only when facing a board with fish.
+
+## 喵喵西洋棋 (games/chess.js)
+Turn-based chess with full rules (check, castling, en passant, promotion picker, mate/stalemate, 50-move, threefold, insufficient material). Engine verified with perft (start d4 = 197281, kiwipete d3 = 97862, pos3 d4 = 43238). Pieces are white/black cats with a pixel glyph badge; the board flips for black. State key "chess": b (64-char board), turn, cast, ep, half, n, last, hist, caps, seen, win, why, sc. Resign, restart-with-consent, notifications each move.

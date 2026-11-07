@@ -1,6 +1,6 @@
 // 喵喵小窩 service worker：負責跳通知、點通知打開 App
-const CACHE = "meow-v150";
-const SHELL = ["./", "index.html", "style.css", "pixel.js", "gameart.js", "data.js", "ime.js", "zhuyin.txt", "kaomoji.js", "changelog.js", "app.js", "config.js", "games/moqi.js", "games/gomoku.js", "games/fight.js", "games/draw.js", "games/battleship.js", "games/quickdraw.js", "games/fishing.js", "games/runner.js", "games/runaway.js", "games/coop.js", "games/banqi.js", "games/stars.js", "games/notes.js", "games/kitchen.js", "games/boat.js", "games/defense.js", "games/mono.js", "games/blocks.js", "games/tetris.js", "games/pool.js", "games/petdeco.js", "games/petcatch.js", "games/pet.js", "fonts/Cubic_11.woff2", "icons/icon-192.png"];
+const CACHE = "meow-v151";
+const SHELL = ["./", "index.html", "style.css", "pixel.js", "gameart.js", "data.js", "ime.js", "zhuyin.txt", "kaomoji.js", "changelog.js", "app.js", "config.js", "games/moqi.js", "games/gomoku.js", "games/fight.js", "games/draw.js", "games/battleship.js", "games/quickdraw.js", "games/fishing.js", "games/runner.js", "games/runaway.js", "games/coop.js", "games/banqi.js", "games/chess.js", "games/stars.js", "games/notes.js", "games/kitchen.js", "games/boat.js", "games/defense.js", "games/mono.js", "games/blocks.js", "games/tetris.js", "games/pool.js", "games/petdeco.js", "games/petcatch.js", "games/pet.js", "fonts/Cubic_11.woff2", "icons/icon-192.png"];
 
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {})); });
 self.addEventListener("activate", e => { e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k); await self.clients.claim(); })()); });
