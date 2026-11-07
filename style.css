@@ -2044,3 +2044,5 @@ input.drIn:focus{outline:none}
 .dr.drFull .drSzRow{grid-area:size;align-self:end}
 .dr.drFull .drActRow{grid-area:acts;grid-template-columns:repeat(3,1fr)}
 .dr.drFull .drActRow button{font-size:11px;padding:7px 0}
+.nativeCaret{caret-color:#e5486a}
+body.drkb .stkFab,body.drkb .stkTray{display:none}

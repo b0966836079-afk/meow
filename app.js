@@ -1045,7 +1045,8 @@ const App = (function(){
     const keep = () => { if(document.activeElement!==input){ try{ input.focus({ preventScroll:true }); }catch(e){} } if(input._caretUpdate) input._caretUpdate(); };
     const fire = () => input.dispatchEvent(new Event("input", { bubbles:true }));
     input.addEventListener("pointerdown", ()=>{ input._touched = true; });
-    setupCaret(input);
+    // one-line boxes use the phone's own cursor (always exactly between the letters); multi-line boxes get the cat-ear cursor
+    if(input.tagName === "TEXTAREA") setupCaret(input); else input.classList.add("nativeCaret");
     return {
       el: input,
       get value(){ return input.value; },
