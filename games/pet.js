@@ -375,7 +375,7 @@ App.registerGame({
       drawDeco(); checkUnlocks();
       if($("#ptTogether")) $("#ptTogether").addEventListener("click", ()=>interact());
       $("#ptLog").innerHTML = (s.log||[]).slice(-6).reverse().map(l=>{ const cn = esc((cats()[l.c||0]||{}).name||"");
-        return `<li><b>${esc(l.by===me()?"你":ctx.nameOf(l.by))}</b> ${l.a==="catch"?`玩接小魚乾賺了 ${l.n} 個貓幣 🪙`:l.a==="run"?`玩喵喵大逃亡賺了 ${l.n} 個貓幣 🪙`:l.a==="boat"?`划龍舟賺了 ${l.n} 個貓幣 🪙`:l.a==="td"?`守護罐罐賺了 ${l.n} 個貓幣 🪙`:l.a==="tetris"?`玩喵喵方塊賺了 ${l.n} 個貓幣 🪙`:l.a==="cattris"?`玩俄羅斯方塊賺了 ${l.n} 個貓幣 🪙`:l.a==="pool"?`撞球贏了 ${l.n} 個貓幣 🪙`:l.a==="buy"?`買了「${esc(l.t||"")}」🛍️`:l.a==="grow"?`看到 ${cn} 長大成「${esc(l.t||"")}」🎉`:(LOGT[l.a]||"")+" "+cn+(LOGE[l.a]||"")}<i>${ago(l.at)}</i></li>`; }).join("");
+        return `<li><b>${esc(l.by===me()?"你":ctx.nameOf(l.by))}</b> ${l.a==="catch"?`玩接小魚乾賺了 ${l.n} 個貓幣 🪙`:l.a==="run"?`玩喵喵大逃亡賺了 ${l.n} 個貓幣 🪙`:l.a==="boat"?`划龍舟賺了 ${l.n} 個貓幣 🪙`:l.a==="td"?`守護罐罐賺了 ${l.n} 個貓幣 🪙`:l.a==="tetris"?`玩喵喵方塊賺了 ${l.n} 個貓幣 🪙`:l.a==="cattris"?`玩俄羅斯方塊賺了 ${l.n} 個貓幣 🪙`:l.a==="catstack"?`玩疊貓貓賺了 ${l.n} 個貓幣 🪙`:l.a==="pool"?`撞球贏了 ${l.n} 個貓幣 🪙`:l.a==="buy"?`買了「${esc(l.t||"")}」🛍️`:l.a==="grow"?`看到 ${cn} 長大成「${esc(l.t||"")}」🎉`:(LOGT[l.a]||"")+" "+cn+(LOGE[l.a]||"")}<i>${ago(l.at)}</i></li>`; }).join("");
       if(cats().length>1 && !editing) startIdle(); else stopIdle();
     }
 
