@@ -38,7 +38,7 @@ function decP(q){
 const ptsOf = st => st.p || (st.q != null ? (st._p || (Object.defineProperty(st, "_p", { value: decP(st.q), enumerable: false }), st._p)) : []);
 const TOOLS = [["pen","✏️","鉛筆"],["mark","🖍️","麥克筆"],["fill","🪣","油漆桶"],["line","📏","直線"],["oval","⭕","圓形"],["rect","⬜","方形"],["er","🧽","橡皮擦"]];
 const BG = "#fffaf2", W = 1000, H = 750, TIME = 100;
-const norm = s => String(s||"").replace(/[\s，。！？!?,.~～、「」"'：:；;]/g,"").toLowerCase();
+const norm = s => String(s||"").normalize("NFKC").replace(/[\s，。！？!?,.~～、「」"'：:；;]/g,"").toLowerCase();
 
 App.registerGame({
   id: "draw",
