@@ -155,6 +155,14 @@
       const { data, error } = await sb.rpc("cas_state", { p_game: game, p_version: version, p_state: state });
       if (error) throw error; return data; // new version or null on conflict
     };
+    // 記事本提醒（需要 update_9_memo.sql）。回傳 true = 已排好準時推播
+    B.memoSet = async (noteId, body, dueIso, toUids) => {
+      const d = await sb.from("memo_alarms").delete().eq("note_id", noteId).eq("fired", false);
+      if (d.error) return false;
+      if (!dueIso || !toUids.length) return true;
+      const { error } = await sb.from("memo_alarms").insert(toUids.map(u => ({ couple_id: B.coupleId, note_id: noteId, body: String(body).slice(0, 300), due_at: dueIso, to_uid: u })));
+      return !error;
+    };
     B.savePush = async (sub) => {
       const { error } = await sb.from("push_subs").upsert({ endpoint: sub.endpoint, sub, user_id: B.uid, couple_id: B.coupleId }, { onConflict: "endpoint" });
       if (error) throw error;
@@ -220,6 +228,7 @@
     B.getState = async (game) => call("get", { cid: B.coupleId, game });
     B.casState = async (game, version, state) => call("cas", { cid: B.coupleId, game, version, state });
     B.savePush = async () => {};
+    B.memoSet = async (noteId, body, dueIso, toUids) => { try{ return await call("memo", { cid: B.coupleId, noteId, body, dueIso, toUids }); }catch(e){ return true; } };
     B.connect = () => { B._h.status.forEach(h => h("SUBSCRIBED")); if (B._meta) call("track", { cid: B.coupleId, uid: B.uid, meta: B._meta }); };
     B.track = (meta) => { B._meta = meta; if (B.coupleId) call("track", { cid: B.coupleId, uid: B.uid, meta }); };
     B.on = (what, h) => { B._h[what].push(h); };

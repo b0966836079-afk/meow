@@ -97,3 +97,7 @@ Solo game for when the partner is busy: fold a paper star step by step (paper �
 
 ## 喵喵俄羅斯方塊 (games/tetris.js)
 The original cat Tetris, brought back 11/4 as its own game (id "cattris") next to the Block Blast style 喵喵方塊. Keeps state key "tetris", so old best scores carry over. Pet log kind "cattris". (A swipe-only version was tried 11/4 and reverted the same day at the user's request: the button version stays.)
+
+## 記事本 (games/notes.js)
+Shared notebook (hidden game "notes", opened from the 5th home tile 記事). Text notes and checklists, 6 colours, pin, search, filters. State key "notes": list of {id,t,title,body,items,color,pin,by,at,up,rem:{at,to:me|ta|both,by},done}.
+Reminders: `B.memoSet()` writes rows to `memo_alarms` (supabase/update_9_memo.sql). pg_cron runs `fire_memos()` every minute, which inserts a chat message kind "memo" with the *other* member as sender, so the existing push webhook notifies the right person. Without the SQL the reminder still shows inside the notebook and on the home tile.

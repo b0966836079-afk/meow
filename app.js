@@ -104,7 +104,7 @@ const App = (function(){
     if(r && (!stateCache[game] || r.version > stateCache[game].version)) stateCache[game] = { version:r.version, state:r.state };
     return stateCache[game] || null;
   }
-  function emitState(game){ (stateSubs[game]||[]).forEach(h=>{ try{ h(stateCache[game] ? clone(stateCache[game].state) : null); }catch(e){ console.error(e); } }); if(game==="moqi") renderMeter(); }
+  function emitState(game){ (stateSubs[game]||[]).forEach(h=>{ try{ h(stateCache[game] ? clone(stateCache[game].state) : null); }catch(e){ console.error(e); } }); if(game==="moqi") renderMeter(); if(game==="notes") refreshTiles(); }
   async function update(game, fn){
     for(let i=0;i<6;i++){
       const cur = await getState(game);
@@ -122,7 +122,7 @@ const App = (function(){
 
   const ctx = { get me(){return me}, partner, isOnline, nameOf, catOf, players, sprite, icon, SFX, burst, toast, floatSvg, esc,
     getState, update, onState, notifyPartner, back: ()=>go("home") };
-  ctx.mode = () => roomMode; ctx.pw = pw; ctx.isBusy = uid => isBusy(uid);
+  ctx.mode = () => roomMode; ctx.pw = pw; ctx.isBusy = uid => isBusy(uid); Object.defineProperty(ctx, "backend", { get: () => B });
   // fast, unsaved messages between the two phones (real-time co-op games)
   const bcSubs = [];
   ctx.broadcast = p => { if(B.bcast) B.bcast(Object.assign({ from: me.uid }, p)); };
@@ -272,6 +272,7 @@ const App = (function(){
     const mine = m.sender===me.uid;
     if(m.kind==="game") return `<div class="msg sys"><div class="bub">${/^[🏳🤝💗]/u.test(m.body)||m.body.includes("心情")?"":"🎮 "}${esc(m.body)}</div></div>`;
     if(m.kind==="ping") return "";
+    if(m.kind==="memo") return `<div class="msg sys memoMsg"><button class="bub" data-gonotes="1">${esc(m.body)}</button></div>`;
     if(m.kind==="call") return `<div class="msg sys callMsg"><span class="bub">${esc(m.body)}</span><button class="cbk" data-callback="${m.body.includes("視訊")?1:0}">${m.sender===me.uid ? "再打一次" : "回撥"}</button></div>`;
     if(m.kind==="album") return `<div class="msg sys albumMsg"><button class="bub" data-goalbum>${esc(m.body)}<br><small>點我去整理相簿 ▶</small></button></div>`;
     if(m.kind==="photo_gone") return `<div class="msg ${mine?"me":""}">${mine?"":`<span class="av">${sprite(m.cat||catOf(m.sender),"normal")}</span>`}<div class="bub gone">📷 照片已刪除</div><span class="tm">${hhmm(m.created_at)}</span></div>`;
@@ -348,6 +349,7 @@ const App = (function(){
     bindVoiceLongPress($("list")); bindSwipeReply($("list")); drawPinBar(); drawReplyBar(); $("list").addEventListener("click", e=>{ const im=e.target.closest(".pic img"); if(im && im.src){ viewPhoto(im.src); return; }
       if(e.target.closest("[data-goalbum]")){ go("album"); return; }
       const cb = e.target.closest("[data-callback]"); if(cb){ startCall(cb.dataset.callback==="1"); return; }
+      if(e.target.closest("[data-gonotes]")){ SFX.tap(); go("game-notes"); return; }
       const jq=e.target.closest("[data-jump]"); if(jq){ jumpTo(+jq.dataset.jump); return; }
       const vb=e.target.closest("[data-voice]"); if(vb){ if(vb._lp){ vb._lp=false; return; } playVoice(+vb.dataset.voice); return; }
       const lt=e.target.closest("[data-letter]"); if(lt){ const m=messages.find(x=>x.id===+lt.dataset.letter); if(m) openLetter(m); return; }
@@ -894,15 +896,22 @@ const App = (function(){
       ["status", `<span class="tI">${icon("board")}</span>`, "狀態", ps && ps.def[0]!=="free" ? ps.def[2]+ps.def[1] : "看 ta 在幹嘛", ps && ps.def[0]!=="free"],
       ["daily", `<span class="tI">${icon(slot==="n"?"moon":"sun")}</span>`, "打卡", needGreet ? (slot==="m"?"說早安":"說晚安") : n ? `🔥${n} 天` : "晚點再來", needGreet],
       ["care", `<span class="tI cat">${sprite(p.cat, pm?pm[3]:"normal")}</span>`, "心情", truce() ? "休戰中" : theirReq ? "想和好" : pm ? pm[1] : "心情小站", careAlert],
+      ["notes", `<span class="tI">${icon("memo",{W:"#fffaf0"})}</span>`, "記事", notesSub(), notesDue()],
       ["pet", `<span class="tI cat">${cats.length ? sprite(cats[0].color, P.mood(cats[0]).face) : sprite("white","curl",{soft:true})}</span>`, "養貓", !cats.length ? "去領養" : hungry.length ? "肚子餓了" : cats.map(c=>c.name).join("・"), !cats.length || hungry.length>0],
     ];
     return T.map(([k,ic,name,sub,dot])=>`<button class="hTile ${dot?"alert":""}" data-tile="${k}">${ic}<b>${name}</b><i>${esc(sub)}</i>${dot?`<span class="tSpark a">${icon("spark",{O:"#ffd36b"})}</span><span class="tSpark b">${icon("spark",{O:"#ffffff"})}</span>`:""}</button>`).join("");
   }
+  function notesList(){ const n = stateCache.notes && stateCache.notes.state; return (n && n.list) || []; }
+  function notesDue(){ return notesList().some(n => n.rem && !n.done && n.rem.at <= Date.now()); }
+  function notesSub(){ const L = notesList(); if(notesDue()) return "時間到了！"; const up = L.filter(n => n.rem && !n.done && n.rem.at > Date.now()).sort((a,b)=>a.rem.at-b.rem.at)[0];
+    if(up){ const d = new Date(up.rem.at); return `⏰ ${d.toDateString()===new Date().toDateString() ? "" : (d.getMonth()+1)+"/"+d.getDate()+" "}${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`; }
+    return L.length ? `${L.length} 則` : "寫點什麼"; }
   function bindTiles(){ const h = $("hTiles"); if(!h) return; h.querySelectorAll("[data-tile]").forEach(b=>b.addEventListener("click", ()=>openTile(b.dataset.tile))); }
   function refreshTiles(){ const h = $("hTiles"); if(!h || route!=="home") return; h.innerHTML = homeTiles(); bindTiles(); }
   function openTile(k){
     SFX.tap();
     if(k==="pet"){ go("game-pet"); return; }
+    if(k==="notes"){ go("game-notes"); return; }
     const html = k==="status" ? statusCard() : k==="daily" ? dailyCard() : careCard();
     const o = document.createElement("div"); o.className = "hSheet";
     o.innerHTML = `<div class="hsIn"><button class="hsX">收起 ▾</button>${html}</div>`;
@@ -1899,7 +1908,7 @@ const App = (function(){
       v.innerHTML = `<div class="gtop"><button class="btn sub" id="bBack">◀ 回小窩</button><span class="gname">${esc(g.name)}</span></div><div id="gArea"></div>`;
       $("bBack").addEventListener("click", ()=>go("home"));
       curGame = g; lastGame = r; g.mount($("gArea"), ctx);
-      const fab=document.createElement("button"); fab.id="fab"; fab.className="fab"; fab.innerHTML=`${icon("chat")}<b id="fabBadge" class="hidden">0</b>`; fab.addEventListener("click", openSheet); document.body.appendChild(fab); stkFab();
+      const fab=document.createElement("button"); fab.id="fab"; fab.className="fab"; fab.innerHTML=`${icon("chat")}<b id="fabBadge" class="hidden">0</b>`; fab.addEventListener("click", openSheet); document.body.appendChild(fab); if(!curGame || curGame.id !== "notes") stkFab();
     } else { if(r==="home") lastGame = null; viewHome(v); }
     renderHeader(); renderBadge();
     window.scrollTo(0,0);
@@ -1954,7 +1963,7 @@ const App = (function(){
     try{ const rm = await getState("room"); roomMode = validMode(rm && rm.state && rm.state.mode); }catch(e){}
     if(justCreated && pendingMode!=="couple"){ roomMode = pendingMode; await update("room", st=>Object.assign(st||{}, { mode:pendingMode })); }
     onState("room", st=>{ const m = validMode(st && st.mode); if(m!==roomMode){ roomMode = m; render(); } });
-    for(const g of ["daily","pet","fishing","album"]) await getState(g).catch(()=>{});
+    for(const g of ["daily","pet","fishing","album","notes"]) await getState(g).catch(()=>{});
     onState("album", onAlbumState);
     await getState("voice").catch(()=>{});
     onState("voice", ()=>{ if(chatVisible()) drawList(false); });
