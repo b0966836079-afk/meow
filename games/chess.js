@@ -79,8 +79,13 @@ function legal(st, from){
 }
 function allLegal(st, col){ const out = []; for(let i=0;i<64;i++) if(colorOf(st.b[i]) === col) out.push(...legal(st, i)); return out; }
 const inCheck = (b, col) => { const k = b.indexOf(col === "w" ? "K" : "k"); return k >= 0 && attacked(b, k, col === "w" ? "b" : "w"); };
-function insufficient(b){ const rest = b.replace(/[.kK]/g, ""); if(!rest) return true; if(rest.length === 1 && /[bBnN]/.test(rest)) return true; return false; }
-const posKey = st => st.b + st.turn + st.cast + st.ep;
+function insufficient(b){ const rest = b.replace(/[.kK]/g, ""); if(!rest) return true; if(rest.length === 1 && /[bBnN]/.test(rest)) return true;
+  if(/^[bB]+$/.test(rest)){ const cols = new Set(); for(let i=0;i<64;i++) if(b[i] === "b" || b[i] === "B") cols.add(((i>>3) + (i&7)) % 2); return cols.size === 1; }
+  return false; }
+const posKey = st => { let ep = -1;
+  if(st.ep >= 0){ const pawn = st.turn === "w" ? "P" : "p", r = st.turn === "w" ? 3 : 4, c = st.ep & 7;
+    for(const dc of [-1, 1]){ const C = c + dc; if(C >= 0 && C < 8 && st.b[r*8 + C] === pawn && pseudo(st, r*8 + C).some(m => m.ep) && legal(st, r*8 + C).some(m => m.ep)) ep = st.ep; } }
+  return st.b + st.turn + (st.cast || "") + ep; };
 
 function fresh(p, sc){ const st = { v:1, p, b: START, turn:"w", cast:"KQkq", ep:-1, half:0, n:0, last:null, hist:[], caps:{ w:[], b:[] }, win:null, why:null, sc: sc || {}, seen:{} }; st.seen[posKey(st)] = 1; return st; }
 
@@ -124,7 +129,9 @@ App.registerGame({
     el.innerHTML = `<div class="box ch"><div class="chPl" id="chPl"></div><div class="chSt" id="chSt"></div>
       <div class="chCap" id="chCapT"></div><div class="chBoard" id="chB"></div><div class="chCap" id="chCapB"></div>
       <div class="chHist" id="chHist"></div>
-      <div class="chBtns"><button class="btn sub" id="chResign">🏳️ 認輸</button><button class="btn sub" id="chSty">🎨 棋子樣式</button><button class="btn sub" id="chNew">重新開一局</button></div>
+      <div class="chReq" id="chReq"></div>
+      <div class="chBtns" id="chPlayBtns"><button class="btn sub" id="chUndo">↩ 悔棋</button><button class="btn sub" id="chDraw">🤝 提和</button><button class="btn sub" id="chResign">🏳️ 認輸</button></div>
+      <div class="chBtns"><button class="btn sub" id="chSty">🎨 棋子樣式</button><button class="btn sub" id="chNew">重新開一局</button></div>
       <details class="bqHelp"><summary>📖 棋子介紹</summary><div class="chHelp">${["k","q","r","b","n","p"].map(t=>`<div>${piece("K".replace("K", t.toUpperCase()))}<span><b>${NAME[t]}</b>${({k:"走一格，被將死就輸了",q:"直的、橫的、斜的都能走很遠",r:"直走橫走，走多遠都可以",b:"只能斜著走",n:"走「日」字，可以跳過別人",p:"往前一格，第一步可以兩格，斜前方吃子，走到底可以升變"})[t]}</span></div>`).join("")}</div>
         <p>特殊規則都有：王車易位（國王點兩格就會跟城堡交換）、吃過路兵、升變時可以選要變成什麼。</p></details></div>`;
     const $ = q => el.querySelector(q);
@@ -155,7 +162,14 @@ App.registerGame({
       $("#chCapT").innerHTML = s.caps[opp].length ? `<span>${esc(nm(uidOf(opp)))} 吃到：</span>${s.caps[opp].map(c=>`<i class="chMini">${glyph(low(c), col === "w" ? "#5a3b2e" : "#3b3140")}</i>`).join("")}` : "";
       $("#chCapB").innerHTML = s.caps[col].length ? `<span>你吃到：</span>${s.caps[col].map(c=>`<i class="chMini">${glyph(low(c), col === "w" ? "#3b3140" : "#5a3b2e")}</i>`).join("")}` : "";
       $("#chHist").innerHTML = s.hist.length ? s.hist.slice(-8).map((h, k) => `<span>${s.hist.length - Math.min(8, s.hist.length) + k + 1}. ${esc(h)}</span>`).join("") : "";
-      $("#chResign").style.display = s.win || !myCol() ? "none" : "";
+      $("#chPlayBtns").style.display = s.win || !myCol() ? "none" : "";
+      const canUndo = s.undo && s.undo.by === me() && s.last && !s.req;
+      $("#chUndo").classList.toggle("dim", !canUndo);
+      const R = s.req, Q = $("#chReq");
+      if(!R || s.win){ Q.innerHTML = ""; }
+      else if(R.by === me()) Q.innerHTML = `<span>${R.k === "draw" ? "已經提和" : "已經請求悔棋"}，等 ${esc(nm(R.by === s.p[0] ? s.p[1] : s.p[0]))} 回覆…</span><button data-r="cancel">取消</button>`;
+      else Q.innerHTML = `<span><b>${esc(nm(R.by))}</b> ${R.k === "draw" ? "想和棋，同意嗎？" : "想悔棋（收回上一步），可以嗎？"}</span><button data-r="yes" class="yes">${R.k === "draw" ? "同意和棋" : "可以"}</button><button data-r="no">${R.k === "draw" ? "繼續下" : "不行"}</button>`;
+      Q.querySelectorAll("[data-r]").forEach(b => b.addEventListener("click", () => answer(b.dataset.r)));
     }
     function tap(i){
       if(!s || s.win) return;
@@ -178,10 +192,11 @@ App.registerGame({
       const ns = await ctx.update("chess", st => { if(!st || st.win || st.p[st.turn === "w" ? 0 : 1] !== me()) return undefined;
         const ok = legal(st, m.from).find(q => q.to === m.to); if(!ok) return undefined;
         const col = st.turn, pc = st.b[m.from], r = applyMove(st, ok, promo);
+        st.undo = { by: me(), b: st.b, turn: st.turn, cast: st.cast, ep: st.ep, half: st.half, last: st.last, cw: st.caps.w.length, cb: st.caps.b.length, hl: (st.hist||[]).length }; st.req = null;
         st.b = r.b; st.cast = r.cast; st.ep = r.ep; st.half = r.pawnOrCap ? 0 : (st.half||0) + 1; st.n++;
         if(r.cap) st.caps[col].push(r.cap);
         st.turn = col === "w" ? "b" : "w"; st.last = { from: m.from, to: m.to };
-        const k = posKey(st); st.seen = st.seen || {}; st.seen[k] = (st.seen[k]||0) + 1;
+        const k = posKey(st); st.seen = st.seen || {}; st.seen[k] = (st.seen[k]||0) + 1; st.undo.key = k;
         const opp = st.turn, legalN = allLegal(st, opp).length, chk = inCheck(st.b, opp);
         let h = `${col === "w" ? "白" : "黑"}${NAME[low(pc)]} ${sqName(m.from)}→${sqName(m.to)}`;
         if(ok.castle) h = `${col === "w" ? "白" : "黑"}方王車易位`; if(r.cap) h += `（吃${NAME[low(r.cap)]}）`; if(promo) h += `，升變${NAME[promo]}`;
@@ -206,13 +221,38 @@ App.registerGame({
       const ns = await ctx.update("chess", st => { const p = st && st.p ? [st.p[1], st.p[0]] : ids.slice(0, 2); return fresh(p, st && st.sc); });
       if(ns){ s = ns; sel = -1; ui(); ctx.notifyPartner(`${ctx.me.name} 開了一局「喵喵西洋棋」，${ns.p[0] === me() ? "我先走" : "你先走喔"} ♟`); }
     }
+    async function request(k){
+      if(!s || s.win) return;
+      if(s.req){ ctx.toast("已經有一個請求在等回覆了"); return; }
+      if(k === "undo" && !(s.undo && s.undo.by === me() && s.last)){ ctx.toast("只能收回自己剛剛下的那一步喔"); return; }
+      SFX.tap();
+      const ns = await ctx.update("chess", st => { if(!st || st.win || st.req) return undefined; if(k === "undo" && !(st.undo && st.undo.by === me())) return undefined; st.req = { k, by: me(), n: st.n }; return st; });
+      if(ns){ s = ns; ui(); ctx.notifyPartner(`${ctx.me.name} 在「喵喵西洋棋」${k === "draw" ? "想跟你和棋 🤝" : "想悔棋，收回上一步"}，打開遊戲回覆一下吧`); }
+    }
+    async function answer(r){
+      SFX.tap();
+      const ns = await ctx.update("chess", st => { if(!st || !st.req) return undefined; const R = st.req;
+        if(r === "cancel"){ if(R.by !== me()) return undefined; st.req = null; return st; }
+        if(R.by === me()) return undefined;
+        st.req = null; if(r !== "yes"){ st.reqNo = { k: R.k, by: R.by, at: Date.now() }; return st; }
+        if(R.k === "draw"){ st.win = "draw"; st.why = "雙方同意和棋"; return st; }
+        const u = st.undo; if(!u || st.n !== R.n) return st;
+        if(u.key && st.seen && st.seen[u.key]) st.seen[u.key]--;
+        st.b = u.b; st.turn = u.turn; st.cast = u.cast; st.ep = u.ep; st.half = u.half; st.last = u.last; st.caps.w.length = u.cw; st.caps.b.length = u.cb;
+        st.hist = (st.hist||[]).slice(0, u.hl).concat([`（${ctx.nameOf(u.by)} 悔棋了）`]); st.undo = null; st.n++; return st; });
+      if(ns){ s = ns; ui(); }
+    }
+    $("#chUndo").addEventListener("click", () => request("undo"));
+    $("#chDraw").addEventListener("click", () => request("draw"));
     let resArm = 0;
     $("#chResign").addEventListener("click", async () => { if(!s || s.win) return; const t = Date.now(); if(t - resArm > 2500){ resArm = t; ctx.toast("確定要認輸嗎？再按一次"); return; }
       const ns = await ctx.update("chess", st => { if(!st || st.win) return undefined; const other = st.p[0] === me() ? st.p[1] : st.p[0]; st.win = other; st.why = `${ctx.me.name} 認輸了`; st.sc = st.sc || {}; st.sc[other] = (st.sc[other]||0) + 1; return st; });
       if(ns){ s = ns; ui(); ctx.notifyPartner(`${ctx.me.name} 在「喵喵西洋棋」認輸了，你贏了！🎉`); } });
     this._rs = ctx.restartable("chess", { title:"喵喵西洋棋", done: () => !s || !!s.win || !s.n, run: newGame });
     $("#chNew").addEventListener("click", () => ctx.askRestart("chess"));
-    this._u = ctx.onState("chess", st => { if(!st) return; const prev = s; s = st; if(prev && st.n > prev.n && st.last && st.turn === myCol()){ fxSq = st.last.to; inCheck(st.b, st.turn) ? SFX.select() : SFX.place(); } sel = -1; ui(); });
+    this._u = ctx.onState("chess", st => { if(!st) return; const prev = s; s = st;
+      if(st.reqNo && st.reqNo.by === me() && (!prev || !prev.reqNo || prev.reqNo.at !== st.reqNo.at) && Date.now() - st.reqNo.at < 6e4) ctx.toast(st.reqNo.k === "draw" ? "對方想繼續下 ♟" : "對方不讓你悔棋 😼");
+      if(prev && prev.req && !st.req && st.win === "draw" && st.why === "雙方同意和棋") SFX.select(); if(prev && st.n > prev.n && st.last && st.turn === myCol()){ fxSq = st.last.to; inCheck(st.b, st.turn) ? SFX.select() : SFX.place(); } sel = -1; ui(); });
     this._p = ctx.onPresence ? ctx.onPresence(ui) : null;
     (async () => {
       let cur = await ctx.getState("chess").catch(()=>null);

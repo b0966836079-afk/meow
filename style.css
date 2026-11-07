@@ -2014,3 +2014,7 @@ body.drFullOn #fab,body.drFullOn .stkFab{display:none}
 .chOpt button span{width:16px;height:12px;border:1px solid var(--line);display:inline-block}
 .chNote{font-size:11px;color:var(--muted);margin:2px 0}
 .chBtns .btn{font-size:13px;padding-left:4px;padding-right:4px}
+.chReq{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;font-size:14px}.chReq:empty{display:none}
+.chReq{background:#fff3b0;border:3px solid var(--line);padding:6px 8px}.chReq b{font-weight:400;color:var(--pinkT)}
+.chReq button{font:inherit;font-size:13px;border:2px solid var(--line);background:var(--card);padding:3px 10px;color:var(--ink)}.chReq button.yes{background:var(--pink);color:#fff}
+.chBtns .btn.dim{opacity:.5}
