@@ -17,6 +17,8 @@ const RECIPES = [
   { id:"milk", n:"熱牛奶", need:["milkC"], life:50, pts:20 },
   { id:"set", n:"貓咪定食", need:["fishC","milkC","riceC"], life:90, pts:45 },
 ];
+const STEP = { fishC:["fish","🔪","切"], riceC:["rice","🔥","煮"], milkC:["milk","🔥","熱"] };
+const STATION = { F:"生魚", R:"生米", M:"牛奶", B:"砧板", S:"爐子", P:"盤子", T:"垃圾桶", O:"出餐" };
 const IN = { fish:"生魚", fishC:"切好的魚", rice:"生米", riceC:"白飯", milk:"牛奶", milkC:"熱牛奶", burnt:"燒焦的東西", plate:"盤子" };
 const O = "#5a3b2e";
 const key = (x, y) => x + "," + y;
@@ -35,6 +37,8 @@ const SPR = {
   burnt: [["..OOO...",".ODDDO..","ODDGDDO.","ODDDDDDO",".ODDDDO.","..OOOO.."], { D:"#3a3542", G:"#6a6474" }],
 };
 function blit(g, rows, pal, x, y, s){ for(let j=0;j<rows.length;j++){ const r = rows[j]; for(let i=0;i<r.length;i++){ const c = r[i]==="O" ? O : pal[r[i]]; if(c){ g.fillStyle = c; g.fillRect(x + i*s, y + j*s, s, s); } } } }
+const itemUrl = (() => { const c = {}; return (t, w, h) => { const k = t + (w||40); if(c[k]) return c[k]; const cv = document.createElement("canvas"); cv.width = w||40; cv.height = h||40; const g = cv.getContext("2d"); g.imageSmoothingEnabled = false; drawItem(g, typeof t === "string" ? { t } : t, cv.width/2, cv.height/2, Math.min(cv.width, cv.height)*.8); return c[k] = cv.toDataURL(); }; })();
+const recipeHtml = (r, esc) => `<span class="ktSteps">${r.need.map(k => `<span class="ktSt"><img src="${itemUrl(STEP[k][0])}"><em>${STEP[k][1]}</em></span>`).join(`<i>＋</i>`)}<i>→</i><span class="ktSt"><img src="${itemUrl({ t:"plate", on:[] })}"><em>🍽</em></span></span>`;
 function drawItem(g, it, cx, cy, sz){
   if(!it) return;
   if(it.t==="plate"){ g.fillStyle = O; g.fillRect(cx - sz*.5, cy - sz*.12, sz, sz*.34); g.fillStyle = "#ffffff"; g.fillRect(cx - sz*.46, cy - sz*.1, sz*.92, sz*.26); g.fillStyle = "#e3ddd6"; g.fillRect(cx - sz*.3, cy, sz*.6, sz*.08);
@@ -61,8 +65,8 @@ App.registerGame({
       el.innerHTML = `<div class="box ktLobby">
         <div class="ktHero">${sprite(ctx.catOf(ctx.players()[0])||"orange","happy")}<span class="ktPan">${(()=>{ const c = document.createElement("canvas"); c.width = 48; c.height = 32; const g = c.getContext("2d"); drawItem(g, { t:"plate", on:["fishC","riceC"] }, 24, 18, 40); return `<img src="${c.toDataURL()}">`; })()}</span>${sprite(ctx.catOf(ctx.players()[1])||"white","happy")}</div>
         <p class="ktIntro">兩隻貓開了一間小餐館！<br>客人點了菜，要<b>拿食材、切魚、煮飯熱牛奶、裝盤、出餐</b>。<br>一個人忙不過來，要分工合作喔～</p>
-        <div class="ktRec">${RECIPES.map(r=>`<div><b>${esc(r.n)}</b><span>${r.need.map(k=>esc(IN[k])).join(" ＋ ")}</span></div>`).join("")}</div>
-        <div class="ktHow"><span>左邊拖曳：走路</span><span>「拿／放」：拿東西、放東西、裝盤</span><span>「切」按住：在砧板切魚</span><span>米和牛奶放到爐子上會自己煮，太久會燒焦！</span></div>
+        <div class="ktRec">${RECIPES.map(r=>`<div><b>${esc(r.n)}</b>${recipeHtml(r)}<span>${r.need.map(k=>`${esc(IN[STEP[k][0]])}${STEP[k][2]}`).join("、")}，裝盤出餐</span></div>`).join("")}</div>
+        <div class="ktHow"><span>🕹 左下搖桿：走路</span><span>✋ 右下大按鈕：拿 / 放 / 裝盤 / 出餐（按鈕會告訴你現在會做什麼）</span><span>🔪 按住「切」：在砧板切魚</span><span>🔥 米和牛奶放上爐子會自己煮，太久會燒焦！</span><span>📋 上面會提示「下一步」</span><span>📱 會變成橫向全螢幕</span></div>
         <div class="cpOn">${ctx.partner() ? (partnerOn() ? `🟢 ${esc(ctx.partner().name)} 在線上，可以開店！` : `⚪ ${esc(ctx.partner().name)} 不在線上，要兩個人一起才能開店`) : "等 ta 加入小窩"}</div>
         <button class="btn ktGo" id="ktGo">🍳 開店！（3 分鐘）</button>
         <div class="k" style="text-align:center">${best ? `最高營業額 ${best} 元` : "還沒有紀錄"}${last ? `・上一次 ${last} 元` : ""}</div></div>`;
@@ -73,13 +77,26 @@ App.registerGame({
     }
 
     // ---------- a round ----------
+    let R = null;   // the fullscreen overlay while a round is running
     function start(){
       if(G) stop();
-      el.innerHTML = `<div class="box ktPlay"><div class="ktTop"><span id="ktTime">3:00</span><span id="ktScore">💰 0</span><button class="btn sub" id="ktOut">打烊</button></div>
-        <div class="ktOrders" id="ktOrders"></div>
-        <div class="ktStage"><canvas id="ktC" width="${COLS*T*2}" height="${ROWS*T*2}"></canvas><div class="ktMsg hidden" id="ktMsg"></div></div>
-        <div class="ktPad"><div class="ktJoy" id="ktJoy"><i></i></div><button class="ktB grab" id="ktGrab">拿／放</button><button class="ktB chop" id="ktChop">切</button></div></div>`;
-      const cv = el.querySelector("#ktC"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false; g.setTransform(2,0,0,2,0,0);
+      R = document.createElement("div"); R.className = "ktFull";
+      R.innerHTML = `<div class="ktStageL" id="ktStageL">
+        <div class="ktTopL"><button class="ktOutB" id="ktOut">🏁 打烊</button><span class="ktTimeL" id="ktTime">3:00</span>
+          <div class="ktOrders" id="ktOrders"></div><span class="ktScoreL" id="ktScore">💰 0</span></div>
+        <div class="ktHint" id="ktHint"></div>
+        <div class="ktMidL">
+          <div class="ktJoy" id="ktJoy"><i></i></div>
+          <div class="ktStage"><canvas id="ktC" width="${COLS*T*2}" height="${ROWS*T*2}"></canvas><div class="ktMsg hidden" id="ktMsg"></div></div>
+          <div class="ktBtns"><button class="ktB grab" id="ktGrab"><span class="ktBi" id="ktGrabI">✋</span><b id="ktGrabL">拿／放</b></button><button class="ktB chop" id="ktChop"><span class="ktBi">🔪</span><b>按住切</b></button></div>
+        </div></div>`;
+      document.body.appendChild(R);
+      const fit = () => { if(!R) return; const st = R.querySelector("#ktStageL"), vw = window.innerWidth, vh = window.innerHeight, portrait = vh > vw, long = portrait ? vh : vw, short = portrait ? vw : vh;
+        st.classList.toggle("rot", portrait); st.style.width = long + "px"; st.style.height = short + "px";
+        const topH = 64, hintH = 26, avH = short - topH - hintH - 14, avW = long - 2*Math.min(170, long*.2) - 24;
+        const h = Math.max(140, Math.min(avH, avW * ROWS / COLS)); const c = R.querySelector("#ktC"); c.style.height = h + "px"; c.style.width = (h * COLS / ROWS) + "px"; };
+      fit(); window.addEventListener("resize", fit); R._fit = fit;
+      const cv = R.querySelector("#ktC"), g = cv.getContext("2d"); g.imageSmoothingEnabled = false; g.setTransform(2,0,0,2,0,0);
       const ids = ctx.players();
       const cat = (sd, x, y) => ({ x, y, fx:0, fy:1, moving:false, img: { n: svgImg(Pix.sprite(ctx.catOf(ids[sd==="a"?0:1])||"orange","normal")), h: svgImg(Pix.sprite(ctx.catOf(ids[sd==="a"?0:1])||"white","happy")) } });
       G = { run: s.run, g, cv, cats: { a: cat("a", 2.5, 4.5), b: cat("b", 7.5, 4.5) }, joy:{x:0,y:0}, chop:false, last: performance.now(), sent:0, snapT:0, frame:0, ended:false,
@@ -87,21 +104,25 @@ App.registerGame({
       // the host seeds the first order
       if(isHost()) newOrder();
       bindControls();
-      el.querySelector("#ktOut").addEventListener("click", ()=>{ SFX.tap(); if(isHost()) finish(); else ctx.update("kitchen", st=>{ if(!st) return undefined; st.live = false; return st; }); });
+      let outArm = 0;
+      R.querySelector("#ktOut").addEventListener("click", ()=>{ const t = Date.now(); if(t - outArm > 2500){ outArm = t; ctx.toast("再按一次就打烊結算"); return; } SFX.tap(); if(isHost()) finish(); else ctx.update("kitchen", st=>{ if(!st) return undefined; st.live = false; return st; }); });
       raf = requestAnimationFrame(loop);
       if(window.__mock) window.__kt = { G:()=>G, act:(a)=>doAct(a) };   // tests only
     }
-    function stop(){ cancelAnimationFrame(raf); if(G && G.keyH){ window.removeEventListener("keydown", G.keyH); window.removeEventListener("keyup", G.keyH); } G = null; }
+    function stop(){ cancelAnimationFrame(raf); if(G && G.keyH){ window.removeEventListener("keydown", G.keyH); window.removeEventListener("keyup", G.keyH); } G = null;
+      if(R){ window.removeEventListener("resize", R._fit); R.remove(); R = null; } }
     function bindControls(){
-      const joy = el.querySelector("#ktJoy"), knob = joy.querySelector("i");
+      const joy = R.querySelector("#ktJoy"), knob = joy.querySelector("i"), rotd = () => R && R.querySelector("#ktStageL").classList.contains("rot");
       let jid = null, jc = null;
-      const setJ = e => { const r = joy.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2; let dx = e.clientX - cx, dy = e.clientY - cy; const m = Math.hypot(dx, dy), R = r.width*.38;
-        if(m > R){ dx = dx/m*R; dy = dy/m*R; } knob.style.transform = `translate(${dx}px,${dy}px)`; G.joy = { x: dx/R, y: dy/R }; };
+      const setJ = e => { const r = joy.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2; let dx = e.clientX - cx, dy = e.clientY - cy;
+        if(rotd()){ const t = dx; dx = dy; dy = -t; }   // the stage is turned 90° when the phone is held upright
+        const m = Math.hypot(dx, dy), Rr = joy.offsetWidth*.38;
+        if(m > Rr){ dx = dx/m*Rr; dy = dy/m*Rr; } knob.style.transform = `translate(${dx}px,${dy}px)`; G.joy = { x: dx/Rr, y: dy/Rr }; };
       joy.addEventListener("pointerdown", e=>{ e.preventDefault(); jid = e.pointerId; try{ joy.setPointerCapture(jid); }catch(_){} setJ(e); });
       joy.addEventListener("pointermove", e=>{ if(e.pointerId===jid) setJ(e); });
       const end = e=>{ if(e.pointerId!==jid) return; jid = null; knob.style.transform = ""; if(G) G.joy = { x:0, y:0 }; };
       joy.addEventListener("pointerup", end); joy.addEventListener("pointercancel", end);
-      const grab = el.querySelector("#ktGrab"), chop = el.querySelector("#ktChop");
+      const grab = R.querySelector("#ktGrab"), chop = R.querySelector("#ktChop");
       grab.addEventListener("pointerdown", e=>{ e.preventDefault(); grab.classList.add("on"); doAct("grab"); });
       ["pointerup","pointercancel","pointerleave"].forEach(ev=>grab.addEventListener(ev, ()=>grab.classList.remove("on")));
       chop.addEventListener("pointerdown", e=>{ e.preventDefault(); try{ chop.setPointerCapture(e.pointerId); }catch(_){} chop.classList.add("on"); if(G) G.chop = true; });
@@ -188,11 +209,11 @@ App.registerGame({
       await ctx.update("kitchen", st=>{ st = st || {}; if(st.run!==G.run && G) return undefined; st.live = false; st.last = W.score; st.lastServed = W.served; if(!st.best || W.score > st.best) st.best = W.score; return st; });
     }
     function showEnd(score, served){
-      const m = el.querySelector("#ktMsg"); if(!m) return; m.classList.remove("hidden");
+      const m = R && R.querySelector("#ktMsg"); if(!m) return; m.classList.remove("hidden");
       m.innerHTML = `<b>打烊囉！</b><p class="ktBig">💰 ${score} 元</p><p>出了 ${served} 道菜${s && s.best && score >= s.best ? "・🎉 新紀錄！" : ""}</p><button class="btn" id="ktAgain">再開一次店</button><button class="btn sub" id="ktHome">回大廳</button>`;
       SFX.match(); ctx.burst();
-      el.querySelector("#ktAgain").addEventListener("click", async ()=>{ if(!partnerOn()){ ctx.toast("對方不在線上了"); return; } await ctx.update("kitchen", st=>{ st = st || {}; st.run = Date.now(); st.live = true; return st; }); });
-      el.querySelector("#ktHome").addEventListener("click", ()=>{ stop(); lobby(); });
+      R.querySelector("#ktAgain").addEventListener("click", async ()=>{ if(!partnerOn()){ ctx.toast("對方不在線上了"); return; } await ctx.update("kitchen", st=>{ st = st || {}; st.run = Date.now(); st.live = true; return st; }); });
+      R.querySelector("#ktHome").addEventListener("click", ()=>{ stop(); lobby(); });
     }
 
     // ---------- movement ----------
@@ -222,6 +243,8 @@ App.registerGame({
       if(ch==="P"){ for(let i=0;i<3;i++){ g.fillStyle = O; g.fillRect(X+5, Y+18 - i*4, T-10, 4); g.fillStyle = "#ffffff"; g.fillRect(X+6, Y+19 - i*4, T-12, 2); } }
       if(ch==="T"){ g.fillStyle = O; g.fillRect(X+7, Y+6, T-14, T-10); g.fillStyle = "#8a9aa8"; g.fillRect(X+8, Y+7, T-16, T-12); g.fillStyle = O; g.fillRect(X+5, Y+5, T-10, 3); g.fillRect(X+13, Y+2, 6, 3); }
       if(ch==="O"){ g.fillStyle = "#f0708d"; g.fillRect(X+1, Y+1, T-2, 8); g.fillStyle = "#ffffff"; for(let i=0;i<4;i++) g.fillRect(X+3 + i*8, Y+3, 4, 4); g.fillStyle = "#ffcf4a"; g.fillRect(X+12, Y+14, 8, 6); g.fillStyle = O; g.fillRect(X+15, Y+12, 2, 2); }
+      if(STATION[ch]){ g.font = "7px Cubic11, sans-serif"; g.textAlign = "center"; const tw = g.measureText(STATION[ch]).width + 4;
+        g.fillStyle = ch==="O" ? "#e5486a" : "rgba(90,59,46,.82)"; g.fillRect(X + T/2 - tw/2, Y + T - 9, tw, 9); g.fillStyle = "#fff"; g.fillText(STATION[ch], X + T/2, Y + T - 2); }
       const it = G.W.items[key(x,y)];
       if(it){ drawItem(g, it, X + T/2, Y + T/2 - 2, ch==="S" ? 22 : 26);
         if(it.p != null && (ch==="B" || ch==="S")){ const p = Math.min(1, it.p), burnWarn = ch==="S" && it.p > 1.5;
@@ -234,9 +257,9 @@ App.registerGame({
       const cx = c.x*T, cy = c.y*T;
       g.fillStyle = "rgba(90,59,46,.2)"; g.fillRect(cx - 10, cy + 10, 20, 4);
       g.save(); g.translate(cx, cy - hop); if(c.fx < 0) g.scale(-1, 1); if(im.complete) g.drawImage(im, -sz/2, -sz/2 - 6, sz, sz); g.restore();
-      const h = G.W.held[sd]; if(h) drawItem(g, h, cx, cy - sz*.55 - hop, 24);
+      const h = G.W.held[sd]; if(h){ const by = cy - sz*.62 - hop; g.fillStyle = "#fff"; g.strokeStyle = O; g.lineWidth = 1.5; g.beginPath(); g.ellipse(cx, by, 15, 12, 0, 0, Math.PI*2); g.fill(); g.stroke(); drawItem(g, h, cx, by, 22); }
       // a little arrow showing which tile you're facing
-      if(sd===side()){ const [tx, ty] = facing(c); g.strokeStyle = "rgba(240,112,141,.9)"; g.lineWidth = 2; g.setLineDash([3,3]); g.strokeRect(tx*T + 2, ty*T + 2, T - 4, T - 4); g.setLineDash([]); }
+      if(sd===side()){ const [tx, ty] = facing(c); const pulse = .55 + .45*Math.abs(Math.sin(G.frame*5)); g.strokeStyle = `rgba(240,112,141,${pulse})`; g.lineWidth = 3; g.strokeRect(tx*T + 1.5, ty*T + 1.5, T - 3, T - 3); }
       if(sd!==side()){ g.font = "9px Cubic11, sans-serif"; g.textAlign = "center"; g.fillStyle = "#5a3b2e"; g.fillText(ctx.nameOf(ctx.players()[sd==="a"?0:1])||"", cx, cy + 22); }
     }
     function draw(){
@@ -245,15 +268,54 @@ App.registerGame({
       const order = ["a","b"].sort((p,q)=>G.cats[p].y - G.cats[q].y); order.forEach(sd=>drawCat(g, sd));
       const f = G.W.flash; if(f && Date.now() - f.at < 1600){ g.font = "12px Cubic11, sans-serif"; g.textAlign = "center"; const y = ROWS*T/2 - (Date.now()-f.at)/80; g.fillStyle = "#ffffff"; g.fillText(f.t, COLS*T/2 + 1, y + 1); g.fillStyle = f.bad ? "#e5486a" : "#3a8a55"; g.fillText(f.t, COLS*T/2, y); }
     }
+    // what the big button would do right now (same rules as act(), without changing anything)
+    function preview(sd, tx, ty){
+      const W = G.W, tile = tileAt(tx, ty), hold = W.held[sd], it = W.items[key(tx, ty)], cooked = x => x==="fishC" || x==="riceC" || x==="milkC";
+      if(!hold){
+        if(tile==="F") return ["🐟","拿生魚"]; if(tile==="R") return ["🍚","拿生米"]; if(tile==="M") return ["🥛","拿牛奶"]; if(tile==="P") return ["🍽","拿盤子"];
+        if(it) return ["✋", "拿起" + (it.t==="plate" ? "盤子" : IN[it.t])]; return ["✋", "拿／放", true]; }
+      if(tile==="T") return ["🗑","丟掉"];
+      if(tile==="O") return hold.t==="plate" && hold.on.length ? ["🔔","出餐！"] : ["🔔","要先裝盤", true];
+      if(hold.t==="plate" && it && cooked(it.t)) return ["🍽","裝到盤子"];
+      if(cooked(hold.t) && it && it.t==="plate") return ["🍽","放上盤子"];
+      if(it) return ["✋","這裡有東西了", true];
+      if(tile==="B") return hold.t==="fish" ? ["🔪","放上砧板"] : ["✋","只能放魚", true];
+      if(tile==="S") return hold.t==="rice" || hold.t==="milk" ? ["🔥","放上爐子"] : ["✋","只能煮米、牛奶", true];
+      if(tile==="C") return ["⬇","放下"];
+      return ["✋","放到桌上吧", true];
+    }
+    // the "next step" tip for the oldest order
+    function hint(){
+      const W = G.W, o = W.orders[0]; if(!o) return "等客人點菜中… 可以先切魚、煮飯備料 🐾";
+      const r = RECIPES.find(x=>x.id===o.r), held = Object.values(W.held).filter(Boolean), items = Object.entries(W.items).map(([k, v]) => [k, v]);
+      const all = held.concat(items.map(x=>x[1]));
+      const plates = all.filter(x=>x.t==="plate"), want = r.need.slice().sort().join("+");
+      if(plates.some(p2 => p2.on.slice().sort().join("+") === want)) return `「${r.n}」裝好了！拿去下面的「出餐」台 🔔`;
+      for(const k of r.need){
+        const onPlate = plates.some(p2 => p2.on.includes(k)); if(onPlate) continue;
+        const raw = STEP[k][0];
+        if(all.some(x=>x.t===k)) continue;
+        if(raw==="fish"){ const onBoard = items.find(([kk, v]) => v.t==="fish" && tileAt(...kk.split(",").map(Number))==="B"); if(onBoard) return "砧板上有魚 → 面對砧板，按住「🔪 切」"; return held.some(x=>x.t==="fish") ? "把魚放到砧板上（左邊的木板）" : "去上面的魚箱拿生魚 🐟"; }
+        const onStove = items.find(([kk, v]) => v.t===raw && tileAt(...kk.split(",").map(Number))==="S"); if(onStove) return `${IN[raw]}在爐子上煮了，等它變好（綠色條滿）`;
+        return held.some(x=>x.t===raw) ? `把${IN[raw]}放到右邊的爐子上 🔥` : `去上面拿${IN[raw]}`;
+      }
+      return `材料都好了！拿盤子把「${r.n}」裝起來 🍽`;
+    }
     function hud(){
       const W = G.W, t = Math.ceil(W.t);
-      const te = el.querySelector("#ktTime"); if(te) te.textContent = `⏱ ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`;
-      const sc = el.querySelector("#ktScore"); if(sc) sc.textContent = `💰 ${W.score} 元`;
-      const oe = el.querySelector("#ktOrders"); if(!oe) return;
+      const te = R.querySelector("#ktTime"); if(te){ te.textContent = `⏱ ${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`; te.classList.toggle("low", t <= 20); }
+      const sc = R.querySelector("#ktScore"); if(sc) sc.textContent = `💰 ${W.score}`;
+      const c = G.cats[side()], [tx, ty] = facing(c), pv = preview(side(), tx, ty);
+      const gl = R.querySelector("#ktGrabL"), gi = R.querySelector("#ktGrabI"), gb = R.querySelector("#ktGrab");
+      if(gl && gl.textContent !== pv[1]){ gl.textContent = pv[1]; gi.textContent = pv[0]; }
+      if(gb) gb.classList.toggle("dim", !!pv[2]);
+      const it = W.items[key(tx, ty)], cb = R.querySelector("#ktChop"); if(cb) cb.classList.toggle("ready", tileAt(tx, ty)==="B" && !!it && it.t==="fish");
+      const hn = R.querySelector("#ktHint"), ht = "📋 下一步：" + hint(); if(hn && hn.textContent !== ht) hn.textContent = ht;
+      const oe = R.querySelector("#ktOrders"); if(!oe) return;
       const sig = W.orders.map(o=>o.r).join(",");
-      if(oe.dataset.sig !== sig){ oe.dataset.sig = sig; oe.innerHTML = W.orders.map(o=>{ const r = RECIPES.find(x=>x.id===o.r); const c = document.createElement("canvas"); c.width = 64; c.height = 40; const g2 = c.getContext("2d"); drawItem(g2, { t:"plate", on:r.need }, 32, 26, 54);
-        return `<div class="ktOrd"><img src="${c.toDataURL()}"><b>${esc(r.n)}</b><span>${r.need.map(k=>esc(IN[k])).join("+")}</span><i><u></u></i></div>`; }).join("") || `<div class="ktNo">等客人點菜中…</div>`; }
-      oe.querySelectorAll(".ktOrd u").forEach((u,i)=>{ const o = W.orders[i]; if(o){ const p = Math.max(0, o.t/o.max); u.style.width = (p*100)+"%"; u.style.background = p < .3 ? "#e5486a" : p < .6 ? "#ffcf4a" : "#5cb87a"; } });
+      if(oe.dataset.sig !== sig){ oe.dataset.sig = sig; oe.innerHTML = W.orders.map((o, i)=>{ const r = RECIPES.find(x=>x.id===o.r);
+        return `<div class="ktOrd ${i===0?"first":""}"><div class="ktOrdH"><img src="${itemUrl({ t:"plate", on:r.need }, 56, 34)}"><b>${esc(r.n)}</b></div>${recipeHtml(r)}<i><u></u></i></div>`; }).join("") || `<div class="ktNo">等客人點菜中…</div>`; }
+      oe.querySelectorAll(".ktOrd u").forEach((u,i)=>{ const o = W.orders[i]; if(o){ const p = Math.max(0, o.t/o.max); u.style.width = (p*100)+"%"; u.style.background = p < .3 ? "#e5486a" : p < .6 ? "#ffcf4a" : "#5cb87a"; u.parentNode.parentNode.classList.toggle("hurry", p < .3); } });
     }
     function loop(t){
       if(!alive || !G) return;

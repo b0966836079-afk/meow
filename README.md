@@ -105,3 +105,6 @@ Reminders: `B.memoSet()` writes rows to `memo_alarms` (supabase/update_9_memo.sq
 ### 你畫我猜 drawing tools (11/7)
 Tools: 鉛筆 / 麥克筆 (38% alpha) / 油漆桶 (scanline flood fill, replayed in order on both phones) / 直線 / 圓形 / 方形 / 橡皮擦; 20-colour palette + custom colour; size slider 2–48; undo (whole stroke) / redo; 清空 asks twice; 大畫布 fullscreen; two-finger pinch zoom & pan (one finger always draws, a second finger cancels the stroke). Strokes store {id,t,c:"#hex",sz,p}; old strokes ({c:index,w:index,e}) still render. Live points are broadcast (`g:"drw"`) so the guesser sees lines as they are drawn. Tool choice remembered in localStorage `mw_drTool`.
 Strokes are saved in batches (one save in flight at a time) and points are stored compactly as `q` (first point + 2 base64 chars per delta). 80 strokes ≈ 7KB. Pen/eraser draw incrementally while moving; only marker/shapes use a snapshot, once per animation frame.
+
+### 喵喵廚房 landscape (11/7)
+A round now runs in a fullscreen landscape overlay (rotated when the phone is upright, like runner/mono; the joystick vector is rotated back). Top: order tickets with step icons (🔪/🔥 → 🍽) and a patience bar; a "📋 下一步" hint computed from the oldest order; station names drawn on every counter; the big button shows what it will do (`preview()` mirrors `act()`); the chop button lights up only when facing a board with fish.

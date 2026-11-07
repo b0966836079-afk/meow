@@ -1932,3 +1932,34 @@ body.drFullOn #fab,body.drFullOn .stkFab{display:none}
 .drStage .drCv{border:0;box-shadow:none}
 .drZoomR{position:absolute;right:6px;top:6px;font:inherit;font-size:12px;border:2px solid var(--line);background:#fff;padding:2px 8px;z-index:2}
 .dr.drFull .drTop{order:-2}
+
+/* 喵喵廚房：橫向全螢幕 */
+.ktFull{position:fixed;inset:0;z-index:130;background:#f3e4c8;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;color:var(--ink)}
+.ktStageL{position:absolute;left:0;top:0;transform-origin:0 0;display:flex;flex-direction:column;padding:6px 10px 8px;background:linear-gradient(#fff3e0,#f6e2c6)}
+.ktStageL.rot{transform:rotate(90deg) translateY(-100%)}
+.ktTopL{display:flex;align-items:center;gap:8px;height:64px;flex:none}
+.ktOutB{font:inherit;font-size:12px;border:3px solid var(--line);background:var(--card);padding:4px 8px;box-shadow:2px 2px 0 var(--shadow);color:var(--ink);flex:none}
+.ktTimeL{font-size:18px;min-width:62px;flex:none}.ktTimeL.low{color:#e5486a;animation:drBlink .6s steps(2) infinite}
+.ktScoreL{font-size:18px;color:var(--pinkT);flex:none;min-width:70px;text-align:right}
+.ktTopL .ktOrders{flex:1;display:flex;gap:6px;height:60px;min-height:0;margin:0;overflow:hidden;justify-content:center}
+.ktTopL .ktOrd{flex:none;width:auto;min-width:118px;height:58px;background:#fffaf0;border:3px solid var(--line);border-radius:8px;padding:2px 6px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;box-shadow:2px 2px 0 var(--shadow)}
+.ktTopL .ktOrd.first{background:#fff0c8}
+.ktTopL .ktOrd.hurry{animation:bqShake .4s infinite}
+.ktOrdH{display:flex;align-items:center;gap:4px}.ktOrdH img{width:34px;image-rendering:pixelated}.ktOrdH b{font-weight:400;font-size:13px;white-space:nowrap}
+.ktSteps{display:flex;align-items:center;gap:2px;font-size:10px}.ktSteps>i{font-style:normal;color:var(--muted)}
+.ktSt{position:relative;display:inline-flex}.ktSt img{width:20px;height:20px;image-rendering:pixelated}.ktSt em{position:absolute;right:-5px;bottom:-4px;font-style:normal;font-size:10px}
+.ktTopL .ktOrd>i{display:block;width:100%;height:5px;border:1.5px solid var(--line);border-radius:3px;overflow:hidden;background:#fff}.ktTopL .ktOrd>i u{display:block;height:100%}
+.ktHint{height:26px;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;color:#7a3b52;background:rgba(255,255,255,.7);border:2px dashed #f0a0b4;border-radius:8px;margin:2px auto 4px;padding:0 12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ktMidL{flex:1;min-height:0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ktMidL .ktJoy{width:min(150px,18vmax);height:min(150px,18vmax);flex:none}
+.ktMidL .ktJoy i{width:42%;height:42%;margin:-21% 0 0 -21%}
+.ktMidL .ktStage{flex:none;position:relative}
+.ktMidL .ktStage canvas{display:block;image-rendering:pixelated;border:4px solid var(--line);border-radius:8px;box-shadow:4px 4px 0 var(--shadow)}
+.ktBtns{display:flex;flex-direction:column;gap:10px;flex:none;width:min(150px,18vmax)}
+.ktBtns .ktB{height:auto;min-height:62px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 4px}
+.ktBtns .ktB.grab{min-height:96px}
+.ktBi{font-size:26px;line-height:1}.ktBtns .ktB b{font-weight:400;font-size:14px;white-space:nowrap}
+.ktBtns .ktB.dim{opacity:.55}
+.ktBtns .ktB.chop{opacity:.5}.ktBtns .ktB.chop.ready{opacity:1;background:#ffe08a;animation:beat .8s steps(2) infinite}
+.ktRec .ktSteps{justify-content:center;margin:3px 0}
+.ktHow{grid-template-columns:1fr 1fr}
