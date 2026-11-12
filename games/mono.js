@@ -198,7 +198,7 @@ const ICONS = {
 };
 const px = (rows, pal) => { const w = rows[0].length, h = rows.length; let r = "";
   rows.forEach((row,y)=>[...row].forEach((c,x)=>{ const col = c==="O" ? O : pal[c]; if(col) r += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${col}"/>`; }));
-  return `<svg viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${r}</svg>`; };
+  return `<svg viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${pxC(r)}</svg>`; };
 const icon = k => px(ICONS[k][0], ICONS[k][1]);
 const DIE = n => { const dots = { 1:[[2,2]], 2:[[1,1],[3,3]], 3:[[1,1],[2,2],[3,3]], 4:[[1,1],[3,1],[1,3],[3,3]], 5:[[1,1],[3,1],[2,2],[1,3],[3,3]], 6:[[1,1],[3,1],[1,2],[3,2],[1,3],[3,3]] }[n] || [];
   return `<svg viewBox="0 0 5 5" shape-rendering="crispEdges"><rect width="5" height="5" fill="${O}"/><rect x=".4" y=".4" width="4.2" height="4.2" fill="#fff"/>${dots.map(([x,y])=>`<rect x="${x-.35}" y="${y-.35}" width=".7" height=".7" fill="${n===1?"#e5486a":O}"/>`).join("")}</svg>`; };
