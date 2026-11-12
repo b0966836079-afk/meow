@@ -168,7 +168,7 @@
       if (error) throw error;
     };
     B.connect = () => {
-      if (B._ch) sb.removeChannel(B._ch);
+      if (B._ch) { const old = B._ch; B._ch = null; sb.removeChannel(old); }
       const f = `couple_id=eq.${B.coupleId}`;
       const ch = sb.channel("couple-" + B.coupleId, { config: { presence: { key: B.uid } } });
       ch.on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: f }, p => B._h.msg.forEach(h => h(p.new)));
@@ -180,13 +180,21 @@
         for (const k in st) { const m = st[k][0]; if (m) list.push(Object.assign({ uid: k }, m)); }
         B._h.presence.forEach(h => h(list));
       });
-      ch.subscribe(status => { B._h.status.forEach(h => h(status)); if (status === "SUBSCRIBED" && B._meta) ch.track(B._meta); });
+      let ok = false;
+      ch.subscribe(status => {
+        if (status === "SUBSCRIBED") { ok = true; B._rtBack = 0; }
+        // 連線斷掉（手機網路切換、連不上…）：等一下自動重新連，越等越久，最多 20 秒
+        if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") && B._ch === ch) {
+          B._rtBack = Math.min(20000, (B._rtBack || 1000) * 2); clearTimeout(B._rtRetry);
+          B._rtRetry = setTimeout(() => { if (B._ch === ch) B.connect(); }, B._rtBack); }
+        B._h.status.forEach(h => h(status)); if (status === "SUBSCRIBED" && B._meta) ch.track(B._meta); });
       B._ch = ch;
     };
     B.track = (meta) => { B._meta = meta; if (B._ch) B._ch.track(meta).catch(() => {}); };
     B.bcast = (payload) => { try { if (B._ch) B._ch.send({ type: "broadcast", event: "g", payload }); } catch (e) {} };
     B.on = (what, h) => { B._h[what].push(h); };
     B.reconnect = () => { if (B.coupleId) B.connect(); };
+    try { sb.auth.onAuthStateChange((ev, session) => { if (session && (ev === "TOKEN_REFRESHED" || ev === "SIGNED_IN")) { try { sb.realtime.setAuth(session.access_token); } catch (e) {} } }); } catch (e) {}
     return B;
   }
 
