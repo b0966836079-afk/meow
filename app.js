@@ -128,6 +128,7 @@ const App = (function(){
   ctx.mode = () => roomMode; ctx.pw = pw; ctx.isBusy = uid => isBusy(uid); Object.defineProperty(ctx, "backend", { get: () => B });
   // fast, unsaved messages between the two phones (real-time co-op games)
   const bcSubs = [];
+  ctx.rpc = (fn, args) => B.rpc ? B.rpc(fn, args) : Promise.reject(new Error("no_rpc"));
   ctx.broadcast = p => { if(B.bcast) B.bcast(Object.assign({ from: me.uid }, p)); };
   ctx.onBroadcast = h => { bcSubs.push(h); return ()=>{ const i = bcSubs.indexOf(h); if(i>=0) bcSubs.splice(i,1); }; };
   // ---- 雙人遊戲的「呼叫 ta」貓爪按鈕 ----

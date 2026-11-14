@@ -193,6 +193,7 @@
     B.track = (meta) => { B._meta = meta; if (B._ch) B._ch.track(meta).catch(() => {}); };
     B.bcast = (payload) => { try { if (B._ch) B._ch.send({ type: "broadcast", event: "g", payload }); } catch (e) {} };
     B.on = (what, h) => { B._h[what].push(h); };
+    B.rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args || {}); if (error) throw error; return data; };   // 遊戲用（例如貓貓股市，由伺服器處理）
     B.reconnect = () => { if (B.coupleId) B.connect(); };
     try { sb.auth.onAuthStateChange((ev, session) => { if (session && (ev === "TOKEN_REFRESHED" || ev === "SIGNED_IN")) { try { sb.realtime.setAuth(session.access_token); } catch (e) {} } }); } catch (e) {}
     return B;
@@ -241,6 +242,7 @@
     B.track = (meta) => { B._meta = meta; if (B.coupleId) call("track", { cid: B.coupleId, uid: B.uid, meta }); };
     B.on = (what, h) => { B._h[what].push(h); };
     B.reconnect = () => B.connect();
+    B.rpc = async (fn, args) => call("rpc", { fn, args });
     return B;
   }
 
